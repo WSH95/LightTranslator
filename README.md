@@ -32,7 +32,7 @@ LightTranslator is a lightweight, cross-platform translation tool built with Ele
 
 1.  **Clone the Repository**
     ```bash
-    git clone git@github.com:WSH95/LightTranslator.git
+    git clone https://github.com/WSH95/LightTranslator.git
     cd LightTranslator
     ```
 
