@@ -1,117 +1,95 @@
 # LightTranslator
 
-A modern, lightweight translation tool built with Electron and React. LightTranslator supports selection translation, screenshot OCR, and integrates with multiple powerful translation engines including Google Gemini, OpenAI, DeepL, and Microsoft Translator.
+LightTranslator is a lightweight, cross-platform translation tool built with Electron, React, and Vite. It supports multiple advanced translation engines (LLMs and traditional), OCR capabilities, and prioritizes user privacy and security.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-## 🌟 Key Features
+## Key Features
 
-*   **Multi-Engine Support**: Seamlessly switch between Google Gemini, OpenAI (supports compatible APIs like DeepSeek), DeepL, and Microsoft Translator.
-*   **Dynamic Model Status**: The status bar provides real-time feedback on the active LLM model, including identity verification to ensure you are using the correct model version.
-*   **Smart Translation Tools**:
-    *   **Selection Translation (划词翻译)**: Translate text select anywhere on your screen.
-    *   **Screenshot OCR**: Built-in OCR capabilities to extract and translate text from images or protected documents.
-*   **Modern Aesthetics**: specialized UI designed with macOS/iOS aesthetics, featuring glassmorphism, smooth animations, and a clean interface.
-*   **Privacy Focused**: API keys are stored locally.
+*   **Multi-Engine Support**:
+    *   **Google Gemini** (Default): High-quality, context-aware translation using the latest Gemini models.
+    *   **OpenAI**: Support for GPT-3.5 and GPT-4 models.
+    *   **DeepL**: Professional-grade translation.
+    *   **Microsoft Translator**: Robust Azure-based translation.
+    *   **Google Translate**: Free version (web-based fallback).
+*   **Dynamic Model Verification**: The application displays the actual verified identity of the LLM model in use (e.g., `gemini-1.5-flash-002`) in the status bar, ensuring you know exactly which model is powering your translations.
+*   **OCR & Screenshot Translation**: Built-in screenshot tool with Tesseract OCR integration for translating text from images or protected UI elements.
+*   **Text Processing**: Smart line-break removal for better translation of PDF/copied text.
+*   **Security First**:
+    *   **No Hardcoded Secrets**: API keys are managed via a secure Settings UI and never stored in the codebase.
+    *   **Secret Scanning**: Automated pre-build checks prevents accidental commitment of sensitive keys.
+*   **Cross-Platform**: Optimized for Windows, macOS, and Linux (Ubuntu).
 
-## 🚀 Installation & Setup
+## Installation
 
 ### Prerequisites
+*   Node.js (v18 or higher)
+*   npm (v9 or higher)
+*   Git
 
-*   Node.js (v18 or later recommended)
-*   npm (comes with Node.js)
+### Getting Started
 
-### Platform-Specific Dependencies
-
-**Ubuntu / Debian Linux:**
-For OCR and screenshot functionality to work correctly on Linux, you need to install the following dependencies:
-
-```bash
-sudo apt-get update
-sudo apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra tesseract-ocr-jpn tesseract-ocr-kor xdotool gnome-screenshot
-```
-*Note: The `tesseract-ocr-*` packages provide language support for Chinese, Japanese, and Korean.*
-
-### Setup Steps
-
-1.  Clone the repository:
+1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/user/lighttranslator.git
-    cd lighttranslator
+    git clone git@github.com:WSH95/LightTranslator.git
+    cd LightTranslator
     ```
 
-2.  Install dependencies:
+2.  **Install Dependencies**
     ```bash
     npm install
     ```
 
-3.  Start the development server:
+3.  **Run in Development Mode**
     ```bash
     npm run dev:electron
     ```
 
-## ⚙️ Configuration
+### Building for Production
 
-LightTranslator manages API keys securely. You can configure them via environment variables for development or directly in the application settings.
+To create a distributable application for your customized platform:
 
-### 1. Environment Variables (Development)
-Duplicate the example configuration file:
 ```bash
-cp .env.example .env.local
-```
-Edit `.env.local` and add your API keys:
-```env
-# Google Gemini
-VITE_GEMINI_API_KEY=your_gemini_key
+# For current platform
+npm run dist
 
-# OpenAI / DeepSeek
-VITE_OPENAI_API_KEY=your_openai_key
-
-# DeepL
-VITE_DEEPL_API_KEY=your_deepl_key
-
-# Microsoft Translator
-VITE_MICROSOFT_SUBSCRIPTION_KEY=your_ms_key
-VITE_MICROSOFT_REGION=global
+# Specific platforms
+npm run dist:linux   # AppImage & Deb
+npm run dist:win     # NSIS Installer
+npm run dist:mac     # DMG
 ```
 
-### 2. In-App Settings (Recommended)
-You can also enter your API keys directly in the application's "Settings" menu.
-> **Note:** Keys configured in the UI are stored comfortably in `localStorage` and will take precedence over environment variables.
+### Ubuntu Setup (Linux)
+LightTranslator is fully compatible with Ubuntu. The build system will generate both `.AppImage` (portable) and `.deb` (installable) packages.
 
-## 🛠 Development & Building
+**Dependencies:**
+The `.deb` package automatically declares dependencies on `tesseract-ocr` and `xdotool` for OCR functionality.
 
-This project uses **Electron Builder** for packaging.
+## Configuration
 
-### Running in Development Mode
-```bash
-npm run dev:electron
-```
-This command concurrently runs the Vite dev server and the Electron main process.
+### Setting Up API Keys
+1.  Launch the application.
+2.  Click the **Settings** (gear icon) in the title bar.
+3.  Select your preferred **Provider** (e.g., Gemini).
+4.  Enter your **API Key** in the designated field.
+    *   Keys are stored locally in the application's secure storage.
 
-### Packaging the Application
-To build the application for production, run one of the following commands:
+### Environment Variables
+You can optionally preload configurations using a `.env` file (see `.env.example`) for local development, though using the UI is recommended for production security.
 
-*   **Build for current OS**:
-    ```bash
-    npm run dist
-    ```
-*   **Build for Linux (AppImage, Deb)**:
-    ```bash
-    npm run dist:linux
-    ```
-*   **Build for Windows**:
-    ```bash
-    npm run dist:win
-    ```
-*   **Build for macOS**:
-    ```bash
-    npm run dist:mac
-    ```
+## Development & Security
 
-### Security Check
-The build process includes a pre-build security check (`scripts/check-secrets.js`) to ensure no testing secrets or critical environment variables are accidentally bundled into the release.
+### Security Audit
+This project includes a strict `scripts/check-secrets.js` hook that runs before every build to scan for potential API key leaks.
 
-## 📄 License
-MIT License - Copyright © 2024 LightTranslator
+### Project Structure
+*   **electron/**: Main process and system integrations (preload, IPC).
+*   **src/**: React application (UI/UX).
+    *   **components/**: Reusable UI components (TranslatorView, SettingsModal).
+    *   **services/**: API integration layers (Gemini, OpenAI, etc.).
+    *   **store/**: State management using Zustand.
+*   **dist-electron/**: Compiled Electron output (ignored by git).
+
+## License
+MIT License - see the [LICENSE](LICENSE) file for details.
