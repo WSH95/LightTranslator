@@ -1,0 +1,5 @@
+{
+  "name": "LightTranslator",
+  "description": "A lightweight, AI-powered translation assistant featuring real-time text translation and OCR capabilities using Gemini models.",
+  "requestFramePermissions": []
+}
