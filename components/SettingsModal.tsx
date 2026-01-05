@@ -669,12 +669,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                           <input
                             type="checkbox"
                             checked={launchAtStartup}
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const enabled = e.target.checked;
-                              updateSettings({ launchAtStartup: enabled });
                               // Notify Electron main process to set auto-launch
                               if ((window as any).electron?.setAutoLaunch) {
-                                (window as any).electron.setAutoLaunch(enabled);
+                                try {
+                                  const result = await (window as any).electron.setAutoLaunch(enabled);
+                                  if (result.success) {
+                                    updateSettings({ launchAtStartup: enabled });
+                                  } else {
+                                    console.error('Failed to set auto-launch:', result.message);
+                                    // Optionally show error to user
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to set auto-launch:', error);
+                                }
+                              } else {
+                                // Not in Electron environment, just update local state
+                                updateSettings({ launchAtStartup: enabled });
                               }
                             }}
                             className="sr-only peer"

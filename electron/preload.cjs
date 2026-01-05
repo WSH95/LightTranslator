@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Auto-launch settings
   setAutoLaunch: (enabled) => ipcRenderer.invoke('set-auto-launch', enabled),
+  getAutoLaunch: () => ipcRenderer.invoke('get-auto-launch'),
 
   // Quick window resize (for dynamic sizing)
   resizeQuickWindow: (dimensions) => ipcRenderer.invoke('resize-quick-window', dimensions),

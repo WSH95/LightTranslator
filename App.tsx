@@ -6,11 +6,13 @@ import { OcrModal } from './components/OcrModal';
 import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useOcrDependencies } from './hooks/useOcrDependencies';
+import { useAppStore } from './store/useAppStore';
 
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
   const hasPrompted = useRef(false);
+  const { updateSettings } = useAppStore();
 
   // Initialize directly from URL to avoid flash/race conditions
   const [isQuickMode] = useState(() => {
@@ -30,6 +32,23 @@ const App: React.FC = () => {
       });
     }
   }, []);
+
+  // Sync auto-launch state with system on app startup
+  useEffect(() => {
+    const syncAutoLaunchState = async () => {
+      if ((window as any).electron?.getAutoLaunch) {
+        try {
+          const result = await (window as any).electron.getAutoLaunch();
+          if (result.success) {
+            updateSettings({ launchAtStartup: result.enabled });
+          }
+        } catch (error) {
+          console.error('Failed to sync auto-launch state:', error);
+        }
+      }
+    };
+    syncAutoLaunchState();
+  }, [updateSettings]);
 
   // Prompt user to install OCR dependencies if missing (only once on first check)
   useEffect(() => {
@@ -77,7 +96,7 @@ const App: React.FC = () => {
               <div className="w-1.5 h-1.5 rounded-full bg-green-500/80 shadow-[0_0_5px_rgba(34,197,94,0.3)]"></div>
               <span className="font-medium text-macos-text/70">Ready</span>
             </div>
-            <span className="opacity-50 font-medium">LightTranslator Desktop v1.2</span>
+            <span className="opacity-50 font-medium">LightTranslator Desktop v1.0.2</span>
           </div>
 
           {/* Modals */}

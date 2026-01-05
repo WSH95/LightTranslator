@@ -26,6 +26,120 @@ function getResourcePath(relativePath) {
   }
 }
 
+function getAutoLaunchExecPath() {
+  if (process.platform === 'linux' && process.env.APPIMAGE) {
+    return process.env.APPIMAGE;
+  }
+  return process.execPath;
+}
+
+function getAutoLaunchArgs() {
+  const args = [];
+  if (!app.isPackaged) {
+    args.push(app.getAppPath());
+  }
+  args.push('--hidden');
+  return args;
+}
+
+function formatDesktopExec(execPath, args) {
+  const quoteIfNeeded = (value) => {
+    if (/[\s"]/u.test(value)) {
+      return `"${value.replace(/"/g, '\\"')}"`;
+    }
+    return value;
+  };
+
+  return [execPath, ...args].map(quoteIfNeeded).join(' ');
+}
+
+function getLinuxAutoLaunchEnabled() {
+  const autostartDir = path.join(app.getPath('appData'), 'autostart');
+  const desktopFilePath = path.join(autostartDir, 'LightTranslator.desktop');
+  return fs.existsSync(desktopFilePath);
+}
+
+function setLinuxAutoLaunch(enabled) {
+  const autostartDir = path.join(app.getPath('appData'), 'autostart');
+  const desktopFilePath = path.join(autostartDir, 'LightTranslator.desktop');
+
+  if (!enabled) {
+    if (fs.existsSync(desktopFilePath)) {
+      fs.unlinkSync(desktopFilePath);
+    }
+    return;
+  }
+
+  fs.mkdirSync(autostartDir, { recursive: true });
+
+  const execPath = getAutoLaunchExecPath();
+  const args = getAutoLaunchArgs();
+  const execLine = formatDesktopExec(execPath, args);
+  const iconPath = getResourcePath('logo.png');
+  const iconValue = fs.existsSync(iconPath) ? iconPath : 'lighttranslator';
+
+  const desktopEntry = [
+    '[Desktop Entry]',
+    'Type=Application',
+    'Name=LightTranslator',
+    'Comment=LightTranslator startup entry',
+    `Exec=${execLine}`,
+    `Icon=${iconValue}`,
+    'Terminal=false',
+    'Categories=Utility;',
+    'X-GNOME-Autostart-enabled=true',
+    'StartupWMClass=LightTranslator',
+    ''
+  ].join('\n');
+
+  fs.writeFileSync(desktopFilePath, desktopEntry, { encoding: 'utf8' });
+}
+
+function setNativeAutoLaunch(enabled) {
+  app.setLoginItemSettings({
+    openAtLogin: enabled,
+    openAsHidden: true,
+    path: getAutoLaunchExecPath(),
+    args: getAutoLaunchArgs()
+  });
+}
+
+function setAutoLaunch(enabled) {
+  if (process.platform === 'linux') {
+    setLinuxAutoLaunch(enabled);
+    return;
+  }
+
+  setNativeAutoLaunch(enabled);
+}
+
+function getAutoLaunch() {
+  if (process.platform === 'linux') {
+    return getLinuxAutoLaunchEnabled();
+  }
+
+  try {
+    const loginSettings = app.getLoginItemSettings();
+    return Boolean(loginSettings?.openAtLogin);
+  } catch (error) {
+    console.error('Failed to get login item settings:', error);
+    return false;
+  }
+}
+
+function shouldStartHiddenOnLaunch() {
+  if (process.argv.includes('--hidden')) {
+    return true;
+  }
+
+  try {
+    const loginSettings = app.getLoginItemSettings();
+    return Boolean(loginSettings?.wasOpenedAsHidden);
+  } catch (error) {
+    return false;
+  }
+}
+
 function createQuickWindow() {
   if (quickWindow) return;
 
@@ -78,7 +192,7 @@ function createQuickWindow() {
   // quickWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
-function createWindow() {
+function createWindow({ startHidden = false } = {}) {
   const iconPath = getResourcePath('logo.png');
   
   mainWindow = new BrowserWindow({
@@ -88,6 +202,7 @@ function createWindow() {
     minHeight: 500,
     icon: iconPath, // Set window icon
     titleBarStyle: 'hidden', // Makes it look like the BetterDisplay design (frameless)
+    show: !startHidden,
     // titleBarOverlay: {
     //   color: 'rgba(0,0,0,0)', // Transparent
     //   symbolColor: '#4c4c4c',
@@ -110,6 +225,12 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+
+  if (startHidden) {
+    mainWindow.once('ready-to-show', () => {
+      if (mainWindow) mainWindow.hide();
+    });
   }
 
   // Open external links in browser
@@ -332,15 +453,23 @@ ipcMain.handle('update-shortcut', async (event, newShortcut) => {
 // Auto-launch configuration handler
 ipcMain.handle('set-auto-launch', async (event, enabled) => {
   try {
-    app.setLoginItemSettings({
-      openAtLogin: enabled,
-      openAsHidden: true  // Start minimized to tray
-    });
+    setAutoLaunch(enabled);
     console.log('Auto-launch set to:', enabled);
     return { success: true, enabled };
   } catch (error) {
     console.error('Failed to set auto-launch:', error);
     return { success: false, message: error.message };
+  }
+});
+
+// Get current auto-launch state
+ipcMain.handle('get-auto-launch', async () => {
+  try {
+    const enabled = getAutoLaunch();
+    return { success: true, enabled };
+  } catch (error) {
+    console.error('Failed to get auto-launch state:', error);
+    return { success: false, enabled: false, message: error.message };
   }
 });
 
@@ -771,7 +900,8 @@ const quickTranslateHandler = () => {
 };
 
 app.whenReady().then(() => {
-  createWindow();
+  const startHidden = shouldStartHiddenOnLaunch();
+  createWindow({ startHidden });
   createQuickWindow();
   createTray();
 
