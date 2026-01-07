@@ -29,6 +29,8 @@ export const QuickTranslateWindow: React.FC = () => {
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
+    openrouterApiKey,
+    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion
@@ -89,6 +91,8 @@ export const QuickTranslateWindow: React.FC = () => {
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
+        openrouterApiKey,
+        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion

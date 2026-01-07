@@ -5,7 +5,7 @@ export interface Language {
   name: string;
 }
 
-export type TranslationProviderId = 'gemini' | 'openai' | 'deepl' | 'google' | 'microsoft';
+export type TranslationProviderId = 'gemini' | 'openai' | 'openrouter' | 'deepl' | 'google' | 'microsoft';
 
 export type ProviderCategory = 'llm' | 'cloud';
 
@@ -36,6 +36,10 @@ export interface AppSettings {
   openaiBaseUrl: string;
   openaiApiKey: string;
   openaiModel: string;
+
+  // OpenRouter Specific
+  openrouterApiKey: string;
+  openrouterModel: string;
 
   // DeepL Specific
   deeplApiKey: string;

@@ -13,6 +13,9 @@ interface TranslateOptions {
   openaiBaseUrl?: string;
   openaiApiKey?: string;
   openaiModel?: string;
+  // OpenRouter Options
+  openrouterApiKey?: string;
+  openrouterModel?: string;
   // DeepL Options
   deeplApiKey?: string;
   // Microsoft Options
@@ -27,6 +30,8 @@ interface VerifyModelOptions {
   openaiBaseUrl?: string;
   openaiApiKey?: string;
   openaiModel?: string;
+  openrouterApiKey?: string;
+  openrouterModel?: string;
 }
 
 // Helper to get Gemini client with the provided API key
@@ -54,6 +59,10 @@ export const translateText = async (
 
   if (provider === 'openai') {
     return translateWithOpenAI(text, sourceLang, targetLang, options);
+  }
+
+  if (provider === 'openrouter') {
+    return translateWithOpenRouter(text, sourceLang, targetLang, options);
   }
 
   if (provider === 'deepl') {
@@ -159,7 +168,37 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
     }
   }
 
-  throw new Error("Model verification is only available for LLM providers (Gemini, OpenAI).");
+  if (provider === 'openrouter') {
+    if (!options.openrouterApiKey) {
+      throw new Error("OpenRouter API Key is required for verification.");
+    }
+    const requestedModel = options.openrouterModel || 'openai/gpt-3.5-turbo';
+
+    try {
+      // Use /models endpoint to verify the API key
+      const url = 'https://openrouter.ai/api/v1/models';
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${options.openrouterApiKey}`,
+          'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
+          'X-Title': 'LightTranslator'
+        }
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "API key verification failed");
+      }
+
+      // API key is valid, return the configured model name
+      return requestedModel;
+    } catch (error: any) {
+      console.error("OpenRouter Verification Error:", error);
+      throw new Error(`OpenRouter Verification Error: ${error.message}`);
+    }
+  }
+
+  throw new Error("Model verification is only available for LLM providers (Gemini, OpenAI, OpenRouter).");
 };
 
 // --- Internal Providers ---
@@ -266,6 +305,54 @@ const translateWithOpenAI = async (text: string, source: string, target: string,
   } catch (error: any) {
     console.error("OpenAI Error:", error);
     throw new Error(`OpenAI Error: ${error.message}`);
+  }
+};
+
+const translateWithOpenRouter = async (text: string, source: string, target: string, options: TranslateOptions) => {
+  if (!options.openrouterApiKey) {
+    throw new Error("OpenRouter API Key is required.");
+  }
+
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const systemPromptEnabled = options.systemPromptEnabled !== false; // Default to true
+
+  // Build messages array
+  const messages: Array<{ role: string; content: string }> = [];
+
+  if (systemPromptEnabled) {
+    const systemPrompt = options.customSystemInstruction ||
+      `You are a professional translator. Translate the following content from ${source === 'auto' ? 'detected language' : source} to ${target}. Output ONLY the translation, no explanations.`;
+    messages.push({ role: 'system', content: systemPrompt });
+  }
+
+  messages.push({ role: 'user', content: text });
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${options.openrouterApiKey}`,
+        'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
+        'X-Title': 'LightTranslator'
+      },
+      body: JSON.stringify({
+        model: options.openrouterModel || 'openai/gpt-3.5-turbo',
+        messages,
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || "OpenRouter API Request Failed");
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
+  } catch (error: any) {
+    console.error("OpenRouter Error:", error);
+    throw new Error(`OpenRouter Error: ${error.message}`);
   }
 };
 

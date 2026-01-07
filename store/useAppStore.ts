@@ -125,6 +125,9 @@ export const useAppStore = create<AppState>()(
         openaiBaseUrl: state.openaiBaseUrl,
         openaiApiKey: state.openaiApiKey,
         openaiModel: state.openaiModel,
+        // OpenRouter
+        openrouterApiKey: state.openrouterApiKey,
+        openrouterModel: state.openrouterModel,
         // DeepL
         deeplApiKey: state.deeplApiKey,
         // Microsoft

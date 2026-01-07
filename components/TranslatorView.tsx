@@ -27,6 +27,8 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
+    openrouterApiKey,
+    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion,
@@ -70,6 +72,8 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
+        openrouterApiKey,
+        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion
@@ -95,7 +99,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         setIsTranslating(false);
       }
     }
-  }, [sourceLang, targetLang, provider, modelId, customSystemInstruction, systemPromptEnabled, geminiApiKey, openaiApiKey, openaiBaseUrl, openaiModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
+  }, [sourceLang, targetLang, provider, modelId, customSystemInstruction, systemPromptEnabled, geminiApiKey, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
 
   useEffect(() => {
     if (!autoTranslate) return;
@@ -127,12 +131,12 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
   const isLlmProvider = currentProvider?.category === 'llm';
 
   // Get the configured model name for display
-  const configuredModelName = provider === 'gemini' ? modelId : openaiModel;
+  const configuredModelName = provider === 'gemini' ? modelId : provider === 'openrouter' ? openrouterModel : openaiModel;
 
   // Clear verification when provider or model changes (don't auto-verify to save quota)
   useEffect(() => {
     clearModelVerification();
-  }, [provider, modelId, openaiModel, clearModelVerification]);
+  }, [provider, modelId, openaiModel, openrouterModel, clearModelVerification]);
 
   // Manual verification handler - only runs when user clicks verify button
   const handleVerify = useCallback(async () => {
@@ -141,7 +145,8 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     // Check credentials
     const hasCredentials =
       (provider === 'gemini' && geminiApiKey) ||
-      (provider === 'openai' && openaiApiKey && openaiBaseUrl);
+      (provider === 'openai' && openaiApiKey && openaiBaseUrl) ||
+      (provider === 'openrouter' && openrouterApiKey);
 
     if (!hasCredentials) {
       setModelVerification({
@@ -161,7 +166,9 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         modelId,
         openaiBaseUrl,
         openaiApiKey,
-        openaiModel
+        openaiModel,
+        openrouterApiKey,
+        openrouterModel
       });
 
       setModelVerification({
@@ -177,7 +184,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         error: error.message || 'Verification failed'
       });
     }
-  }, [provider, geminiApiKey, modelId, openaiApiKey, openaiBaseUrl, openaiModel, isLlmProvider, setModelVerification]);
+  }, [provider, geminiApiKey, modelId, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, isLlmProvider, setModelVerification]);
 
   const handleCopy = () => {
     if (translatedText) {
@@ -358,7 +365,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
                   <span className="font-medium text-macos-text">
                     {configuredModelName || 'No model configured'}
                   </span>
-                  {(provider === 'gemini' ? geminiApiKey : openaiApiKey) && (
+                  {(provider === 'gemini' ? geminiApiKey : provider === 'openrouter' ? openrouterApiKey : openaiApiKey) && (
                     <button
                       onClick={handleVerify}
                       className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"

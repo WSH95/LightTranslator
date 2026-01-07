@@ -25,13 +25,21 @@ export const PROVIDERS: TranslationProvider[] = [
     requiresKey: true,
     description: 'Multimodal, High speed.' 
   },
-  { 
-    id: 'openai', 
-    name: 'OpenAI Compatible', 
+  {
+    id: 'openai',
+    name: 'OpenAI Compatible',
     category: 'llm',
     enabled: true,
     requiresKey: true,
     description: 'DeepSeek, GPT-4, Ollama.'
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    category: 'llm',
+    enabled: true,
+    requiresKey: true,
+    description: 'GPT-4, Claude, Llama, etc.'
   },
   // Cloud Providers
   { 
@@ -78,6 +86,10 @@ export const DEFAULT_SETTINGS = {
   openaiBaseUrl: 'https://api.openai.com/v1',
   openaiApiKey: '',
   openaiModel: 'gpt-3.5-turbo',
+
+  // OpenRouter Defaults
+  openrouterApiKey: '',
+  openrouterModel: 'openai/gpt-3.5-turbo',
 
   // DeepL Defaults
   deeplApiKey: '',

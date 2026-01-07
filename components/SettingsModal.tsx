@@ -18,6 +18,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
+    openrouterApiKey,
+    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion,
@@ -190,7 +192,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                          <label key={p.id} className="flex items-center justify-between group cursor-pointer">
                             <div className="flex items-center gap-3">
                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${provider === p.id ? 'bg-macos-active text-white' : 'bg-gray-100 text-gray-500'}`}>
-                                  {p.id === 'gemini' ? <Bot size={16} /> : <Terminal size={16} />}
+                                  {p.id === 'gemini' ? <Bot size={16} /> : p.id === 'openrouter' ? <Globe size={16} /> : <Terminal size={16} />}
                                </div>
                                <div>
                                   <div className="text-sm font-medium text-macos-text group-hover:text-black">{p.name}</div>
@@ -287,6 +289,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 onChange={(e) => updateSettings({ openaiModel: e.target.value })}
                                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
                               />
+                           </div>
+                         </div>
+                    </div>
+                  )}
+
+                  {provider === 'openrouter' && (
+                    <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                         <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
+                            <Globe size={16} className="text-orange-500" />
+                            OpenRouter Settings
+                         </div>
+
+                         <div className="space-y-4">
+                           <div>
+                              <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
+                              <input
+                                type="password"
+                                value={openrouterApiKey}
+                                onChange={(e) => updateSettings({ openrouterApiKey: e.target.value })}
+                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
+                                placeholder="sk-or-..."
+                              />
+                              <p className="text-xs text-macos-muted mt-2">Get your API key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenRouter</a></p>
+                           </div>
+                           <div>
+                              <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Model Name</label>
+                              <input
+                                type="text"
+                                value={openrouterModel}
+                                onChange={(e) => updateSettings({ openrouterModel: e.target.value })}
+                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
+                                placeholder="openai/gpt-4-turbo"
+                              />
+                              <p className="text-xs text-macos-muted mt-2">Examples: openai/gpt-4-turbo, anthropic/claude-3-opus, meta-llama/llama-3-70b</p>
                            </div>
                          </div>
                     </div>
