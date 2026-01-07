@@ -17,13 +17,13 @@ export const LANGUAGES: Language[] = [
 
 export const PROVIDERS: TranslationProvider[] = [
   // LLM Providers
-  { 
-    id: 'gemini', 
-    name: 'Google Gemini', 
+  {
+    id: 'gemini',
+    name: 'Google Gemini',
     category: 'llm',
     enabled: true,
     requiresKey: true,
-    description: 'Multimodal, High speed.' 
+    description: 'Multimodal, High speed.'
   },
   {
     id: 'openai',
@@ -42,9 +42,9 @@ export const PROVIDERS: TranslationProvider[] = [
     description: 'GPT-4, Claude, Llama, etc.'
   },
   // Cloud Providers
-  { 
-    id: 'deepl', 
-    name: 'DeepL Translate', 
+  {
+    id: 'deepl',
+    name: 'DeepL Translate',
     category: 'cloud',
     enabled: true,
     requiresKey: true,
@@ -75,7 +75,7 @@ export const DEFAULT_SETTINGS = {
   targetLang: 'zh-CN' as const,
   provider: 'google' as const,
   useOcrPreProcessing: false,
-  
+
   // Gemini Defaults
   modelId: 'gemini-3-flash-preview',
   customSystemInstruction: '',
@@ -111,4 +111,8 @@ export const DEFAULT_SETTINGS = {
 
   // Startup Defaults
   launchAtStartup: false,
+
+  // Quick Window Appearance Defaults
+  quickWindowOpacity: 0.95,
+  quickWindowBorderOpacity: 0.05,
 };
