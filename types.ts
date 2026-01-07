@@ -61,6 +61,10 @@ export interface AppSettings {
 
   // Startup Settings
   launchAtStartup: boolean;
+
+  // Quick Window Appearance
+  quickWindowOpacity: number; // 0.5-1.0
+  quickWindowBorderOpacity: number; // 0-1.0
 }
 
 export interface ProxySettings {

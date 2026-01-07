@@ -55,7 +55,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       ...DEFAULT_SETTINGS,
-      
+
       // UI State Defaults
       inputText: '',
       translatedText: '',
@@ -86,7 +86,7 @@ export const useAppStore = create<AppState>()(
       setProvider: (id) => set({ provider: id }),
       toggleAutoTranslate: () => set((state) => ({ autoTranslate: !state.autoTranslate })),
       updateSettings: (newSettings) => set((state) => ({ ...state, ...newSettings })),
-      
+
       setInputText: (text) => set({ inputText: text }),
       setTranslatedText: (text) => set({ translatedText: text }),
       setIsTranslating: (loading) => set({ isTranslating: loading }),
@@ -144,6 +144,9 @@ export const useAppStore = create<AppState>()(
         selectionShortcut: state.selectionShortcut,
         // Startup
         launchAtStartup: state.launchAtStartup,
+        // Quick Window Appearance
+        quickWindowOpacity: state.quickWindowOpacity,
+        quickWindowBorderOpacity: state.quickWindowBorderOpacity,
       }),
     }
   )

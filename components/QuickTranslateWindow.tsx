@@ -3,6 +3,7 @@ import { X, Copy, Loader2, ExternalLink } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
+import { PROVIDERS } from '../constants';
 
 // Window size constraints
 const MIN_WIDTH = 200;
@@ -13,6 +14,12 @@ const HEADER_HEIGHT = 32;
 const PADDING = 32; // p-4 = 16px * 2
 
 export const QuickTranslateWindow: React.FC = () => {
+  useEffect(() => {
+    // Make body transparent for the rounded window
+    document.body.style.background = 'transparent';
+    return () => { document.body.style.background = ''; };
+  }, []);
+
   const [, setText] = useState('');
   const [translated, setTranslated] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +40,9 @@ export const QuickTranslateWindow: React.FC = () => {
     openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
-    microsoftRegion
+    microsoftRegion,
+    quickWindowOpacity,
+    quickWindowBorderOpacity
   } = useAppStore();
 
   // Resize window to fit content
@@ -78,10 +87,10 @@ export const QuickTranslateWindow: React.FC = () => {
 
   const handleTranslate = async (inputText: string) => {
     if (!inputText.trim()) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await translateText(inputText, sourceLang, targetLang, {
         provider,
@@ -112,11 +121,17 @@ export const QuickTranslateWindow: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-white/95 backdrop-blur-xl border-2 border-blue-500/50 flex flex-col overflow-hidden shadow-2xl relative">
+    <div
+      className="h-screen w-screen backdrop-blur-3xl rounded-3xl flex flex-col overflow-hidden relative"
+      style={{
+        backgroundColor: `rgba(255, 255, 255, ${quickWindowOpacity})`,
+        border: `1px solid rgba(150, 150, 150, ${quickWindowBorderOpacity * 2})`
+      }}
+    >
       {/* Header / Drag Area */}
       <div className="h-8 bg-gray-100/80 flex items-center justify-between px-3 -webkit-app-region-drag border-b border-gray-200/50">
-        <span className="text-xs font-medium text-gray-600">Quick Translate</span>
-        <button 
+        <span className="text-xs font-medium text-gray-600">Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}</span>
+        <button
           onClick={handleClose}
           className="p-1 hover:bg-gray-200 rounded-full -webkit-app-region-no-drag transition-colors"
         >
@@ -128,29 +143,21 @@ export const QuickTranslateWindow: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4">
         {/* Translation Result Only */}
         <div ref={contentRef} className="space-y-2">
-           <div className="text-[10px] uppercase tracking-wider text-blue-400 font-semibold flex items-center gap-2">
-             Translation
-             {loading && <Loader2 size={10} className="animate-spin" />}
-           </div>
+          {loading && <Loader2 size={10} className="animate-spin text-blue-400" />}
 
-           {error ? (
-             <div className="text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">
-               {error}
-             </div>
-           ) : (
-             <div className="text-sm text-gray-900 font-medium leading-relaxed break-words">
-               {translated || <span className="text-gray-300 italic">Translating...</span>}
-             </div>
-           )}
+          {error ? (
+            <div className="text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">
+              {error}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-900 font-medium leading-relaxed break-words">
+              {translated || <span className="text-gray-300 italic">Translating...</span>}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Resize Handle Indicator */}
-      <div className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-end justify-end p-0.5 opacity-30 hover:opacity-60 transition-opacity">
-        <svg width="10" height="10" viewBox="0 0 10 10" className="text-gray-400">
-          <path d="M9 1L1 9M9 5L5 9M9 9L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-      </div>
+
     </div>
   );
 };

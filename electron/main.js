@@ -147,6 +147,7 @@ function createQuickWindow() {
     width: 400,
     height: 300,
     frame: false,
+    transparent: true,
     alwaysOnTop: true,
     show: false,
     skipTaskbar: true,
@@ -172,7 +173,7 @@ function createQuickWindow() {
       query: { mode: 'quick' }
     });
   }
-    
+
   console.log('Loading Quick Window, isDev:', isDev);
 
   // Wait for the window to be ready before showing (optional, but good practice)
@@ -187,14 +188,14 @@ function createQuickWindow() {
   quickWindow.on('closed', () => {
     quickWindow = null;
   });
-  
+
   // DEBUG: Open DevTools to diagnose blank screen
   // quickWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
 function createWindow({ startHidden = false } = {}) {
   const iconPath = getResourcePath('logo.png');
-  
+
   mainWindow = new BrowserWindow({
     width: 480,
     height: 680,
@@ -253,14 +254,14 @@ function createTray() {
   // Load tray icon from the new logo
   const iconPath = getResourcePath('tray-icon.png');
   let trayIcon = nativeImage.createFromPath(iconPath);
-  
+
   // Resize for Linux (recommended 22x22)
   if (!trayIcon.isEmpty()) {
     trayIcon = trayIcon.resize({ width: 22, height: 22 });
   }
 
   tray = new Tray(trayIcon);
-  
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: '打开面板',
@@ -327,7 +328,7 @@ function createTray() {
 ipcMain.handle('proxy-request', async (event, url, options = {}) => {
   return new Promise((resolve, reject) => {
     const { method = 'GET', headers = {}, body = null } = options;
-    
+
     const request = net.request({
       url,
       method,
@@ -341,17 +342,17 @@ ipcMain.handle('proxy-request', async (event, url, options = {}) => {
       });
       response.on('end', () => {
         try {
-            resolve({ 
-              ok: response.statusCode >= 200 && response.statusCode < 300, 
-              statusCode: response.statusCode,
-              data: JSON.parse(responseBody) 
-            });
+          resolve({
+            ok: response.statusCode >= 200 && response.statusCode < 300,
+            statusCode: response.statusCode,
+            data: JSON.parse(responseBody)
+          });
         } catch (e) {
-            resolve({ 
-              ok: response.statusCode >= 200 && response.statusCode < 300, 
-              statusCode: response.statusCode,
-              data: responseBody 
-            });
+          resolve({
+            ok: response.statusCode >= 200 && response.statusCode < 300,
+            statusCode: response.statusCode,
+            data: responseBody
+          });
         }
       });
     });
@@ -364,7 +365,7 @@ ipcMain.handle('proxy-request', async (event, url, options = {}) => {
     if (body) {
       request.write(typeof body === 'string' ? body : JSON.stringify(body));
     }
-    
+
     request.end();
   });
 });
@@ -445,7 +446,7 @@ ipcMain.handle('update-shortcut', async (event, newShortcut) => {
     // Try to restore old shortcut
     try {
       globalShortcut.register(currentShortcut, quickTranslateHandler);
-    } catch (e) {}
+    } catch (e) { }
     return { success: false, message: error.message };
   }
 });
@@ -571,12 +572,12 @@ ipcMain.handle('set-proxy', async (event, proxySettings) => {
 ipcMain.handle('capture-screen', async () => {
   return new Promise((resolve, reject) => {
     const tempFile = path.join(os.tmpdir(), `screenshot-${Date.now()}.png`);
-    
+
     // Hide main window temporarily so it's not in the screenshot
     if (mainWindow) {
       mainWindow.hide();
     }
-    
+
     // Small delay to ensure window is hidden
     setTimeout(() => {
       // Use gnome-screenshot for area selection
@@ -586,14 +587,14 @@ ipcMain.handle('capture-screen', async () => {
           mainWindow.show();
           mainWindow.focus();
         }
-        
+
         if (error) {
           console.error('Screenshot error:', error);
           // User might have cancelled
           resolve({ success: false, cancelled: true });
           return;
         }
-        
+
         // Check if file was created (user didn't cancel)
         if (fs.existsSync(tempFile)) {
           try {
@@ -616,15 +617,15 @@ ipcMain.handle('capture-screen', async () => {
 // Clean up OCR text - remove unwanted line breaks within paragraphs
 function cleanOcrText(text) {
   if (!text) return '';
-  
+
   // Split into lines
   const lines = text.split('\n');
   const result = [];
   let currentParagraph = '';
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Empty line means paragraph break
     if (!line) {
       if (currentParagraph) {
@@ -633,14 +634,14 @@ function cleanOcrText(text) {
       }
       continue;
     }
-    
+
     // Check if previous line ended with sentence-ending punctuation
-    const prevEndsWithPunctuation = currentParagraph && 
+    const prevEndsWithPunctuation = currentParagraph &&
       /[.!?。！？；;:：）)】」』"']$/.test(currentParagraph.trim());
-    
+
     // Check if current line starts with a capital letter or Chinese character (might be new paragraph)
     const startsNewSentence = /^[A-Z\u4e00-\u9fff]/.test(line);
-    
+
     // If previous line ended with punctuation and current starts with capital, might be new paragraph
     // But only if the previous line was reasonably long (not just a short title)
     if (prevEndsWithPunctuation && startsNewSentence && currentParagraph.length > 50) {
@@ -650,10 +651,10 @@ function cleanOcrText(text) {
       // Continue the same paragraph - join with space for English, no space for CJK
       const lastChar = currentParagraph.slice(-1);
       const firstChar = line.charAt(0);
-      
+
       // Check if both are CJK characters (no space needed)
       const isCJK = (char) => /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/.test(char);
-      
+
       if (isCJK(lastChar) || isCJK(firstChar)) {
         currentParagraph += line;
       } else {
@@ -664,12 +665,12 @@ function cleanOcrText(text) {
       currentParagraph = line;
     }
   }
-  
+
   // Don't forget the last paragraph
   if (currentParagraph) {
     result.push(currentParagraph.trim());
   }
-  
+
   return result.join('\n\n');
 }
 
@@ -677,24 +678,24 @@ function cleanOcrText(text) {
 ipcMain.handle('ocr-image', async (event, base64Image) => {
   return new Promise((resolve, reject) => {
     const tempFile = path.join(os.tmpdir(), `ocr-${Date.now()}.png`);
-    
+
     try {
       // Remove data URL prefix if present
       const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
       const imageBuffer = Buffer.from(base64Data, 'base64');
       fs.writeFileSync(tempFile, imageBuffer);
-      
+
       // Run Tesseract with multiple languages (chi_sim+chi_tra+eng+jpn+kor)
       exec(`tesseract "${tempFile}" stdout -l chi_sim+chi_tra+eng+jpn+kor 2>/dev/null`, (error, stdout, stderr) => {
         // Clean up temp file
-        try { fs.unlinkSync(tempFile); } catch (e) {}
-        
+        try { fs.unlinkSync(tempFile); } catch (e) { }
+
         if (error) {
           console.error('Tesseract error:', error);
           resolve({ success: false, error: error.message });
           return;
         }
-        
+
         const rawText = stdout.trim();
         if (rawText) {
           // Clean up the OCR text to remove unwanted line breaks
@@ -705,7 +706,7 @@ ipcMain.handle('ocr-image', async (event, base64Image) => {
         }
       });
     } catch (err) {
-      try { fs.unlinkSync(tempFile); } catch (e) {}
+      try { fs.unlinkSync(tempFile); } catch (e) { }
       resolve({ success: false, error: err.message });
     }
   });
@@ -714,33 +715,33 @@ ipcMain.handle('ocr-image', async (event, base64Image) => {
 // Screenshot OCR triggered from tray menu
 function triggerScreenshotOCR() {
   const tempFile = path.join(os.tmpdir(), `screenshot-ocr-${Date.now()}.png`);
-  
+
   // Use gnome-screenshot for area selection
   exec(`gnome-screenshot -a -f "${tempFile}"`, (error) => {
     if (error) {
       console.error('Screenshot error:', error);
       return;
     }
-    
+
     // Check if file was created (user didn't cancel)
     if (fs.existsSync(tempFile)) {
       try {
         const imageData = fs.readFileSync(tempFile);
         const base64 = `data:image/png;base64,${imageData.toString('base64')}`;
         fs.unlinkSync(tempFile); // Clean up temp file
-        
+
         // Run Tesseract OCR
         const ocrTempFile = path.join(os.tmpdir(), `ocr-tray-${Date.now()}.png`);
         fs.writeFileSync(ocrTempFile, imageData);
-        
+
         exec(`tesseract "${ocrTempFile}" stdout -l chi_sim+chi_tra+eng+jpn+kor 2>/dev/null`, (ocrError, stdout) => {
-          try { fs.unlinkSync(ocrTempFile); } catch (e) {}
-          
+          try { fs.unlinkSync(ocrTempFile); } catch (e) { }
+
           if (ocrError) {
             console.error('Tesseract error:', ocrError);
             return;
           }
-          
+
           const rawText = stdout.trim();
           if (rawText) {
             // Clean up the OCR text to remove unwanted line breaks
@@ -764,139 +765,140 @@ function triggerScreenshotOCR() {
 const quickTranslateHandler = () => {
   // Use xdotool to get REAL mouse position (Electron's screen API is unreliable on some Linux setups)
   exec('xdotool getmouselocation --shell', (error, stdout) => {
-      if (error) {
-        console.error('xdotool getmouselocation error:', error);
-        return;
-      }
-      
-      // Parse xdotool output: X=1234\nY=567\nSCREEN=0\nWINDOW=...
-      const lines = stdout.trim().split('\n');
-      const vars = {};
-      lines.forEach(line => {
-        const [key, value] = line.split('=');
-        vars[key] = parseInt(value, 10);
-      });
-      
-      const mouseX = vars.X || 0;
-      const mouseY = vars.Y || 0;
-      console.log('Real mouse position from xdotool:', mouseX, mouseY);
-      
-      // Now copy the selected text
-      const oldText = clipboard.readText();
-      clipboard.clear();
+    if (error) {
+      console.error('xdotool getmouselocation error:', error);
+      return;
+    }
 
-      exec('xdotool key ctrl+c', (copyError) => {
-        if (copyError) {
-          console.error('xdotool copy error:', copyError);
+    // Parse xdotool output: X=1234\nY=567\nSCREEN=0\nWINDOW=...
+    const lines = stdout.trim().split('\n');
+    const vars = {};
+    lines.forEach(line => {
+      const [key, value] = line.split('=');
+      vars[key] = parseInt(value, 10);
+    });
+
+    const mouseX = vars.X || 0;
+    const mouseY = vars.Y || 0;
+    console.log('Real mouse position from xdotool:', mouseX, mouseY);
+
+    // Now copy the selected text
+    const oldText = clipboard.readText();
+    clipboard.clear();
+
+    exec('xdotool key ctrl+c', (copyError) => {
+      if (copyError) {
+        console.error('xdotool copy error:', copyError);
+      }
+
+      setTimeout(() => {
+        let text = clipboard.readText();
+
+        if (!text) {
+          text = oldText;
         }
 
-        setTimeout(() => {
-          let text = clipboard.readText();
-          
-          if (!text) {
-             text = oldText; 
+        if (text && text.trim()) {
+          lastQuickText = text;
+
+          // Find which display the mouse is on
+          const allDisplays = screen.getAllDisplays();
+          let targetDisplay = allDisplays[0];
+
+          for (const disp of allDisplays) {
+            const { x, y, width, height } = disp.bounds;
+            if (mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height) {
+              targetDisplay = disp;
+              break;
+            }
           }
 
-          if (text && text.trim()) {
-            lastQuickText = text;
-            
-            // Find which display the mouse is on
-            const allDisplays = screen.getAllDisplays();
-            let targetDisplay = allDisplays[0];
-            
-            for (const disp of allDisplays) {
-              const { x, y, width, height } = disp.bounds;
-              if (mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height) {
-                targetDisplay = disp;
-                break;
-              }
+          console.log('Target display:', targetDisplay.id, targetDisplay.bounds);
+
+          // Calculate position (bottom-right of cursor)
+          let x = mouseX + 15;
+          let y = mouseY + 15;
+
+          const winWidth = 400;
+          const winHeight = 300;
+          const { x: dx, y: dy, width: dw, height: dh } = targetDisplay.bounds;
+
+          // Check right edge
+          if (x + winWidth > dx + dw) {
+            x = dx + dw - winWidth - 10;
+          }
+
+          // Check bottom edge
+          if (y + winHeight > dy + dh) {
+            y = dy + dh - winHeight - 10;
+          }
+
+          // Ensure it doesn't go off-screen left/top
+          if (x < dx) x = dx + 10;
+          if (y < dy) y = dy + 10;
+
+          x = Math.floor(x);
+          y = Math.floor(y);
+
+          console.log('Final position to set:', { x, y });
+
+          // Destroy old window
+          if (quickWindow) {
+            quickWindow.destroy();
+            quickWindow = null;
+          }
+
+          // Create window at exact position
+          quickWindow = new BrowserWindow({
+            x: x,
+            y: y,
+            width: winWidth,
+            height: winHeight,
+            frame: false,
+            transparent: true,
+            alwaysOnTop: true,
+            show: true,
+            skipTaskbar: true,
+            resizable: true,
+            movable: true,
+            useContentSize: false,
+            minWidth: 200,
+            minHeight: 100,
+            maxWidth: 600,
+            maxHeight: 500,
+            webPreferences: {
+              preload: path.join(__dirname, 'preload.cjs'),
+              nodeIntegration: false,
+              contextIsolation: true,
             }
-            
-            console.log('Target display:', targetDisplay.id, targetDisplay.bounds);
+          });
 
-            // Calculate position (bottom-right of cursor)
-            let x = mouseX + 15;
-            let y = mouseY + 15;
+          // Force position after creation
+          quickWindow.setBounds({ x, y, width: winWidth, height: winHeight });
 
-            const winWidth = 400;
-            const winHeight = 300;
-            const { x: dx, y: dy, width: dw, height: dh } = targetDisplay.bounds;
-            
-            // Check right edge
-            if (x + winWidth > dx + dw) {
-              x = dx + dw - winWidth - 10;
-            }
-            
-            // Check bottom edge
-            if (y + winHeight > dy + dh) {
-              y = dy + dh - winHeight - 10;
-            }
+          const isDev = !app.isPackaged;
+          const baseUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
+          const startUrl = `${baseUrl}?mode=quick`;
+          quickWindow.loadURL(startUrl);
 
-            // Ensure it doesn't go off-screen left/top
-            if (x < dx) x = dx + 10;
-            if (y < dy) y = dy + 10;
+          quickWindow.on('blur', () => {
+            if (quickWindow) quickWindow.hide();
+          });
 
-            x = Math.floor(x);
-            y = Math.floor(y);
+          quickWindow.on('closed', () => {
+            quickWindow = null;
+          });
 
-            console.log('Final position to set:', { x, y });
-            
-            // Destroy old window
-            if (quickWindow) {
-              quickWindow.destroy();
-              quickWindow = null;
-            }
-            
-            // Create window at exact position
-            quickWindow = new BrowserWindow({
-              x: x,
-              y: y,
-              width: winWidth,
-              height: winHeight,
-              frame: false,
-              alwaysOnTop: true,
-              show: true,
-              skipTaskbar: true,
-              resizable: true,
-              movable: true,
-              useContentSize: false,
-              minWidth: 200,
-              minHeight: 100,
-              maxWidth: 600,
-              maxHeight: 500,
-              webPreferences: {
-                preload: path.join(__dirname, 'preload.cjs'),
-                nodeIntegration: false,
-                contextIsolation: true,
-              }
-            });
-            
-            // Force position after creation
+          quickWindow.webContents.once('did-finish-load', () => {
             quickWindow.setBounds({ x, y, width: winWidth, height: winHeight });
-
-            const isDev = !app.isPackaged;
-            const baseUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
-            const startUrl = `${baseUrl}?mode=quick`;
-            quickWindow.loadURL(startUrl);
-            
-            quickWindow.on('blur', () => {
-              if (quickWindow) quickWindow.hide();
-            });
-
-            quickWindow.on('closed', () => {
-              quickWindow = null;
-            });
-            
-            quickWindow.webContents.once('did-finish-load', () => {
-              quickWindow.setBounds({ x, y, width: winWidth, height: winHeight });
-              quickWindow.setAlwaysOnTop(true, 'floating');
-              quickWindow.focus();
-              quickWindow.webContents.send('quick-translate-text', text);
-            });
-          }
-        }, 100);
-      });
+            quickWindow.setAlwaysOnTop(true, 'floating');
+            quickWindow.focus();
+            quickWindow.webContents.send('quick-translate-text', text);
+          });
+        }
+      }, 100);
     });
+  });
 };
 
 app.whenReady().then(() => {
