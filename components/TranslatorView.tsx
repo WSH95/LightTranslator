@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { translateText, translateImage, verifyModelIdentity } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS } from '../constants';
+import { platform } from '../src/lib/platform';
 
 interface TranslatorViewProps {
   onOpenOCR: () => void;
@@ -118,11 +119,12 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
 
   // Listen for OCR result from tray menu
   useEffect(() => {
-    if ((window as any).electron?.onOcrResult) {
-      (window as any).electron.onOcrResult((text: string) => {
+    if (platform.isAvailable()) {
+      const unlisten = platform.onOcrResult((text: string) => {
         setInputText(text);
         performTranslation(text);
       });
+      return unlisten;
     }
   }, [setInputText, performTranslation]);
 
@@ -244,7 +246,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       <div className="flex-1 min-h-0 bg-macos-card border border-macos-cardBorder shadow-macos-card rounded-2xl p-4 relative group flex flex-col transition-all focus-within:ring-2 focus-within:ring-macos-active/20 focus-within:border-macos-active/50">
         <textarea
           ref={textareaRef}
-          className="w-full flex-1 min-h-0 bg-transparent resize-none focus:outline-none text-lg text-macos-text placeholder-macos-muted/50 font-normal leading-relaxed tracking-normal overflow-y-auto"
+          className="w-full flex-1 min-h-0 bg-transparent resize-none focus:outline-none text-lg text-gray-800 placeholder-gray-400 font-normal leading-relaxed tracking-normal overflow-y-auto"
           placeholder="Enter text..."
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -305,8 +307,8 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
             <span className="bg-red-50 px-4 py-2 rounded-lg border border-red-100 shadow-sm">{errorMessage}</span>
           </div>
         ) : (
-          <div className="w-full flex-1 min-h-0 text-lg text-macos-text/90 font-normal leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-macos-active/20">
-            {translatedText || <span className="text-macos-muted/40 select-none italic">Translation will appear here...</span>}
+          <div className="w-full flex-1 min-h-0 text-lg text-gray-800 font-normal leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-macos-active/20">
+            {translatedText || <span className="text-gray-400 select-none italic">Translation will appear here...</span>}
           </div>
         )}
 

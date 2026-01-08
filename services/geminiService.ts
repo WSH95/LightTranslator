@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { TranslationProviderId } from "../types";
+import { platform } from "../src/lib/platform";
 
 // --- Types ---
 interface TranslateOptions {
@@ -105,21 +106,28 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
     if (!geminiApiKey) {
       throw new Error("Gemini API Key is required for verification.");
     }
-    const requestedModel = modelId || 'gemini-3-flash-preview';
+    const requestedModel = modelId || 'gemini-2.0-flash';
 
     try {
-      // Use the models.get() API - this doesn't consume generation quota
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${requestedModel}?key=${geminiApiKey}`;
-      const response = await fetch(url);
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "Model not found");
+      if (platform.isAvailable()) {
+        const response = await platform.request(url);
+        if (!response.ok) {
+          const errData = response.data || 'Model not found';
+          throw new Error(typeof errData === 'string' ? errData : JSON.stringify(errData));
+        }
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        return data.displayName || data.name?.replace('models/', '') || requestedModel;
+      } else {
+        const response = await fetch(url);
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || "Model not found");
+        }
+        const data = await response.json();
+        return data.displayName || data.name?.replace('models/', '') || requestedModel;
       }
-
-      const data = await response.json();
-      // Return the display name or model name from the API
-      return data.displayName || data.name?.replace('models/', '') || requestedModel;
     } catch (error: any) {
       console.error("Gemini Verification Error:", error);
       throw new Error(error.message || "Failed to verify Gemini model");
@@ -134,34 +142,35 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
     const requestedModel = openaiModel || 'gpt-3.5-turbo';
 
     try {
-      // Use /models endpoint to verify the API key works and get model info
-      // This doesn't consume chat completion quota
       const url = `${baseUrl}/models/${requestedModel}`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`
+      const headers = { 'Authorization': `Bearer ${openaiApiKey}` };
+
+      if (platform.isAvailable()) {
+        const response = await platform.request(url, { headers });
+        if (response.ok) {
+          const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+          return data.id || requestedModel;
         }
-      });
 
-      if (response.ok) {
-        const data = await response.json();
-        return data.id || requestedModel;
-      }
-
-      // If specific model endpoint fails, try listing models to verify API key
-      const listResponse = await fetch(`${baseUrl}/models`, {
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`
+        const listResponse = await platform.request(`${baseUrl}/models`, { headers });
+        if (!listResponse.ok) {
+          throw new Error("API key verification failed");
         }
-      });
+        return requestedModel;
+      } else {
+        const response = await fetch(url, { headers });
+        if (response.ok) {
+          const data = await response.json();
+          return data.id || requestedModel;
+        }
 
-      if (!listResponse.ok) {
-        const err = await listResponse.json();
-        throw new Error(err.error?.message || "API key verification failed");
+        const listResponse = await fetch(`${baseUrl}/models`, { headers });
+        if (!listResponse.ok) {
+          const err = await listResponse.json();
+          throw new Error(err.error?.message || "API key verification failed");
+        }
+        return requestedModel;
       }
-
-      // API key is valid, return the configured model name
-      return requestedModel;
     } catch (error: any) {
       console.error("OpenAI Verification Error:", error);
       throw new Error(`OpenAI Verification Error: ${error.message}`);
@@ -175,23 +184,27 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
     const requestedModel = options.openrouterModel || 'openai/gpt-3.5-turbo';
 
     try {
-      // Use /models endpoint to verify the API key
       const url = 'https://openrouter.ai/api/v1/models';
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${options.openrouterApiKey}`,
-          'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
-          'X-Title': 'LightTranslator'
+      const headers = {
+        'Authorization': `Bearer ${options.openrouterApiKey}`,
+        'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
+        'X-Title': 'LightTranslator'
+      };
+
+      if (platform.isAvailable()) {
+        const response = await platform.request(url, { headers });
+        if (!response.ok) {
+          throw new Error("API key verification failed");
         }
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "API key verification failed");
+        return requestedModel;
+      } else {
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || "API key verification failed");
+        }
+        return requestedModel;
       }
-
-      // API key is valid, return the configured model name
-      return requestedModel;
     } catch (error: any) {
       console.error("OpenRouter Verification Error:", error);
       throw new Error(`OpenRouter Verification Error: ${error.message}`);
@@ -204,9 +217,13 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
 // --- Internal Providers ---
 
 const translateWithGemini = async (text: string, source: string, target: string, options: TranslateOptions) => {
-  const geminiClient = getGeminiClient(options.geminiApiKey);
-  const modelId = options.modelId || 'gemini-3-flash-preview';
-  const systemPromptEnabled = options.systemPromptEnabled !== false; // Default to true
+  const apiKey = options.geminiApiKey || process.env.API_KEY || '';
+  if (!apiKey) {
+    throw new Error("Gemini API Key is required. Please configure it in Settings.");
+  }
+
+  const modelId = options.modelId || 'gemini-2.0-flash';
+  const systemPromptEnabled = options.systemPromptEnabled !== false;
 
   let systemInstruction: string | undefined = undefined;
 
@@ -222,13 +239,50 @@ const translateWithGemini = async (text: string, source: string, target: string,
 
   const prompt = `Source: ${source}\nTarget: ${target}\nText:\n${text}`;
 
+  // Build request body for Gemini API
+  const requestBody: any = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.3 }
+  };
+
+  if (systemInstruction) {
+    requestBody.systemInstruction = { parts: [{ text: systemInstruction }] };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
   try {
-    const response = await geminiClient.models.generateContent({
-      model: modelId,
-      contents: prompt,
-      config: { systemInstruction, temperature: 0.3 },
-    });
-    return response.text?.trim() || "Translation failed.";
+    // Use platform.request if available (Tauri/Electron), otherwise fallback to fetch
+    if (platform.isAvailable()) {
+      const response = await platform.request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errData = response.data || response.error || 'Unknown error';
+        throw new Error(`Gemini API Error: ${errData}`);
+      }
+
+      const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Translation failed.";
+    } else {
+      // Fallback to fetch for web
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "Gemini API Error");
+      }
+
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Translation failed.";
+    }
   } catch (error: any) {
     console.error("Gemini Error:", error);
     throw new Error(error.message || "Gemini API Error");
@@ -236,28 +290,68 @@ const translateWithGemini = async (text: string, source: string, target: string,
 };
 
 const translateImageWithGemini = async (base64Image: string, targetLang: string, options: TranslateOptions) => {
-  const geminiClient = getGeminiClient(options.geminiApiKey);
+  const apiKey = options.geminiApiKey || process.env.API_KEY || '';
+  if (!apiKey) {
+    throw new Error("Gemini API Key is required. Please configure it in Settings.");
+  }
+
   const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-  const modelId = options.modelId || 'gemini-3-flash-preview';
+  const modelId = options.modelId || 'gemini-2.0-flash';
 
   const prompt = `Extract text and translate to ${targetLang}. Return JSON: { "extracted": "...", "translation": "..." }`;
 
+  const requestBody = {
+    contents: [{
+      parts: [
+        { inlineData: { mimeType: 'image/png', data: cleanBase64 } },
+        { text: prompt }
+      ]
+    }],
+    generationConfig: { responseMimeType: 'application/json' }
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
   try {
-    const response = await geminiClient.models.generateContent({
-      model: modelId,
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/png', data: cleanBase64 } },
-          { text: prompt }
-        ]
-      },
-      config: { responseMimeType: 'application/json' }
-    });
-    const result = JSON.parse(response.text || "{}");
-    return {
-      detectedText: result.extracted || "No text detected.",
-      translatedText: result.translation || "Could not translate."
-    };
+    if (platform.isAvailable()) {
+      const response = await platform.request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errData = response.data || response.error || 'Unknown error';
+        throw new Error(`Gemini OCR Error: ${errData}`);
+      }
+
+      const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const result = JSON.parse(resultText);
+      return {
+        detectedText: result.extracted || "No text detected.",
+        translatedText: result.translation || "Could not translate."
+      };
+    } else {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "Gemini OCR Error");
+      }
+
+      const data = await response.json();
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const result = JSON.parse(resultText);
+      return {
+        detectedText: result.extracted || "No text detected.",
+        translatedText: result.translation || "Could not translate."
+      };
+    }
   } catch (error: any) {
     console.error("Gemini OCR Error:", error);
     throw new Error(error.message || "Gemini OCR Failed");
@@ -270,9 +364,8 @@ const translateWithOpenAI = async (text: string, source: string, target: string,
   }
   const baseUrl = options.openaiBaseUrl.replace(/\/+$/, '');
   const url = `${baseUrl}/chat/completions`;
-  const systemPromptEnabled = options.systemPromptEnabled !== false; // Default to true
+  const systemPromptEnabled = options.systemPromptEnabled !== false;
 
-  // Build messages array
   const messages: Array<{ role: string; content: string }> = [];
 
   if (systemPromptEnabled) {
@@ -283,25 +376,48 @@ const translateWithOpenAI = async (text: string, source: string, target: string,
 
   messages.push({ role: 'user', content: text });
 
+  const requestBody = JSON.stringify({
+    model: options.openaiModel || 'gpt-3.5-turbo',
+    messages,
+    temperature: 0.3
+  });
+
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${options.openaiApiKey}`
-      },
-      body: JSON.stringify({
-        model: options.openaiModel || 'gpt-3.5-turbo',
-        messages,
-        temperature: 0.3
-      })
-    });
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || "OpenAI API Request Failed");
+    if (platform.isAvailable()) {
+      const response = await platform.request(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${options.openaiApiKey}`
+        },
+        body: requestBody
+      });
+
+      if (!response.ok) {
+        const errData = response.data || response.error || 'Unknown error';
+        throw new Error(`OpenAI API Error: ${errData}`);
+      }
+
+      const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
+    } else {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${options.openaiApiKey}`
+        },
+        body: requestBody
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "OpenAI API Request Failed");
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
     }
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
   } catch (error: any) {
     console.error("OpenAI Error:", error);
     throw new Error(`OpenAI Error: ${error.message}`);
@@ -314,9 +430,8 @@ const translateWithOpenRouter = async (text: string, source: string, target: str
   }
 
   const url = 'https://openrouter.ai/api/v1/chat/completions';
-  const systemPromptEnabled = options.systemPromptEnabled !== false; // Default to true
+  const systemPromptEnabled = options.systemPromptEnabled !== false;
 
-  // Build messages array
   const messages: Array<{ role: string; content: string }> = [];
 
   if (systemPromptEnabled) {
@@ -327,29 +442,49 @@ const translateWithOpenRouter = async (text: string, source: string, target: str
 
   messages.push({ role: 'user', content: text });
 
+  const requestBody = JSON.stringify({
+    model: options.openrouterModel || 'openai/gpt-3.5-turbo',
+    messages,
+    temperature: 0.3
+  });
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${options.openrouterApiKey}`,
+    'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
+    'X-Title': 'LightTranslator'
+  };
+
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${options.openrouterApiKey}`,
-        'HTTP-Referer': 'https://github.com/ArianaProjects/LightTranslator',
-        'X-Title': 'LightTranslator'
-      },
-      body: JSON.stringify({
-        model: options.openrouterModel || 'openai/gpt-3.5-turbo',
-        messages,
-        temperature: 0.3
-      })
-    });
+    if (platform.isAvailable()) {
+      const response = await platform.request(url, {
+        method: 'POST',
+        headers,
+        body: requestBody
+      });
 
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error?.message || "OpenRouter API Request Failed");
+      if (!response.ok) {
+        const errData = response.data || response.error || 'Unknown error';
+        throw new Error(`OpenRouter API Error: ${errData}`);
+      }
+
+      const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+      return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
+    } else {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: requestBody
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "OpenRouter API Request Failed");
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
     }
-
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content?.trim() || "Translation empty.";
   } catch (error: any) {
     console.error("OpenRouter Error:", error);
     throw new Error(`OpenRouter Error: ${error.message}`);
@@ -382,26 +517,23 @@ const translateWithDeepL = async (text: string, source: string, target: string, 
   const url = `${baseUrl}?${params.toString()}`;
 
   try {
-    // Use Electron Proxy if available (better for bypassing firewalls/CORS)
-    // @ts-ignore
-    if (window.electron && window.electron.request) {
-        // Use the new enhanced proxy request with headers
-        // @ts-ignore
-        const response = await window.electron.request(url, {
+    // Use platform proxy if available (better for bypassing firewalls/CORS)
+    if (platform.isAvailable()) {
+        const response = await platform.request(url, {
           method: 'POST',
           headers: {
              'Authorization': `DeepL-Auth-Key ${options.deeplApiKey}`,
              'Content-Type': 'application/x-www-form-urlencoded'
           }
         });
-        
+
         if (!response.ok) {
              // Try to parse error
              const errData = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
              throw new Error(`DeepL Error: ${response.statusCode} - ${errData}`);
         }
-        
-        const data = response.data;
+
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         return data.translations?.[0]?.text || "Translation empty.";
     } else {
         // Fallback for Web
@@ -436,19 +568,17 @@ const translateWithGoogleFree = async (text: string, source: string, target: str
   try {
     const sl = source === 'auto' ? 'auto' : source;
     // Fix language codes for Google (e.g., zh-CN -> zh-CN is usually fine, but ensure compatibility)
-    const tl = target; 
-    
+    const tl = target;
+
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
 
-    // Check if we are in Electron environment (exposed via preload)
-    // @ts-ignore
-    if (window.electron && window.electron.request) {
-        // Use Electron main process to fetch (bypasses CORS)
-        // @ts-ignore
-        const response = await window.electron.request(url);
+    // Check if we are in native platform environment
+    if (platform.isAvailable()) {
+        // Use platform proxy to fetch (bypasses CORS)
+        const response = await platform.request(url);
         if (!response.ok) throw new Error("Google Network Error");
         // Google GTX returns [[["Translated Text", "Original", ...], ...], ...]
-        const data = response.data;
+        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         return data[0].map((s: any) => s[0]).join('');
     } else {
         // Fallback for Web (May hit CORS)
@@ -503,14 +633,12 @@ const translateWithMicrosoft = async (text: string, source: string, target: stri
   const body = JSON.stringify([{ Text: text }]);
 
   try {
-    // Use Electron Proxy if available
-    // @ts-ignore
-    if (window.electron && window.electron.request) {
-      // @ts-ignore
-      const response = await window.electron.request(url, {
+    // Use platform proxy if available
+    if (platform.isAvailable()) {
+      const response = await platform.request(url, {
         method: 'POST',
         headers: {
-          'Ocp-Apim-Subscription-Key': options.microsoftSubscriptionKey,
+          'Ocp-Apim-Subscription-Key': options.microsoftSubscriptionKey!,
           'Ocp-Apim-Subscription-Region': region,
           'Content-Type': 'application/json',
         },
@@ -522,14 +650,14 @@ const translateWithMicrosoft = async (text: string, source: string, target: stri
         throw new Error(`Microsoft Translator Error: ${response.statusCode} - ${errData}`);
       }
 
-      const data = response.data;
+      const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
       return data[0]?.translations?.[0]?.text || "Translation empty.";
     } else {
       // Fallback for Web
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Ocp-Apim-Subscription-Key': options.microsoftSubscriptionKey,
+          'Ocp-Apim-Subscription-Key': options.microsoftSubscriptionKey!,
           'Ocp-Apim-Subscription-Region': region,
           'Content-Type': 'application/json',
         },

@@ -3,6 +3,7 @@ import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Downlo
 import { translateText } from '../services/geminiService';
 import { useAppStore } from '../store/useAppStore';
 import { useOcrDependencies } from '../hooks/useOcrDependencies';
+import { platform } from '../src/lib/platform';
 
 interface OcrModalProps {
   onClose: () => void;
@@ -52,24 +53,21 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
   };
 
   const handleScreenCapture = async () => {
-    if (!(window as any).electron?.captureScreen) {
+    if (!platform.isAvailable()) {
       setError('Screenshot feature is not available');
       return;
     }
-    
+
     setIsCapturing(true);
     setError(null);
-    
+
     try {
-      const result = await (window as any).electron.captureScreen();
-      
-      if (result.success && result.data) {
-        setPreview(result.data);
-      } else if (result.cancelled) {
-        // User cancelled, do nothing
-      } else if (result.error) {
-        setError(`Screenshot failed: ${result.error}`);
+      const result = await platform.captureScreen();
+
+      if (result) {
+        setPreview(result);
       }
+      // If result is null, user cancelled - do nothing
     } catch (err: any) {
       setError(`Screenshot failed: ${err.message}`);
     } finally {
@@ -79,25 +77,25 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
 
   const handleAnalyze = async () => {
     if (!preview) return;
-    
+
     setIsProcessing(true);
     setError(null);
-    
+
     try {
       // Step 1: Use local Tesseract OCR to extract text
-      if (!(window as any).electron?.ocrImage) {
+      if (!platform.isAvailable()) {
         throw new Error('OCR feature is not available');
       }
-      
-      const ocrResult = await (window as any).electron.ocrImage(preview);
-      
+
+      const ocrResult = await platform.ocrImage(preview);
+
       if (!ocrResult.success) {
         throw new Error(ocrResult.error || 'OCR failed');
       }
-      
-      const extractedText = ocrResult.text;
+
+      const extractedText = ocrResult.text || '';
       setInputText(extractedText);
-      
+
       // Step 2: Translate using the user's selected provider
       const translatedResult = await translateText(extractedText, sourceLang, targetLang, {
         provider,
@@ -108,7 +106,7 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
         openaiModel,
         deeplApiKey
       });
-      
+
       setTranslatedText(translatedResult);
       onClose();
     } catch (err: any) {

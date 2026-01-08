@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS } from '../constants';
+import { platform } from '../src/lib/platform';
 
 // Window size constraints
 const MIN_WIDTH = 200;
@@ -47,7 +48,7 @@ export const QuickTranslateWindow: React.FC = () => {
 
   // Resize window to fit content
   const resizeToFitContent = useCallback(() => {
-    if (!contentRef.current || !(window as any).electron) return;
+    if (!contentRef.current || !platform.isAvailable()) return;
 
     // Measure the actual content size
     const contentEl = contentRef.current;
@@ -58,8 +59,8 @@ export const QuickTranslateWindow: React.FC = () => {
     const desiredWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, contentWidth + PADDING + 16));
     const desiredHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, contentHeight + HEADER_HEIGHT + PADDING));
 
-    // Request resize via IPC
-    (window as any).electron.resizeQuickWindow({ width: desiredWidth, height: desiredHeight });
+    // Request resize via platform API
+    platform.resizeQuickWindow({ width: desiredWidth, height: desiredHeight });
   }, []);
 
   // Resize when translation changes
@@ -72,22 +73,36 @@ export const QuickTranslateWindow: React.FC = () => {
 
   useEffect(() => {
     // Notify main process that we are ready to receive text
-    if ((window as any).electron) {
-      (window as any).electron.sendQuickReady();
+    if (platform.isAvailable()) {
+      platform.sendQuickReady();
 
-      (window as any).electron.onQuickTranslate((receivedText: string) => {
+      const unlisten = platform.onQuickTranslate((receivedText: string) => {
         console.log('Received text:', receivedText);
         // Clean up the text to remove unnecessary line breaks
         const cleanedText = cleanTextLineBreaks(receivedText);
         setText(cleanedText);
         handleTranslate(cleanedText);
       });
+
+      return unlisten;
+    }
+  }, []);
+
+  // Close window when clicking outside (on blur)
+  useEffect(() => {
+    if (platform.isAvailable()) {
+      const unlisten = platform.onWindowBlur(() => {
+        platform.closeQuickWindow();
+      });
+      return unlisten;
     }
   }, []);
 
   const handleTranslate = async (inputText: string) => {
     if (!inputText.trim()) return;
 
+    // Reset state for new translation
+    setTranslated('');
     setLoading(true);
     setError(null);
 
@@ -115,8 +130,8 @@ export const QuickTranslateWindow: React.FC = () => {
   };
 
   const handleClose = () => {
-    if ((window as any).electron) {
-      (window as any).electron.closeQuickWindow();
+    if (platform.isAvailable()) {
+      platform.closeQuickWindow();
     }
   };
 
@@ -129,8 +144,11 @@ export const QuickTranslateWindow: React.FC = () => {
       }}
     >
       {/* Header / Drag Area */}
-      <div className="h-8 bg-gray-100/80 flex items-center justify-between px-3 -webkit-app-region-drag border-b border-gray-200/50">
-        <span className="text-xs font-medium text-gray-600">Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}</span>
+      <div
+        className="h-8 bg-gray-100/80 flex items-center justify-between px-3 -webkit-app-region-drag border-b border-gray-200/50"
+        data-tauri-drag-region
+      >
+        <span className="text-xs font-medium text-gray-600 pointer-events-none select-none">Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}</span>
         <button
           onClick={handleClose}
           className="p-1 hover:bg-gray-200 rounded-full -webkit-app-region-no-drag transition-colors"

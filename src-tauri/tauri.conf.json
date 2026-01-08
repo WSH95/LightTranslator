@@ -1,0 +1,90 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LightTranslator",
+  "version": "1.1.0",
+  "identifier": "com.lighttranslator.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "LightTranslator",
+        "width": 480,
+        "height": 680,
+        "minWidth": 400,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": false,
+        "center": true,
+        "visible": true
+      },
+      {
+        "label": "quick",
+        "title": "Quick Translate",
+        "url": "index.html?mode=quick",
+        "width": 500,
+        "height": 350,
+        "minWidth": 300,
+        "minHeight": 80,
+        "maxWidth": 600,
+        "maxHeight": 600,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "center": false
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": false
+    },
+    "security": {
+      "csp": "default-src 'self' https: http:; connect-src 'self' https: http:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: http:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:"
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage", "deb"],
+    "category": "Utility",
+    "shortDescription": "Lightweight translation app",
+    "longDescription": "A lightweight, fast translation application with OCR support",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": [
+          "tesseract-ocr",
+          "tesseract-ocr-chi-sim",
+          "tesseract-ocr-chi-tra",
+          "tesseract-ocr-jpn",
+          "tesseract-ocr-kor",
+          "xdotool",
+          "gnome-screenshot"
+        ]
+      }
+    }
+  }
+}

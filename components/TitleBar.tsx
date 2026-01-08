@@ -2,6 +2,7 @@ import React from 'react';
 import { Settings, ArrowRightLeft, Zap } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { LANGUAGES } from '../constants';
+import { platform } from '../src/lib/platform';
 
 interface TitleBarProps {
   onOpenSettings: () => void;
@@ -25,34 +26,37 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings }) => {
 
   const handleMinimize = () => {
     console.log('Minimize clicked');
-    if ((window as any).electron) {
-      (window as any).electron.minimize();
+    if (platform.isAvailable()) {
+      platform.minimize();
     } else {
-      alert('Electron API not available. Please restart the app.');
+      alert('Platform API not available. Please restart the app.');
     }
   };
 
   const handleMaximize = () => {
     console.log('Maximize clicked');
-    if ((window as any).electron) {
-      (window as any).electron.maximize();
+    if (platform.isAvailable()) {
+      platform.maximize();
     } else {
-      alert('Electron API not available. Please restart the app.');
+      alert('Platform API not available. Please restart the app.');
     }
   };
 
   const handleClose = () => {
     console.log('Close clicked');
-    if ((window as any).electron) {
-      (window as any).electron.close();
+    if (platform.isAvailable()) {
+      platform.close();
     } else {
-      alert('Electron API not available. Please restart the app.');
+      alert('Platform API not available. Please restart the app.');
     }
   };
 
   return (
-    <div className="h-14 flex items-center justify-between px-5 select-none -webkit-app-region-drag relative z-20">
-      
+    <div
+      className="h-14 flex items-center justify-between px-5 select-none -webkit-app-region-drag relative z-20"
+      data-tauri-drag-region
+    >
+
       {/* Left: Traffic Lights (macOS Style SVGs) */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 group traffic-light-group -webkit-app-region-no-drag p-1">

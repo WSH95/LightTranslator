@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useOcrDependencies } from './hooks/useOcrDependencies';
 import { useAppStore } from './store/useAppStore';
 import { PROVIDERS } from './constants';
+import { platform } from './src/lib/platform';
 
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -30,22 +31,21 @@ const App: React.FC = () => {
 
   // Listen for open-settings event from tray menu
   useEffect(() => {
-    if ((window as any).electron?.onOpenSettings) {
-      (window as any).electron.onOpenSettings(() => {
+    if (platform.isAvailable()) {
+      const unlisten = platform.onOpenSettings(() => {
         setShowSettings(true);
       });
+      return unlisten;
     }
   }, []);
 
   // Sync auto-launch state with system on app startup
   useEffect(() => {
     const syncAutoLaunchState = async () => {
-      if ((window as any).electron?.getAutoLaunch) {
+      if (platform.isAvailable()) {
         try {
-          const result = await (window as any).electron.getAutoLaunch();
-          if (result.success) {
-            updateSettings({ launchAtStartup: result.enabled });
-          }
+          const enabled = await platform.getAutoLaunch();
+          updateSettings({ launchAtStartup: enabled });
         } catch (error) {
           console.error('Failed to sync auto-launch state:', error);
         }

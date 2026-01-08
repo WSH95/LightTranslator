@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PROVIDERS, DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { platform } from '../src/lib/platform';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -107,9 +108,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const saveShortcut = () => {
     if (tempShortcut) {
       updateSettings({ selectionShortcut: tempShortcut });
-      // Notify Electron to update the shortcut
-      if ((window as any).electron?.updateShortcut) {
-        (window as any).electron.updateShortcut(tempShortcut);
+      // Notify platform to update the shortcut
+      if (platform.isAvailable()) {
+        platform.updateShortcut(tempShortcut);
       }
     }
     setIsRecordingShortcut(false);
@@ -636,9 +637,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         checked={proxyEnabled}
                         onChange={(e) => {
                           updateSettings({ proxyEnabled: e.target.checked });
-                          // Notify Electron main process to apply proxy
-                          if ((window as any).electron?.setProxy) {
-                            (window as any).electron.setProxy({
+                          // Notify platform to apply proxy
+                          if (platform.isAvailable()) {
+                            platform.setProxy({
                               enabled: e.target.checked,
                               protocol: proxyProtocol,
                               host: proxyHost,
@@ -714,8 +715,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                       </div>
                       <button
                         onClick={() => {
-                          if ((window as any).electron?.setProxy) {
-                            (window as any).electron.setProxy({
+                          if (platform.isAvailable()) {
+                            platform.setProxy({
                               enabled: proxyEnabled,
                               protocol: proxyProtocol,
                               host: proxyHost,
@@ -752,21 +753,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         checked={launchAtStartup}
                         onChange={async (e) => {
                           const enabled = e.target.checked;
-                          // Notify Electron main process to set auto-launch
-                          if ((window as any).electron?.setAutoLaunch) {
+                          // Notify platform to set auto-launch
+                          if (platform.isAvailable()) {
                             try {
-                              const result = await (window as any).electron.setAutoLaunch(enabled);
-                              if (result.success) {
-                                updateSettings({ launchAtStartup: enabled });
-                              } else {
-                                console.error('Failed to set auto-launch:', result.message);
-                                // Optionally show error to user
-                              }
+                              await platform.setAutoLaunch(enabled);
+                              updateSettings({ launchAtStartup: enabled });
                             } catch (error) {
                               console.error('Failed to set auto-launch:', error);
                             }
                           } else {
-                            // Not in Electron environment, just update local state
+                            // Not in native environment, just update local state
                             updateSettings({ launchAtStartup: enabled });
                           }
                         }}
