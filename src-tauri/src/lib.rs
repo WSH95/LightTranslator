@@ -406,6 +406,10 @@ async fn close_quick_window(app: AppHandle) -> Result<(), String> {
 
 // --- Helper Functions ---
 
+fn should_start_hidden() -> bool {
+    std::env::args().any(|arg| arg == "--hidden" || arg == "--autostart")
+}
+
 fn trigger_quick_translate(app: &AppHandle) {
     use tauri_plugin_clipboard_manager::ClipboardExt;
 
@@ -559,7 +563,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--hidden"]),
         ))
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
@@ -578,6 +582,8 @@ pub fn run() {
             close_quick_window,
         ])
         .setup(|app| {
+            let start_hidden = should_start_hidden();
+
             // Setup tray
             if let Err(e) = setup_tray(app.handle()) {
                 log::error!("Failed to setup tray: {}", e);
@@ -594,10 +600,21 @@ pub fn run() {
                 let _ = quick.hide();
             }
 
+            if let Some(main) = app.get_webview_window("main") {
+                if start_hidden {
+                    let _ = main.hide();
+                } else {
+                    let _ = main.show();
+                    let _ = main.set_focus();
+                }
+            }
+
             // Open devtools in dev mode for debugging
             #[cfg(debug_assertions)]
-            if let Some(main) = app.get_webview_window("main") {
-                main.open_devtools();
+            if !start_hidden {
+                if let Some(main) = app.get_webview_window("main") {
+                    main.open_devtools();
+                }
             }
 
             Ok(())

@@ -1,7 +1,7 @@
 {
   "name": "lighttranslator",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "轻量级翻译工具，支持划词翻译、截图OCR等功能",
   "author": "LightTranslator",
