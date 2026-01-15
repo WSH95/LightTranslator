@@ -1,9 +1,9 @@
 /**
- * Platform Abstraction Layer
+ * Platform Abstraction Layer (Tauri-only)
  *
- * This module provides a unified API that works with both Electron and Tauri backends.
- * During the transition period, both backends are supported. The abstraction automatically
- * detects the runtime environment and uses the appropriate API.
+ * This module provides a unified API for the Tauri backend.
+ * It automatically detects the Tauri runtime and provides
+ * fallbacks for web environments where applicable.
  */
 
 // Type definitions for the platform API
@@ -53,27 +53,11 @@ export interface OcrInstallProgress {
   message: string;
 }
 
-// Detect runtime environment
+// Detect Tauri runtime
 export const isTauri = (): boolean => {
-  // Tauri v2 uses __TAURI_INTERNALS__, v1 used __TAURI__
   return typeof window !== 'undefined' &&
     ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
 };
-
-export const isElectron = (): boolean => {
-  return typeof window !== 'undefined' && 'electron' in window;
-};
-
-// Debug logging for platform detection
-if (typeof window !== 'undefined') {
-  console.log('[Platform] Detection:', {
-    hasTauriInternals: '__TAURI_INTERNALS__' in window,
-    hasTauri: '__TAURI__' in window,
-    hasElectron: 'electron' in window,
-    isTauri: isTauri(),
-    isElectron: isElectron()
-  });
-}
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
@@ -102,38 +86,25 @@ if (isTauri()) {
 }
 
 /**
- * Platform API - Unified interface for both Electron and Tauri
+ * Platform API - Tauri interface
  */
 export const platform = {
   /**
    * Make an HTTP request through the backend (bypasses CORS)
    */
   async request(url: string, options: ProxyRequestOptions = {}): Promise<ProxyResponse> {
-    console.log('[Platform.request] Starting request:', { url: url.substring(0, 100), isTauri: isTauri(), isElectron: isElectron() });
-
     if (isTauri()) {
       await initTauri();
-      console.log('[Platform.request] Tauri detected, tauriInvoke:', !!tauriInvoke);
       if (tauriInvoke) {
         try {
-          console.log('[Platform.request] Calling proxy_request via Tauri invoke');
-          const result = await tauriInvoke('proxy_request', { url, options }) as ProxyResponse;
-          console.log('[Platform.request] Tauri result:', { ok: result.ok, statusCode: result.statusCode, hasData: !!result.data });
-          return result;
+          return await tauriInvoke('proxy_request', { url, options }) as ProxyResponse;
         } catch (e) {
-          console.error('[Platform.request] Tauri invoke error:', e);
           return { ok: false, error: String(e) };
         }
       }
     }
 
-    if (isElectron()) {
-      console.log('[Platform.request] Using Electron');
-      return (window as any).electron.request(url, options);
-    }
-
     // Fallback to fetch (may fail due to CORS)
-    console.log('[Platform.request] Falling back to fetch');
     try {
       const response = await fetch(url, {
         method: options.method || 'GET',
@@ -143,7 +114,6 @@ export const platform = {
       const data = await response.text();
       return { ok: response.ok, statusCode: response.status, data };
     } catch (error) {
-      console.error('[Platform.request] Fetch error:', error);
       return { ok: false, error: String(error) };
     }
   },
@@ -152,45 +122,24 @@ export const platform = {
    * Window controls
    */
   async minimize(): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriWindow) {
-        await tauriWindow.getCurrentWindow().minimize();
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      (window as any).electron.minimize();
+    await initTauri();
+    if (tauriWindow) {
+      await tauriWindow.getCurrentWindow().minimize();
     }
   },
 
   async maximize(): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriWindow) {
-        await tauriWindow.getCurrentWindow().toggleMaximize();
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      (window as any).electron.maximize();
+    await initTauri();
+    if (tauriWindow) {
+      await tauriWindow.getCurrentWindow().toggleMaximize();
     }
   },
 
   async close(): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriWindow) {
-        // In Tauri, we hide to tray instead of closing
-        await tauriWindow.getCurrentWindow().hide();
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      (window as any).electron.close();
+    await initTauri();
+    if (tauriWindow) {
+      // Hide to tray instead of closing
+      await tauriWindow.getCurrentWindow().hide();
     }
   },
 
@@ -198,100 +147,58 @@ export const platform = {
    * Quick Translate window
    */
   onQuickTranslate(callback: (text: string) => void): () => void {
-    if (isTauri()) {
-      let unlisten: (() => void) | null = null;
-      initTauri().then(() => {
-        if (tauriEvent) {
-          tauriEvent.listen('quick-translate-text', (event) => {
-            callback(event.payload as string);
-          }).then((fn) => {
-            unlisten = fn;
-          });
-        }
-      });
-      return () => unlisten?.();
-    }
-
-    if (isElectron()) {
-      (window as any).electron.onQuickTranslate(callback);
-      return () => {}; // Electron doesn't provide unlisten
-    }
-
-    return () => {};
+    let unlisten: (() => void) | null = null;
+    initTauri().then(() => {
+      if (tauriEvent) {
+        tauriEvent.listen('quick-translate-text', (event) => {
+          callback(event.payload as string);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      }
+    });
+    return () => unlisten?.();
   },
 
   sendQuickReady(): void {
-    if (isTauri()) {
-      initTauri().then(() => {
-        if (tauriInvoke) {
-          tauriInvoke('quick_window_ready');
-        }
-      });
-      return;
-    }
-
-    if (isElectron()) {
-      (window as any).electron.sendQuickReady();
-    }
+    initTauri().then(() => {
+      if (tauriInvoke) {
+        tauriInvoke('quick_window_ready');
+      }
+    });
   },
 
   closeQuickWindow(): void {
-    if (isTauri()) {
-      initTauri().then(() => {
-        if (tauriInvoke) {
-          tauriInvoke('close_quick_window');
-        }
-      });
-      return;
-    }
-
-    if (isElectron()) {
-      (window as any).electron.closeQuickWindow();
-    }
+    initTauri().then(() => {
+      if (tauriInvoke) {
+        tauriInvoke('close_quick_window');
+      }
+    });
   },
 
   /**
    * Listen for window blur (focus lost) events
    */
   onWindowBlur(callback: () => void): () => void {
-    if (isTauri()) {
-      let unlisten: (() => void) | null = null;
-      initTauri().then(() => {
-        if (tauriWindow) {
-          tauriWindow.getCurrentWindow().onFocusChanged((event) => {
-            // When focus is lost (payload is false), trigger callback
-            if (!event.payload) {
-              callback();
-            }
-          }).then((fn) => {
-            unlisten = fn;
-          });
-        }
-      });
-      return () => unlisten?.();
-    }
-
-    if (isElectron()) {
-      // For Electron, use the window blur event
-      const handler = () => callback();
-      window.addEventListener('blur', handler);
-      return () => window.removeEventListener('blur', handler);
-    }
-
-    return () => {};
+    let unlisten: (() => void) | null = null;
+    initTauri().then(() => {
+      if (tauriWindow) {
+        tauriWindow.getCurrentWindow().onFocusChanged((event) => {
+          if (!event.payload) {
+            callback();
+          }
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      }
+    });
+    return () => unlisten?.();
   },
 
   async resizeQuickWindow(dimensions: WindowDimensions): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        await tauriInvoke('resize_quick_window', { dimensions });
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      await (window as any).electron.resizeQuickWindow(dimensions);
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('resize_quick_window', { dimensions });
     }
   },
 
@@ -299,43 +206,27 @@ export const platform = {
    * Settings callbacks
    */
   onOpenSettings(callback: () => void): () => void {
-    if (isTauri()) {
-      let unlisten: (() => void) | null = null;
-      initTauri().then(() => {
-        if (tauriEvent) {
-          tauriEvent.listen('open-settings', () => {
-            callback();
-          }).then((fn) => {
-            unlisten = fn;
-          });
-        }
-      });
-      return () => unlisten?.();
-    }
-
-    if (isElectron()) {
-      (window as any).electron.onOpenSettings(callback);
-      return () => {};
-    }
-
-    return () => {};
+    let unlisten: (() => void) | null = null;
+    initTauri().then(() => {
+      if (tauriEvent) {
+        tauriEvent.listen('open-settings', () => {
+          callback();
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      }
+    });
+    return () => unlisten?.();
   },
 
   /**
    * Screenshot capture for OCR
    */
   async captureScreen(): Promise<string | null> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('capture_screen') as Promise<string | null>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('capture_screen') as Promise<string | null>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.captureScreen();
-    }
-
     return null;
   },
 
@@ -343,17 +234,10 @@ export const platform = {
    * OCR image processing
    */
   async ocrImage(base64Image: string): Promise<OcrResult> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('ocr_image', { base64Image }) as Promise<OcrResult>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('ocr_image', { base64Image }) as Promise<OcrResult>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.ocrImage(base64Image);
-    }
-
     return { success: false, error: 'No OCR backend available' };
   },
 
@@ -361,42 +245,26 @@ export const platform = {
    * OCR result callback (from tray menu)
    */
   onOcrResult(callback: (text: string) => void): () => void {
-    if (isTauri()) {
-      let unlisten: (() => void) | null = null;
-      initTauri().then(() => {
-        if (tauriEvent) {
-          tauriEvent.listen('ocr-result', (event) => {
-            callback(event.payload as string);
-          }).then((fn) => {
-            unlisten = fn;
-          });
-        }
-      });
-      return () => unlisten?.();
-    }
-
-    if (isElectron()) {
-      (window as any).electron.onOcrResult(callback);
-      return () => {};
-    }
-
-    return () => {};
+    let unlisten: (() => void) | null = null;
+    initTauri().then(() => {
+      if (tauriEvent) {
+        tauriEvent.listen('ocr-result', (event) => {
+          callback(event.payload as string);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      }
+    });
+    return () => unlisten?.();
   },
 
   /**
    * Proxy settings
    */
   async setProxy(settings: ProxySettings): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        await tauriInvoke('set_proxy', { settings });
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      await (window as any).electron.setProxy(settings);
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('set_proxy', { settings });
     }
   },
 
@@ -404,17 +272,10 @@ export const platform = {
    * Keyboard shortcut settings
    */
   async updateShortcut(shortcut: string): Promise<boolean> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('update_shortcut', { shortcut }) as Promise<boolean>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('update_shortcut', { shortcut }) as Promise<boolean>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.updateShortcut(shortcut);
-    }
-
     return false;
   },
 
@@ -422,31 +283,17 @@ export const platform = {
    * Auto-launch settings
    */
   async setAutoLaunch(enabled: boolean): Promise<void> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        await tauriInvoke('set_auto_launch', { enabled });
-        return;
-      }
-    }
-
-    if (isElectron()) {
-      await (window as any).electron.setAutoLaunch(enabled);
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('set_auto_launch', { enabled });
     }
   },
 
   async getAutoLaunch(): Promise<boolean> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('get_auto_launch') as Promise<boolean>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('get_auto_launch') as Promise<boolean>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.getAutoLaunch();
-    }
-
     return false;
   },
 
@@ -454,17 +301,10 @@ export const platform = {
    * OCR dependency management
    */
   async checkOcrDependencies(): Promise<OcrDependencyStatus> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('check_ocr_dependencies') as Promise<OcrDependencyStatus>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('check_ocr_dependencies') as Promise<OcrDependencyStatus>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.checkOcrDependencies();
-    }
-
     return {
       tesseractInstalled: false,
       languages: [],
@@ -473,71 +313,47 @@ export const platform = {
   },
 
   async installOcrDependencies(): Promise<boolean> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('install_ocr_dependencies') as Promise<boolean>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('install_ocr_dependencies') as Promise<boolean>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.installOcrDependencies();
-    }
-
     return false;
   },
 
   async showOcrInstallPrompt(message: string): Promise<boolean> {
-    if (isTauri()) {
-      await initTauri();
-      if (tauriInvoke) {
-        return tauriInvoke('show_ocr_install_prompt', { message }) as Promise<boolean>;
-      }
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('show_ocr_install_prompt', { message }) as Promise<boolean>;
     }
-
-    if (isElectron()) {
-      return (window as any).electron.showOcrInstallPrompt(message);
-    }
-
     return false;
   },
 
   onOcrInstallProgress(callback: (progress: OcrInstallProgress) => void): () => void {
-    if (isTauri()) {
-      let unlisten: (() => void) | null = null;
-      initTauri().then(() => {
-        if (tauriEvent) {
-          tauriEvent.listen('ocr-install-progress', (event) => {
-            callback(event.payload as OcrInstallProgress);
-          }).then((fn) => {
-            unlisten = fn;
-          });
-        }
-      });
-      return () => unlisten?.();
-    }
-
-    if (isElectron()) {
-      (window as any).electron.onOcrInstallProgress(callback);
-      return () => {};
-    }
-
-    return () => {};
+    let unlisten: (() => void) | null = null;
+    initTauri().then(() => {
+      if (tauriEvent) {
+        tauriEvent.listen('ocr-install-progress', (event) => {
+          callback(event.payload as OcrInstallProgress);
+        }).then((fn) => {
+          unlisten = fn;
+        });
+      }
+    });
+    return () => unlisten?.();
   },
 
   /**
-   * Check if native backend is available
+   * Check if Tauri backend is available
    */
   isAvailable(): boolean {
-    return isTauri() || isElectron();
+    return isTauri();
   },
 
   /**
    * Get the current platform name
    */
-  getPlatformName(): 'tauri' | 'electron' | 'web' {
+  getPlatformName(): 'tauri' | 'web' {
     if (isTauri()) return 'tauri';
-    if (isElectron()) return 'electron';
     return 'web';
   },
 };

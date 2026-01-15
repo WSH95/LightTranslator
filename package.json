@@ -19,126 +19,20 @@
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.23",
-    "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "electron": "^39.2.7",
-    "electron-builder": "^26.0.12",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0",
-    "wait-on": "^9.0.3"
+    "vite": "^6.2.0"
   },
-  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "electron": "wait-on tcp:5173 && electron .",
-    "dev:electron": "concurrently -k \"npm run dev\" \"npm run electron\"",
     "build": "tsc && vite build",
     "prebuild": "node scripts/check-secrets.js || true",
-    "dist": "npm run build && electron-builder",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:win:portable": "npm run build && electron-builder --win portable",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:all": "npm run build && electron-builder -mwl",
     "typecheck": "tsc --noEmit",
     "tauri": "cargo tauri",
-    "tauri:dev": "cargo tauri dev",
-    "tauri:build": "cargo tauri build",
-    "tauri:build:linux": "cargo tauri build --target x86_64-unknown-linux-gnu"
-  },
-  "build": {
-    "appId": "com.lighttranslator.app",
-    "productName": "LightTranslator",
-    "copyright": "Copyright © 2024 LightTranslator",
-    "directories": {
-      "output": "dist-electron",
-      "buildResources": "assets"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "assets",
-        "to": "assets",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "icon": "assets/logo.png",
-      "category": "public.app-category.productivity"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/logo.png"
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-Portable.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "assets/logo.png",
-      "category": "Utility",
-      "maintainer": "LightTranslator",
-      "synopsis": "轻量级翻译工具",
-      "description": "支持划词翻译、截图OCR、多翻译引擎的轻量级翻译工具"
-    },
-    "deb": {
-      "depends": [
-        "tesseract-ocr",
-        "tesseract-ocr-chi-sim",
-        "tesseract-ocr-chi-tra",
-        "tesseract-ocr-jpn",
-        "tesseract-ocr-kor",
-        "xdotool",
-        "gnome-screenshot"
-      ]
-    }
+    "app:dev": "cargo tauri dev",
+    "app:build": "cargo tauri build",
+    "app:build:linux": "cargo tauri build --target x86_64-unknown-linux-gnu"
   }
 }
