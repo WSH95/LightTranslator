@@ -28,23 +28,18 @@ export const QuickTranslateWindow: React.FC = () => {
   const contentRef = useRef<HTMLDivElement>(null);
 
   const {
-    sourceLang,
-    targetLang,
     provider,
-    modelId,
-    customSystemInstruction,
-    geminiApiKey,
-    openaiApiKey,
-    openaiBaseUrl,
-    openaiModel,
-    openrouterApiKey,
-    openrouterModel,
-    deeplApiKey,
-    microsoftSubscriptionKey,
-    microsoftRegion,
     quickWindowOpacity,
     quickWindowBorderOpacity
   } = useAppStore();
+
+  const refreshSettings = useCallback(async () => {
+    try {
+      await useAppStore.persist.rehydrate();
+    } catch (err) {
+      console.warn('Failed to refresh settings from storage:', err);
+    }
+  }, []);
 
   // Resize window to fit content
   const resizeToFitContent = useCallback(() => {
@@ -107,6 +102,23 @@ export const QuickTranslateWindow: React.FC = () => {
     setError(null);
 
     try {
+      await refreshSettings();
+      const {
+        sourceLang,
+        targetLang,
+        provider,
+        modelId,
+        customSystemInstruction,
+        geminiApiKey,
+        openaiApiKey,
+        openaiBaseUrl,
+        openaiModel,
+        openrouterApiKey,
+        openrouterModel,
+        deeplApiKey,
+        microsoftSubscriptionKey,
+        microsoftRegion
+      } = useAppStore.getState();
       const result = await translateText(inputText, sourceLang, targetLang, {
         provider,
         modelId,
