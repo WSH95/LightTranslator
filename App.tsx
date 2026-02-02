@@ -25,6 +25,13 @@ const App: React.FC = () => {
     console.log('App mounted. Search params:', window.location.search);
     return params.get('mode') === 'quick';
   });
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.windowMode = isQuickMode ? 'quick' : 'main';
+    return () => {
+      delete root.dataset.windowMode;
+    };
+  }, [isQuickMode]);
 
   // OCR dependency management
   const { ocrStatus, promptAndInstall } = useOcrDependencies();
@@ -38,6 +45,16 @@ const App: React.FC = () => {
       return unlisten;
     }
   }, []);
+
+  // Resize main window when settings modal opens/closes
+  useEffect(() => {
+    if (showSettings && platform.isAvailable()) {
+      platform.resizeMainWindow({ width: 820, height: 680 });
+      return () => {
+        platform.resizeMainWindow({ width: 480, height: 680 });
+      };
+    }
+  }, [showSettings]);
 
   // Sync auto-launch state with system on app startup
   useEffect(() => {
@@ -77,14 +94,14 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       {/* Changed: Removed padding and centering. Now fills the viewport (window). */}
-      <div className="w-screen h-screen bg-transparent overflow-hidden">
+      <div className="w-screen h-screen overflow-hidden">
         {/* 
           Main Window Container 
           Changed: Removed fixed max-width and height. 
           Added h-full w-full to fill the Electron window.
           Removed rounded corners (optional, depending on if you want frameless window)
         */}
-        <div className="app-window w-full h-full flex flex-col overflow-hidden relative transition-all duration-300">
+        <div className="w-full h-full flex flex-col overflow-hidden relative transition-all duration-300">
 
           {/* Unified Header */}
           <TitleBar onOpenSettings={() => setShowSettings(true)} />

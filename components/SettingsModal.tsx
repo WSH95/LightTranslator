@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2 } from 'lucide-react';
+import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2, Languages } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PROVIDERS, DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
 
 interface SettingsModalProps {
@@ -34,6 +34,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     launchAtStartup,
     quickWindowOpacity,
     quickWindowBorderOpacity,
+    quickSourceLang,
+    quickTargetLang,
     updateSettings
   } = useAppStore();
 
@@ -553,6 +555,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         : 'Click to record a new shortcut. This triggers the pop-up window.'}
                     </p>
                   </div>
+                </div>
+
+                {/* Quick Translate Language Card */}
+                <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-5">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Languages size={16} className="text-blue-500" />
+                    <span>Translation Language</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-macos-muted mb-1">Source Language</label>
+                      <select
+                        value={quickSourceLang}
+                        onChange={(e) => updateSettings({ quickSourceLang: e.target.value as any })}
+                        className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400"
+                      >
+                        {LANGUAGES.map((lang) => (
+                          <option key={lang.code} value={lang.code}>{lang.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-macos-muted mb-1">Target Language</label>
+                      <select
+                        value={quickTargetLang}
+                        onChange={(e) => updateSettings({ quickTargetLang: e.target.value as any })}
+                        className="w-full text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-400"
+                      >
+                        {LANGUAGES.filter((lang) => lang.code !== 'auto').map((lang) => (
+                          <option key={lang.code} value={lang.code}>{lang.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-macos-muted">These language settings are independent from the main panel. You can also change them directly in the pop-up window.</p>
                 </div>
 
                 {/* Quick Translate Appearance Card */}

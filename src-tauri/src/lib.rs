@@ -382,6 +382,15 @@ async fn resize_quick_window(app: AppHandle, dimensions: WindowDimensions) -> Re
 }
 
 #[tauri::command]
+async fn resize_main_window(app: AppHandle, dimensions: WindowDimensions) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let size = tauri::LogicalSize::new(dimensions.width, dimensions.height);
+        window.set_size(size).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 async fn quick_window_ready(app: AppHandle) -> Result<(), String> {
     // Get clipboard text
     use tauri_plugin_clipboard_manager::ClipboardExt;
@@ -578,6 +587,7 @@ pub fn run() {
             set_auto_launch,
             get_auto_launch,
             resize_quick_window,
+            resize_main_window,
             quick_window_ready,
             close_quick_window,
         ])

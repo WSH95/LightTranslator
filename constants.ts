@@ -115,4 +115,8 @@ export const DEFAULT_SETTINGS = {
   // Quick Window Appearance Defaults
   quickWindowOpacity: 0.95,
   quickWindowBorderOpacity: 0.05,
+
+  // Quick Window Language Defaults
+  quickSourceLang: 'auto' as const,
+  quickTargetLang: 'zh-CN' as const,
 };

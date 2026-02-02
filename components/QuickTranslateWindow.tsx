@@ -1,36 +1,45 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { X, Copy, Loader2, ExternalLink } from 'lucide-react';
+import { X, Loader2, ChevronDown } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
-import { PROVIDERS } from '../constants';
+import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
+import { LanguageCode } from '../types';
 
 // Window size constraints
-const MIN_WIDTH = 200;
+const MIN_WIDTH = 100;
 const MIN_HEIGHT = 100;
 const MAX_WIDTH = 600;
 const MAX_HEIGHT = 500;
 const HEADER_HEIGHT = 32;
+const LANG_BAR_HEIGHT = 28;
 const PADDING = 32; // p-4 = 16px * 2
+const DROPDOWN_MIN_HEIGHT = 280; // Minimum window height when dropdown is open
+
+// Languages available for target selection (exclude 'auto')
+const TARGET_LANGUAGES = LANGUAGES.filter((lang) => lang.code !== 'auto');
 
 export const QuickTranslateWindow: React.FC = () => {
   useEffect(() => {
-    // Make body transparent for the rounded window
     document.body.style.background = 'transparent';
     return () => { document.body.style.background = ''; };
   }, []);
 
-  const [, setText] = useState('');
+  const [sourceText, setSourceText] = useState('');
   const [translated, setTranslated] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     provider,
     quickWindowOpacity,
-    quickWindowBorderOpacity
+    quickWindowBorderOpacity,
+    quickTargetLang,
+    setQuickTargetLang,
   } = useAppStore();
 
   const refreshSettings = useCallback(async () => {
@@ -45,37 +54,31 @@ export const QuickTranslateWindow: React.FC = () => {
   const resizeToFitContent = useCallback(() => {
     if (!contentRef.current || !platform.isAvailable()) return;
 
-    // Measure the actual content size
     const contentEl = contentRef.current;
     const contentWidth = contentEl.scrollWidth;
     const contentHeight = contentEl.scrollHeight;
 
-    // Calculate desired window size (content + header + padding)
     const desiredWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, contentWidth + PADDING + 16));
-    const desiredHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, contentHeight + HEADER_HEIGHT + PADDING));
+    const desiredHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, contentHeight + HEADER_HEIGHT + LANG_BAR_HEIGHT + PADDING));
 
-    // Request resize via platform API
     platform.resizeQuickWindow({ width: desiredWidth, height: desiredHeight });
   }, []);
 
   // Resize when translation changes
   useEffect(() => {
     if (translated || error) {
-      // Small delay to ensure DOM is updated
       setTimeout(resizeToFitContent, 50);
     }
   }, [translated, error, resizeToFitContent]);
 
   useEffect(() => {
-    // Notify main process that we are ready to receive text
     if (platform.isAvailable()) {
       platform.sendQuickReady();
 
       const unlisten = platform.onQuickTranslate((receivedText: string) => {
         console.log('Received text:', receivedText);
-        // Clean up the text to remove unnecessary line breaks
         const cleanedText = cleanTextLineBreaks(receivedText);
-        setText(cleanedText);
+        setSourceText(cleanedText);
         handleTranslate(cleanedText);
       });
 
@@ -93,10 +96,22 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
+  // Close dropdown when clicking outside it
+  useEffect(() => {
+    if (!langDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setLangDropdownOpen(false);
+        setTimeout(resizeToFitContent, 50);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [langDropdownOpen]);
+
   const handleTranslate = async (inputText: string) => {
     if (!inputText.trim()) return;
 
-    // Reset state for new translation
     setTranslated('');
     setLoading(true);
     setError(null);
@@ -104,8 +119,7 @@ export const QuickTranslateWindow: React.FC = () => {
     try {
       await refreshSettings();
       const {
-        sourceLang,
-        targetLang,
+        quickTargetLang,
         provider,
         modelId,
         customSystemInstruction,
@@ -119,7 +133,7 @@ export const QuickTranslateWindow: React.FC = () => {
         microsoftSubscriptionKey,
         microsoftRegion
       } = useAppStore.getState();
-      const result = await translateText(inputText, sourceLang, targetLang, {
+      const result = await translateText(inputText, 'auto', quickTargetLang, {
         provider,
         modelId,
         customSystemInstruction,
@@ -147,6 +161,36 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   };
 
+  const toggleDropdown = useCallback(() => {
+    setLangDropdownOpen((prev) => {
+      const next = !prev;
+      if (next && platform.isAvailable()) {
+        // Expand window to fit dropdown
+        platform.resizeQuickWindow({ width: MAX_WIDTH, height: DROPDOWN_MIN_HEIGHT });
+      } else {
+        // Shrink back after a brief delay for the close to render
+        setTimeout(resizeToFitContent, 50);
+      }
+      return next;
+    });
+  }, [resizeToFitContent]);
+
+  const handleSelectLang = (code: LanguageCode) => {
+    if (code === quickTargetLang) {
+      setLangDropdownOpen(false);
+      return;
+    }
+    setQuickTargetLang(code);
+    setLangDropdownOpen(false);
+    setTimeout(resizeToFitContent, 50);
+    // Re-translate with the new target language
+    if (sourceText.trim()) {
+      setTimeout(() => handleTranslate(sourceText), 100);
+    }
+  };
+
+  const currentTargetName = TARGET_LANGUAGES.find((l) => l.code === quickTargetLang)?.name || quickTargetLang;
+
   return (
     <div
       className="h-screen w-screen backdrop-blur-3xl rounded-3xl flex flex-col overflow-hidden relative"
@@ -160,7 +204,9 @@ export const QuickTranslateWindow: React.FC = () => {
         className="h-8 bg-gray-100/80 flex items-center justify-between px-3 -webkit-app-region-drag border-b border-gray-200/50"
         data-tauri-drag-region
       >
-        <span className="text-xs font-medium text-gray-600 pointer-events-none select-none">Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}</span>
+        <span className="text-xs font-medium text-gray-600 pointer-events-none select-none">
+          Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}
+        </span>
         <button
           onClick={handleClose}
           className="p-1 hover:bg-gray-200 rounded-full -webkit-app-region-no-drag transition-colors"
@@ -169,9 +215,39 @@ export const QuickTranslateWindow: React.FC = () => {
         </button>
       </div>
 
+      {/* Language Bar */}
+      <div className="h-7 flex items-center px-3 border-b border-gray-200/30 bg-gray-50/40" ref={dropdownRef}>
+        <span className="text-[11px] text-gray-400 mr-1.5 select-none">Translate to</span>
+        <button
+          onClick={toggleDropdown}
+          className="flex items-center gap-0.5 text-[11px] font-medium text-gray-700 px-2 py-0.5 rounded-full bg-white/70 border border-gray-200/60 hover:bg-white hover:border-gray-300/80 transition-all -webkit-app-region-no-drag"
+        >
+          {currentTargetName}
+          <ChevronDown size={10} className={`text-gray-400 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Custom Dropdown */}
+        {langDropdownOpen && (
+          <div className="absolute left-3 top-[60px] z-50 min-w-[140px] max-h-[200px] overflow-y-auto rounded-xl bg-white/95 backdrop-blur-xl border border-gray-200/70 shadow-lg py-1">
+            {TARGET_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => handleSelectLang(lang.code)}
+                className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${
+                  lang.code === quickTargetLang
+                    ? 'bg-blue-50 text-blue-600 font-medium'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {lang.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {/* Translation Result Only */}
         <div ref={contentRef} className="space-y-2">
           {loading && <Loader2 size={10} className="animate-spin text-blue-400" />}
 

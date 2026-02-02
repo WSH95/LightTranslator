@@ -202,6 +202,13 @@ export const platform = {
     }
   },
 
+  async resizeMainWindow(dimensions: WindowDimensions): Promise<void> {
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('resize_main_window', { dimensions });
+    }
+  },
+
   /**
    * Settings callbacks
    */

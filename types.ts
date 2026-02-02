@@ -65,6 +65,10 @@ export interface AppSettings {
   // Quick Window Appearance
   quickWindowOpacity: number; // 0.5-1.0
   quickWindowBorderOpacity: number; // 0-1.0
+
+  // Quick Window Language Settings (independent from main panel)
+  quickSourceLang: LanguageCode;
+  quickTargetLang: LanguageCode;
 }
 
 export interface ProxySettings {

@@ -27,6 +27,8 @@ interface AppState extends AppSettings {
   // Actions
   setSourceLang: (lang: LanguageCode) => void;
   setTargetLang: (lang: LanguageCode) => void;
+  setQuickSourceLang: (lang: LanguageCode) => void;
+  setQuickTargetLang: (lang: LanguageCode) => void;
   setProvider: (id: TranslationProviderId) => void;
   toggleAutoTranslate: () => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
@@ -83,6 +85,8 @@ export const useAppStore = create<AppState>()(
       // Actions
       setSourceLang: (lang) => set({ sourceLang: lang }),
       setTargetLang: (lang) => set({ targetLang: lang }),
+      setQuickSourceLang: (lang) => set({ quickSourceLang: lang }),
+      setQuickTargetLang: (lang) => set({ quickTargetLang: lang }),
       setProvider: (id) => set({ provider: id }),
       toggleAutoTranslate: () => set((state) => ({ autoTranslate: !state.autoTranslate })),
       updateSettings: (newSettings) => set((state) => ({ ...state, ...newSettings })),
@@ -147,6 +151,9 @@ export const useAppStore = create<AppState>()(
         // Quick Window Appearance
         quickWindowOpacity: state.quickWindowOpacity,
         quickWindowBorderOpacity: state.quickWindowBorderOpacity,
+        // Quick Window Language
+        quickSourceLang: state.quickSourceLang,
+        quickTargetLang: state.quickTargetLang,
       }),
     }
   )

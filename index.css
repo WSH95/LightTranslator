@@ -2,14 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  /* Warm vibrant background to show off the glassmorphism */
-  background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%);
-  background-size: cover;
-  background-attachment: fixed;
+html, body {
+  background: transparent;
   color: #1d1d1f;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   overflow: hidden;
+  height: 100%;
+  width: 100%;
+  margin: 0;
 }
 
 /* Webkit app region for draggable areas */
@@ -82,11 +82,25 @@ body {
 }
 
 /* App Window Glass */
-.app-window {
-  background: rgba(255, 255, 255, 0.65);
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+html[data-window-mode="main"] #root {
+  background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
   box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(255,255,255,0.4) inset;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+html[data-window-mode="quick"] #root {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 /* Styled Range Slider */
