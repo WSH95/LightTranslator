@@ -112,3 +112,16 @@ OCR, which DECISIONS 0003 deliberately replaced with copy-pastable
 guidance.
 **Consequences**: C12 is closed; the Tauri backend gained two fixes it
 would otherwise still be missing.
+
+## 0009 — 2026-07-28 — AGENTS.md updated for the dual backend (guardrailed edit)
+
+**Context**: AGENTS.md still described a Tauri-only project and carried no
+rule preventing the two backends from drifting apart. Guardrails require
+a diff, explicit approval, and a DECISIONS record for edits to this file.
+**Decision**: with the user's approval, updated the stack description and
+added a Conventions rule — backend changes land in both
+`src-tauri/src/lib.rs` and `electron/main.js` in the same commit and are
+checked against VERIFY.md's parity list — plus Electron/Tauri build rows
+in the managed commands block.
+**Consequences**: future sessions are told about the dual backend by the
+file they read first, instead of discovering it from the tree.

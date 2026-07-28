@@ -40,7 +40,7 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] D6 Verified natively on this Ubuntu 20.04 host: app launches, global hotkey works, popup renders a live translation
 - [x] D7 Ported back to Tauri: clipboard save/restore around Ctrl+C (C12), hide main window during capture
 - [x] D8 VERIFY.md backend-parity checklist (18 points)
-- [ ] D9 Add the "backend changes land in both backends" rule to AGENTS.md — **needs user approval** (guardrailed file)
+- [x] D9 "Backend changes land in both backends" rule added to AGENTS.md (approved; DECISIONS 0009)
 - [ ] D10 Run the full parity checklist against both builds interactively (user acceptance)
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)

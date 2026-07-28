@@ -47,4 +47,4 @@ mistyped Electron method fails `npm run typecheck`.
 | 15 | Proxy with auth | Requests succeed through an authenticated proxy |
 | 16 | Provider errors | Real cause shown (not a generic/CORS message) |
 | 17 | Editing settings | Typing an API key does not fire translations |
-| 18 | Package metadata | `Depends: xdotool` only; OCR packages under `Recommends` |
+| 18 | Package metadata | `Depends: xdotool` only; OCR packages under `Recommends`; both builds emit `LightTranslator_<version>_amd64.deb` and Conflict with each other |

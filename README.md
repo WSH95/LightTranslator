@@ -72,6 +72,21 @@ The build artifacts (AppImage, Deb) will be generated in `src-tauri/target/relea
 
 The React interface and every feature are shared between both builds — only the backend differs, so the app looks and behaves the same either way.
 
+**Just want to install it?** Grab a `.deb` from the [latest release](https://github.com/WSH95/LightTranslator/releases/latest) — check your version first with `lsb_release -rs`:
+
+| Your Ubuntu | Download |
+| --- | --- |
+| 22.04, 24.04 or newer (also Debian 12+) | `LightTranslator-<version>-amd64-ubuntu22.04-or-newer.deb` |
+| 20.04, 18.04 or older | `LightTranslator-<version>-amd64-ubuntu20.04-or-older.deb` |
+
+```bash
+sudo apt install ./LightTranslator-<version>-amd64-<your-choice>.deb
+```
+
+The two packages deliberately conflict — remove one before installing the other. Installing the 22.04+ package on 20.04 fails with an unmet `libwebkit2gtk-4.1-0` dependency; that is the wrong file, not a broken package.
+
+To build from source instead:
+
 | Your system | Build | Why |
 | --- | --- | --- |
 | Ubuntu 22.04+, Debian 12+ | **Tauri** (`npm run app:build`) | ~5 MB package, ~60 MB RAM |
@@ -87,6 +102,8 @@ npm install
 npm run electron:build:deb     # -> dist-electron/LightTranslator_<version>_amd64.deb
 sudo apt install ./dist-electron/LightTranslator_*.deb
 ```
+
+Use `apt install`, not `dpkg -i`, so the `xdotool` dependency is resolved for you.
 
 Development: `npm run electron:dev` (Vite HMR + Electron). If Electron's binary download is blocked or slow, point it at a mirror, e.g.:
 

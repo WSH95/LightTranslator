@@ -1,8 +1,11 @@
 # LightTranslator
 
-Lightweight cross-platform translation tool built with Tauri 2 + React: quick-translate hotkey, OCR, multi-engine LLM translation
+Lightweight cross-platform translation tool built with React + two
+interchangeable native backends: quick-translate hotkey, OCR, multi-engine
+LLM translation
 
-Primary language/stack: TypeScript (React frontend) + Rust (Tauri backend).
+Primary language/stack: TypeScript (shared React frontend) with a Rust/Tauri
+backend for Ubuntu 22.04+ and an Electron backend for Ubuntu 18.04-20.04.
 
 ## Source of truth
 
@@ -18,6 +21,12 @@ Primary language/stack: TypeScript (React frontend) + Rust (Tauri backend).
 
 - Keep this file concise (< 300 lines). It is instructions, not a log.
 - Volatile state belongs under `.project-steward/`, never here.
+- **Dual backend**: the React UI is shared, but `src-tauri/src/lib.rs` and
+  `electron/main.js` implement the same commands twice. Backend changes land
+  in BOTH in the same commit, and are checked against the parity list in
+  `.project-steward/VERIFY.md`. `PlatformBackend` in `src/lib/platform.ts`
+  is derived from the Tauri backend, so `npm run typecheck` catches a missing
+  Electron method but not a behavioral difference.
 
 ## Git policy
 
@@ -32,6 +41,8 @@ Primary language/stack: TypeScript (React frontend) + Rust (Tauri backend).
 | Task | Command |
 | --- | --- |
 | Build | `npm run build` |
+| Build (Tauri deb) | `npm run app:docker:build` |
+| Build (Electron deb) | `npm run electron:build:deb` |
 | Test | `TODO` |
 | Lint | `npm run typecheck` |
 <!-- PROJECT-STEWARD:END commands -->
