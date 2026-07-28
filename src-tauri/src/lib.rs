@@ -659,67 +659,85 @@ fn trigger_quick_translate(app: &AppHandle) {
     // Read the clipboard text
     let clipboard_text = app.clipboard().read_text().unwrap_or_default();
 
-    // Show quick window at cursor position
-    if let Some(window) = app.get_webview_window("quick") {
-        // xdotool reports PHYSICAL pixels; wrapping them in LogicalPosition
-        // lands the window at scale× the cursor position on HiDPI displays.
-        if let Ok(output) = Command::new("xdotool").arg("getmouselocation").output() {
-            let location = String::from_utf8_lossy(&output.stdout);
-            // Parse "x:123 y:456 screen:0 window:123456"
-            let mut x: i32 = 100;
-            let mut y: i32 = 100;
-
-            for part in location.split_whitespace() {
-                if let Some(val) = part.strip_prefix("x:") {
-                    x = val.parse().unwrap_or(100);
-                } else if let Some(val) = part.strip_prefix("y:") {
-                    y = val.parse().unwrap_or(100);
-                }
-            }
-
-            // Clamp so the popup stays on the monitor under the cursor
-            if let (Ok(win_size), Ok(Some(monitor))) =
-                (window.outer_size(), app.monitor_from_point(x as f64, y as f64))
-            {
-                let mp = monitor.position();
-                let ms = monitor.size();
-                let max_x = mp.x + ms.width as i32 - win_size.width as i32;
-                let max_y = mp.y + ms.height as i32 - win_size.height as i32;
-                x = x.clamp(mp.x, max_x.max(mp.x));
-                y = y.clamp(mp.y, max_y.max(mp.y));
-            }
-
-            let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
-        }
-
-        let _ = window.show();
-        let _ = window.set_focus();
-
-        // On Linux, use xdotool to forcefully activate the window for proper focus
-        // This ensures the blur event will fire when clicking outside
-        std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(50));
-            // Search for the window by name and activate it
-            let _ = Command::new("xdotool")
-                .args(["search", "--name", "Quick Translate", "windowactivate"])
-                .output();
-        });
-
-        if !clipboard_text.is_empty() {
-            let state = app.state::<AppState>();
-            if state.quick_ready.load(Ordering::SeqCst) {
-                // Emit after a small delay for the window to be ready
-                let app_clone = app.clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(Duration::from_millis(100));
-                    let _ = app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
-                });
-            } else if let Ok(mut pending) = state.pending_quick_text.lock() {
-                // Webview not mounted yet; quick_window_ready delivers this
-                *pending = Some(clipboard_text);
+    // Cursor position in PHYSICAL pixels (xdotool's unit; wrapping these in a
+    // LogicalPosition lands the window at scale× the cursor on HiDPI displays)
+    let mut cursor = (100_i32, 100_i32);
+    if let Ok(output) = Command::new("xdotool").arg("getmouselocation").output() {
+        let location = String::from_utf8_lossy(&output.stdout);
+        // Parse "x:123 y:456 screen:0 window:123456"
+        for part in location.split_whitespace() {
+            if let Some(val) = part.strip_prefix("x:") {
+                cursor.0 = val.parse().unwrap_or(100);
+            } else if let Some(val) = part.strip_prefix("y:") {
+                cursor.1 = val.parse().unwrap_or(100);
             }
         }
     }
+
+    // Window/monitor calls touch GTK, which is main-thread-only: this runs on
+    // the global-shortcut callback thread, so hop to the main thread or the
+    // process dies nondeterministically (observed: app exits mid-hotkey).
+    let app_for_window = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        let Some(window) = app_for_window.get_webview_window("quick") else {
+            return;
+        };
+        let (mut x, mut y) = cursor;
+
+        // Clamp so the popup stays on the monitor under the cursor
+        if let (Ok(win_size), Ok(Some(monitor))) = (
+            window.outer_size(),
+            app_for_window.monitor_from_point(x as f64, y as f64),
+        ) {
+            let mp = monitor.position();
+            let ms = monitor.size();
+            let max_x = mp.x + ms.width as i32 - win_size.width as i32;
+            let max_y = mp.y + ms.height as i32 - win_size.height as i32;
+            x = x.clamp(mp.x, max_x.max(mp.x));
+            y = y.clamp(mp.y, max_y.max(mp.y));
+        }
+
+        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+        let _ = window.show();
+        let _ = window.set_focus();
+    });
+
+    // On Linux, use xdotool to forcefully activate the window for proper focus
+    // This ensures the blur event will fire when clicking outside
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(50));
+        // Search for the window by name and activate it
+        let _ = Command::new("xdotool")
+            .args(["search", "--name", "Quick Translate", "windowactivate"])
+            .output();
+    });
+
+    if !clipboard_text.is_empty() {
+        let state = app.state::<AppState>();
+        if state.quick_ready.load(Ordering::SeqCst) {
+            // Emit after a small delay for the window to be ready
+            let app_clone = app.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(100));
+                let _ = app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
+            });
+        } else if let Ok(mut pending) = state.pending_quick_text.lock() {
+            // Webview not mounted yet; quick_window_ready delivers this
+            *pending = Some(clipboard_text);
+        }
+    }
+}
+
+/// Show + focus the main window from any thread (window ops touch GTK, which
+/// is main-thread-only).
+fn show_main_window(app: &AppHandle) {
+    let app = app.clone();
+    let _ = app.clone().run_on_main_thread(move || {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    });
 }
 
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -763,10 +781,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     // install-guidance popup instead of failing silently
                     let deps = ocr_dependency_status();
                     if !(deps.tesseract_installed && deps.gnome_screenshot_installed) {
-                        if let Some(window) = app_clone.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
+                        show_main_window(&app_clone);
                         let _ = app_clone.emit_to("main", "ocr-deps-missing", ());
                         return;
                     }
@@ -774,11 +789,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                         if let Ok(ocr_result) = tauri::async_runtime::block_on(ocr_image(image_data)) {
                             if ocr_result.success {
                                 if let Some(text) = ocr_result.text {
-                                    // Show main window and emit OCR result
-                                    if let Some(window) = app_clone.get_webview_window("main") {
-                                        let _ = window.show();
-                                        let _ = window.set_focus();
-                                    }
+                                    show_main_window(&app_clone);
                                     let _ = app_clone.emit_to("main", "ocr-result", text);
                                 }
                             }
