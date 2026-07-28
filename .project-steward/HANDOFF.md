@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-07-28T15:15:00Z
-updated_by: claude-code (docker path committed; dual-backend work starting)
+updated_at: 2026-07-28T16:15:00Z
+updated_by: claude-code (dual backend landed; awaiting user acceptance)
 session_status: active
 branch: fix/2026-07-review-stabilization
-last_commit: 58db330
+last_commit: 9663bd8
 ---
 
 # Handoff
@@ -13,33 +13,42 @@ another device). Keep every section current at wrap-up.
 
 ## Now
 
-Release 1.2.0 is built, installed from the .deb in a clean container, and
-functionally verified. 14 commits on `fix/2026-07-review-stabilization`.
-Smoke testing found and fixed a real crash (see R6/DECISIONS 0006): the
-quick-translate hotkey killed the app because window operations ran on
-the global-shortcut thread instead of the main thread.
+Two backends now ship from one codebase (DECISIONS 0007):
 
-Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.2.0_amd64.deb`
-(gitignored; installs on Ubuntu 22.04/24.04 and Debian 12+).
+- **Tauri** (`src-tauri/`) for Ubuntu 22.04+/Debian 12+ — ~5 MB, ~60 MB RAM.
+  Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.2.0_amd64.deb`
+- **Electron** (`electron/`) for Ubuntu 18.04-20.04, where Tauri 2 cannot run —
+  ~92 MB, ~200 MB RAM. Artifact: `dist-electron/lighttranslator_1.2.0_amd64.deb`
 
-Verified on the installed deb: clean `--no-install-recommends` install
-with no OCR packages, app launches, typing translates
-("Good morning, my friend." -> 早上好，我的朋友。), hotkey -> popup ->
-translation ("The weather is beautiful today." -> 今天天气真好。),
-5/5 hotkey presses stable after the fix.
+The React UI is shared verbatim, so the interface is identical; only the ~13
+backend commands exist twice. `PlatformBackend` (src/lib/platform.ts) is derived
+from the Tauri backend, so `npm run typecheck` fails if the Electron backend is
+missing anything. Behavior parity is checked by the 18-point list in VERIFY.md.
+
+Verified natively on this 20.04 host: the packaged Electron build launches, both
+windows appear with the right titles/sizes, the global hotkey works, and the
+popup renders a live translation ("Electron 在 Ubuntu 20.04 上原生运行。").
 
 ## In flight
 
-- **Dual-backend work just started** (approved plan): keep Tauri for
-  22.04+, add an Electron backend for 18.04-20.04 so old distros get a
-  native install instead of Docker. Electron 39 officially supports
-  Ubuntu 18.04+ because it bundles Chromium. The React UI is shared, so
-  the interface is identical by construction; only the ~13-command
-  backend is duplicated. Legacy code to restore from `339f55c`:
-  electron/main.js (933 lines), preload.cjs, dependencyChecker.js.
-- Docker path is committed (d3b0d99) and stays useful: it is how the
-  *Tauri* .deb gets built on this 20.04 host.
-- Awaiting the USER's acceptance test of 1.2.0 before merging to `main`.
+- **User acceptance pending on two fronts**: the 1.2.0 Tauri build (R8) and the
+  new Electron build (D10). `main` is not merged until then.
+- **D9 needs approval**: adding the "backend changes land in both backends in
+  the same commit" rule to AGENTS.md, a guardrailed file.
+
+## Next steps
+
+1. User installs and exercises the Electron build natively:
+   `sudo apt install ./dist-electron/lighttranslator_1.2.0_amd64.deb`
+   (brings xdotool; this host has none, so selection capture needs it).
+2. Walk the VERIFY.md parity checklist on whichever build(s) matter.
+3. On approval: merge `fix/2026-07-review-stabilization` into `main`
+   (fast-forward), optional tag `v1.2.0`. No pushes without approval.
+4. Then the "Later" backlog (Wayland, single-instance, secure key storage).
+
+## Blockers
+
+- (none — waiting on user acceptance only)
 
 ## Manual checklist for the user acceptance test
 
@@ -95,7 +104,7 @@ translation ("The weather is beautiful today." -> 今天天气真好。),
 
 ## Warnings
 
-- **This machine (Ubuntu 20.04) cannot compile Tauri 2** (no
+- **This machine (Ubuntu 20.04) cannot compile or run the TAURI build** (the Electron build runs natively here) (no
   webkit2gtk-4.1, no Rust toolchain). Rust verification runs in the
   Docker container `lt-rust-check` (stopped after the session):
   `docker start lt-rust-check && docker exec -w /work/src-tauri lt-rust-check cargo check`
@@ -109,3 +118,9 @@ translation ("The weather is beautiful today." -> 今天天气真好。),
   key-shaped strings (it used to only warn). False positives: extend its
   skip lists rather than re-adding `|| true`.
 - API keys still live unencrypted in localStorage (RISKS.md, backlog).
+- Electron's binary download from GitHub is blocked on this network. Use
+  `ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/` and
+  `ELECTRON_BUILDER_BINARIES_MIRROR=https://registry.npmmirror.com/-/binary/electron-builder-binaries/`
+  (documented in the README).
+- Launching the app from a Bash tool call that then returns kills it by SIGHUP;
+  run the app and its test in ONE script (see the session scratchpad scripts).
