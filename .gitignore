@@ -31,3 +31,9 @@ dist-ssr
 *.sw?
 
 release_notes_*.md
+
+# PROJECT-STEWARD:BEGIN runtime-state
+.project-steward/runtime/
+.project-steward/tmp/
+.project-steward/migration-backup-projectforge/
+# PROJECT-STEWARD:END runtime-state
