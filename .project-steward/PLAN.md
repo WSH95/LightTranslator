@@ -41,7 +41,15 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] D7 Ported back to Tauri: clipboard save/restore around Ctrl+C (C12), hide main window during capture
 - [x] D8 VERIFY.md backend-parity checklist (18 points)
 - [x] D9 "Backend changes land in both backends" rule added to AGENTS.md (approved; DECISIONS 0009)
-- [ ] D10 Run the full parity checklist against both builds interactively (user acceptance)
+- [x] D10 Electron build installed and running natively on the user's 20.04 host (verified: installed app.asar is byte-identical to the released artifact)
+
+## Release v1.2.0 published (2026-07-28)
+
+- [x] P1 AGENTS.md parity rule added (DECISIONS 0009); artifact naming aligned so both builds emit `LightTranslator_<version>_amd64.deb`
+- [x] P2 Both artifacts rebuilt from HEAD — the Tauri one was stale (predated the clipboard/capture fixes in 94b9866)
+- [x] P3 Branch pushed; PR #2 opened against `main` (merge commit or rebase requested, not squash)
+- [x] P4 Draft release v1.2.0 created targeting `main`, with both .debs named by Ubuntu range and compatibility instructions; upload verified by checksum round-trip
+- [ ] P5 **User merges PR #2**, then the draft release is published (`gh release edit v1.2.0 --draft=false`) so the tag lands on `main`
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 

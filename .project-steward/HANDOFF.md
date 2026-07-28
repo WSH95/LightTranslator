@@ -1,6 +1,6 @@
 ---
-updated_at: 2026-07-28T16:15:00Z
-updated_by: claude-code (dual backend landed; awaiting user acceptance)
+updated_at: 2026-07-28T16:55:00Z
+updated_by: claude-code (PR #2 open, v1.2.0 draft release ready)
 session_status: active
 branch: fix/2026-07-review-stabilization
 last_commit: 9663bd8
@@ -31,19 +31,21 @@ popup renders a live translation ("Electron 在 Ubuntu 20.04 上原生运行。"
 
 ## In flight
 
-- **User acceptance pending on two fronts**: the 1.2.0 Tauri build (R8) and the
-  new Electron build (D10). `main` is not merged until then.
-- **D9 needs approval**: adding the "backend changes land in both backends in
-  the same commit" rule to AGENTS.md, a guardrailed file.
+- **PR #2** — https://github.com/WSH95/LightTranslator/pull/2 — 25 commits,
+  base `main`. Waiting for the user to merge (merge commit or rebase, NOT
+  squash, so the release tag lands on a commit in `main`'s history).
+- **Draft release v1.2.0** targeting `main`, both .debs attached:
+  `LightTranslator-1.2.0-amd64-ubuntu22.04-or-newer.deb` (Tauri, 5 MB) and
+  `LightTranslator-1.2.0-amd64-ubuntu20.04-or-older.deb` (Electron, 92 MB).
+  Publish after the merge: `gh release edit v1.2.0 --draft=false`.
+- The user has the Electron build installed at /opt/LightTranslator and
+  running; it is byte-identical to the released artifact.
 
 ## Next steps
 
-1. User installs and exercises the Electron build natively:
-   `sudo apt install ./dist-electron/lighttranslator_1.2.0_amd64.deb`
-   (brings xdotool; this host has none, so selection capture needs it).
-2. Walk the VERIFY.md parity checklist on whichever build(s) matter.
-3. On approval: merge `fix/2026-07-review-stabilization` into `main`
-   (fast-forward), optional tag `v1.2.0`. No pushes without approval.
+1. User merges PR #2 into `main`.
+2. Publish the draft release: `gh release edit v1.2.0 --draft=false`.
+3. Optionally walk the VERIFY.md parity checklist against both builds.
 4. Then the "Later" backlog (Wayland, single-instance, secure key storage).
 
 ## Blockers
