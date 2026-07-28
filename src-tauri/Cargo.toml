@@ -28,7 +28,7 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-process = "2"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "socks"] }
 tokio = { version = "1", features = ["full"] }
 base64 = "0.22"
 tempfile = "3"

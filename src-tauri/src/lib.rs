@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     AppHandle, Emitter, Manager, State,
 };
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 
 // --- Types ---
 
@@ -65,6 +67,10 @@ pub struct ProxySettings {
 struct AppState {
     current_shortcut: Mutex<String>,
     proxy_settings: Mutex<Option<ProxySettings>>,
+    /// True once the quick webview has registered its quick-translate-text listener.
+    quick_ready: AtomicBool,
+    /// Text captured by the hotkey before the quick webview was ready.
+    pending_quick_text: Mutex<Option<String>>,
 }
 
 impl Default for AppState {
@@ -72,6 +78,8 @@ impl Default for AppState {
         Self {
             current_shortcut: Mutex::new("CommandOrControl+Shift+X".to_string()),
             proxy_settings: Mutex::new(None),
+            quick_ready: AtomicBool::new(false),
+            pending_quick_text: Mutex::new(None),
         }
     }
 }
@@ -84,25 +92,47 @@ async fn proxy_request(
     options: Option<ProxyRequestOptions>,
     state: State<'_, AppState>,
 ) -> Result<ProxyResponse, String> {
+    let parsed = reqwest::Url::parse(&url).map_err(|e| format!("Invalid URL: {}", e))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(format!("Unsupported URL scheme '{}'", parsed.scheme()));
+    }
+
     let client = {
-        let proxy_settings = state.proxy_settings.lock().unwrap();
+        let proxy_settings = state
+            .proxy_settings
+            .lock()
+            .map_err(|_| "proxy settings lock poisoned".to_string())?;
+        let mut builder = reqwest::Client::builder()
+            .timeout(Duration::from_secs(60))
+            .connect_timeout(Duration::from_secs(15));
         if let Some(ref settings) = *proxy_settings {
             if settings.enabled {
-                let proxy_url = format!(
-                    "{}://{}:{}",
-                    settings.protocol, settings.host, settings.port
-                );
-                let proxy = reqwest::Proxy::all(&proxy_url).map_err(|e| e.to_string())?;
-                reqwest::Client::builder()
-                    .proxy(proxy)
-                    .build()
-                    .map_err(|e| e.to_string())?
-            } else {
-                reqwest::Client::new()
+                let user = settings.username.as_deref().unwrap_or("");
+                let pass = settings.password.as_deref().unwrap_or("");
+                let proxy = if settings.protocol.starts_with("socks") && !user.is_empty() {
+                    // SOCKS credentials go in the proxy URL, not Proxy-Authorization
+                    reqwest::Proxy::all(format!(
+                        "{}://{}:{}@{}:{}",
+                        settings.protocol, user, pass, settings.host, settings.port
+                    ))
+                } else {
+                    reqwest::Proxy::all(format!(
+                        "{}://{}:{}",
+                        settings.protocol, settings.host, settings.port
+                    ))
+                    .map(|p| {
+                        if user.is_empty() {
+                            p
+                        } else {
+                            p.basic_auth(user, pass)
+                        }
+                    })
+                }
+                .map_err(|e| e.to_string())?;
+                builder = builder.proxy(proxy);
             }
-        } else {
-            reqwest::Client::new()
         }
+        builder.build().map_err(|e| e.to_string())?
     };
 
     let opts = options.unwrap_or(ProxyRequestOptions {
@@ -134,21 +164,20 @@ async fn proxy_request(
     match request.send().await {
         Ok(response) => {
             let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-
-            // Try to parse as JSON, otherwise return as string
-            let data = if body.starts_with('{') || body.starts_with('[') {
-                body
-            } else {
-                body
-            };
-
-            Ok(ProxyResponse {
-                ok: status.is_success(),
-                status_code: Some(status.as_u16()),
-                data: Some(data),
-                error: None,
-            })
+            match response.text().await {
+                Ok(body) => Ok(ProxyResponse {
+                    ok: status.is_success(),
+                    status_code: Some(status.as_u16()),
+                    data: Some(body),
+                    error: None,
+                }),
+                Err(e) => Ok(ProxyResponse {
+                    ok: false,
+                    status_code: Some(status.as_u16()),
+                    data: None,
+                    error: Some(format!("Failed to read response body: {}", e)),
+                }),
+            }
         }
         Err(e) => Ok(ProxyResponse {
             ok: false,
@@ -316,37 +345,43 @@ async fn update_shortcut(
     shortcut: String,
     state: State<'_, AppState>,
 ) -> Result<bool, String> {
-    // Unregister old shortcut
-    {
-        let old_shortcut = state.current_shortcut.lock().unwrap();
-        if let Ok(old_sc) = old_shortcut.parse::<Shortcut>() {
-            let _ = app.global_shortcut().unregister(old_sc);
-        }
-    }
+    // Validate before touching the currently registered shortcut
+    let new_shortcut: Shortcut = shortcut
+        .parse()
+        .map_err(|e| format!("Invalid shortcut '{}': {:?}", shortcut, e))?;
 
-    // Parse and register new shortcut
-    let new_shortcut: Shortcut = shortcut.parse().map_err(|e| format!("{:?}", e))?;
+    // Single lock scope for the whole swap so concurrent calls can't interleave
+    let mut current = state
+        .current_shortcut
+        .lock()
+        .map_err(|_| "shortcut state lock poisoned".to_string())?;
+    let old_shortcut = current.parse::<Shortcut>().ok();
 
-    app.global_shortcut()
-        .on_shortcut(new_shortcut.clone(), move |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                trigger_quick_translate(app);
-            }
-        })
-        .map_err(|e| e.to_string())?;
-
-    // Update state
-    {
-        let mut current = state.current_shortcut.lock().unwrap();
+    // Same accelerator (possibly spelled differently): registering again would fail
+    if old_shortcut.as_ref() == Some(&new_shortcut) {
         *current = shortcut;
+        return Ok(true);
     }
+
+    // Register the new shortcut first so a failure leaves the old one working
+    app.global_shortcut()
+        .on_shortcut(new_shortcut, on_quick_shortcut)
+        .map_err(|e| format!("Failed to register '{}': {}", shortcut, e))?;
+
+    if let Some(old_sc) = old_shortcut {
+        let _ = app.global_shortcut().unregister(old_sc);
+    }
+    *current = shortcut;
 
     Ok(true)
 }
 
 #[tauri::command]
 async fn set_proxy(settings: ProxySettings, state: State<'_, AppState>) -> Result<(), String> {
-    let mut proxy = state.proxy_settings.lock().unwrap();
+    let mut proxy = state
+        .proxy_settings
+        .lock()
+        .map_err(|_| "proxy settings lock poisoned".to_string())?;
     *proxy = Some(settings);
     Ok(())
 }
@@ -391,16 +426,20 @@ async fn resize_main_window(app: AppHandle, dimensions: WindowDimensions) -> Res
 }
 
 #[tauri::command]
-async fn quick_window_ready(app: AppHandle) -> Result<(), String> {
-    // Get clipboard text
-    use tauri_plugin_clipboard_manager::ClipboardExt;
+async fn quick_window_ready(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    // The webview now has a live listener; deliver any text the hotkey
+    // captured before it was ready. No clipboard access here — reading the
+    // clipboard on startup caused an unsolicited translation at every launch.
+    state.quick_ready.store(true, Ordering::SeqCst);
 
-    if let Ok(text) = app.clipboard().read_text() {
-        if !text.is_empty() {
-            // Emit to quick window
-            app.emit_to("quick", "quick-translate-text", text)
-                .map_err(|e| e.to_string())?;
-        }
+    let pending = state
+        .pending_quick_text
+        .lock()
+        .map_err(|_| "pending text lock poisoned".to_string())?
+        .take();
+    if let Some(text) = pending {
+        app.emit_to("quick", "quick-translate-text", text)
+            .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -419,8 +458,41 @@ fn should_start_hidden() -> bool {
     std::env::args().any(|arg| arg == "--hidden" || arg == "--autostart")
 }
 
+fn on_quick_shortcut(app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent) {
+    if event.state == ShortcutState::Pressed {
+        trigger_quick_translate(app);
+    }
+}
+
+/// Selection capture relies on X11 tools (xdotool); warn once per run on Wayland.
+fn warn_if_wayland(app: &AppHandle) {
+    static WARNED: AtomicBool = AtomicBool::new(false);
+
+    let is_wayland = std::env::var("XDG_SESSION_TYPE")
+        .map(|v| v.eq_ignore_ascii_case("wayland"))
+        .unwrap_or(false);
+    if !is_wayland || WARNED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    log::warn!("Wayland session detected: xdotool-based selection capture may not work");
+    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+    app.dialog()
+        .message(
+            "Quick Translate captures the selected text with X11 tools (xdotool), \
+             which may not work in a Wayland session. The current clipboard content \
+             will be translated instead.\n\n\
+             Tip: copy the text (Ctrl+C) before pressing the shortcut.",
+        )
+        .title("Wayland session detected")
+        .kind(MessageDialogKind::Warning)
+        .show(|_| {});
+}
+
 fn trigger_quick_translate(app: &AppHandle) {
     use tauri_plugin_clipboard_manager::ClipboardExt;
+
+    warn_if_wayland(app);
 
     // Get clipboard content first using xdotool to simulate Ctrl+C
     let _ = Command::new("xdotool")
@@ -428,14 +500,15 @@ fn trigger_quick_translate(app: &AppHandle) {
         .output();
 
     // Small delay for clipboard to update
-    std::thread::sleep(std::time::Duration::from_millis(150));
+    std::thread::sleep(Duration::from_millis(150));
 
     // Read the clipboard text
     let clipboard_text = app.clipboard().read_text().unwrap_or_default();
 
     // Show quick window at cursor position
     if let Some(window) = app.get_webview_window("quick") {
-        // Get cursor position using xdotool
+        // xdotool reports PHYSICAL pixels; wrapping them in LogicalPosition
+        // lands the window at scale× the cursor position on HiDPI displays.
         if let Ok(output) = Command::new("xdotool").arg("getmouselocation").output() {
             let location = String::from_utf8_lossy(&output.stdout);
             // Parse "x:123 y:456 screen:0 window:123456"
@@ -450,7 +523,19 @@ fn trigger_quick_translate(app: &AppHandle) {
                 }
             }
 
-            let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+            // Clamp so the popup stays on the monitor under the cursor
+            if let (Ok(win_size), Ok(Some(monitor))) =
+                (window.outer_size(), app.monitor_from_point(x as f64, y as f64))
+            {
+                let mp = monitor.position();
+                let ms = monitor.size();
+                let max_x = mp.x + ms.width as i32 - win_size.width as i32;
+                let max_y = mp.y + ms.height as i32 - win_size.height as i32;
+                x = x.clamp(mp.x, max_x.max(mp.x));
+                y = y.clamp(mp.y, max_y.max(mp.y));
+            }
+
+            let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
         }
 
         let _ = window.show();
@@ -459,20 +544,26 @@ fn trigger_quick_translate(app: &AppHandle) {
         // On Linux, use xdotool to forcefully activate the window for proper focus
         // This ensures the blur event will fire when clicking outside
         std::thread::spawn(move || {
-            std::thread::sleep(std::time::Duration::from_millis(50));
+            std::thread::sleep(Duration::from_millis(50));
             // Search for the window by name and activate it
             let _ = Command::new("xdotool")
                 .args(["search", "--name", "Quick Translate", "windowactivate"])
                 .output();
         });
 
-        // Emit clipboard text to the quick window after a small delay for window to be ready
         if !clipboard_text.is_empty() {
-            let app_clone = app.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(100));
-                let _ = app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
-            });
+            let state = app.state::<AppState>();
+            if state.quick_ready.load(Ordering::SeqCst) {
+                // Emit after a small delay for the window to be ready
+                let app_clone = app.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(100));
+                    let _ = app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
+                });
+            } else if let Ok(mut pending) = state.pending_quick_text.lock() {
+                // Webview not mounted yet; quick_window_ready delivers this
+                *pending = Some(clipboard_text);
+            }
         }
     }
 }
@@ -488,9 +579,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     // Use the same icon as dock (512x512) - let system handle scaling
     let tray_icon = {
         let icon_bytes = include_bytes!("../icons/icon.png");
-        let img = image::load_from_memory(icon_bytes)
-            .expect("Failed to load tray icon")
-            .into_rgba8();
+        let img = image::load_from_memory(icon_bytes)?.into_rgba8();
         let (width, height) = img.dimensions();
         tauri::image::Image::new_owned(img.into_raw(), width, height)
     };
@@ -533,7 +622,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 });
             }
             "quit" => {
-                std::process::exit(0);
+                // Go through Tauri's exit lifecycle (shortcut unregistration,
+                // webview teardown, log flush) instead of std::process::exit
+                app.exit(0);
             }
             _ => {}
         })
@@ -543,15 +634,14 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn setup_global_shortcut(app: &AppHandle, state: &AppState) -> Result<(), Box<dyn std::error::Error>> {
-    let shortcut_str = state.current_shortcut.lock().unwrap().clone();
+    let shortcut_str = state
+        .current_shortcut
+        .lock()
+        .map_err(|_| String::from("shortcut state lock poisoned"))?
+        .clone();
     let shortcut: Shortcut = shortcut_str.parse()?;
 
-    app.global_shortcut()
-        .on_shortcut(shortcut, move |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                trigger_quick_translate(app);
-            }
-        })?;
+    app.global_shortcut().on_shortcut(shortcut, on_quick_shortcut)?;
 
     Ok(())
 }
