@@ -47,10 +47,13 @@ export interface OcrResult {
   error?: string;
 }
 
-export interface OcrInstallProgress {
-  stage: string;
-  progress: number;
-  message: string;
+export interface OcrInstallGuidance {
+  os: string;
+  packageManager?: string;
+  /** Human-readable descriptions of what is missing */
+  missing: string[];
+  /** Copy-pastable install command(s); empty when nothing is missing */
+  commands: string[];
 }
 
 // Detect Tauri runtime
@@ -362,28 +365,27 @@ export const platform = {
     };
   },
 
-  async installOcrDependencies(): Promise<boolean> {
+  /**
+   * OS-specific install guidance for missing OCR components
+   * (OCR deps are installed on demand, not bundled as package dependencies)
+   */
+  async getOcrInstallGuidance(): Promise<OcrInstallGuidance | null> {
     await initTauri();
     if (tauriInvoke) {
-      return tauriInvoke('install_ocr_dependencies') as Promise<boolean>;
+      return tauriInvoke('get_ocr_install_guidance') as Promise<OcrInstallGuidance>;
     }
-    return false;
+    return null;
   },
 
-  async showOcrInstallPrompt(message: string): Promise<boolean> {
-    await initTauri();
-    if (tauriInvoke) {
-      return tauriInvoke('show_ocr_install_prompt', { message }) as Promise<boolean>;
-    }
-    return false;
-  },
-
-  onOcrInstallProgress(callback: (progress: OcrInstallProgress) => void): () => void {
+  /**
+   * Fired by the backend when a tray-initiated OCR finds components missing
+   */
+  onOcrDepsMissing(callback: () => void): () => void {
     return makeDisposableListener(async () => {
       await initTauri();
       if (!tauriEvent) return null;
-      return tauriEvent.listen('ocr-install-progress', (event) => {
-        callback(event.payload as OcrInstallProgress);
+      return tauriEvent.listen('ocr-deps-missing', () => {
+        callback();
       });
     });
   },

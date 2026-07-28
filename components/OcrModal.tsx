@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Copy, Check, RefreshCw } from 'lucide-react';
 import { translateText } from '../services/geminiService';
 import { useAppStore } from '../store/useAppStore';
 import { useOcrDependencies } from '../hooks/useOcrDependencies';
@@ -15,9 +15,27 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState<number | null>(null);
 
-  // OCR dependency status
-  const { ocrStatus, isOcrAvailable, isInstalling, promptAndInstall } = useOcrDependencies();
+  // On-demand OCR dependency check: runs when the modal opens, never at
+  // app startup. Missing components render as install guidance below.
+  const { ocrStatus, guidance, recheck, isOcrAvailable, isChecking } = useOcrDependencies();
+
+  useEffect(() => {
+    recheck();
+    // recheck is stable; run once per modal open
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const copyCommand = async (command: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopiedCommand(index);
+      setTimeout(() => setCopiedCommand(null), 2000);
+    } catch {
+      /* leave the command selectable for manual copy */
+    }
+  };
 
   const {
     sourceLang,
@@ -149,35 +167,75 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
         </div>
 
         <div className="p-6">
-          {/* OCR Unavailable Warning */}
+          {/* Install guidance: OCR components are installed on demand */}
           {!isOcrAvailable && ocrStatus.checked && (
             <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <div className="flex items-start gap-3">
                 <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-amber-400">OCR Components Missing</p>
-                  <p className="text-xs text-amber-400/70 mt-1">
-                    {ocrStatus.message || 'Required OCR components are not installed. OCR features will not work until they are installed.'}
-                  </p>
+                  {guidance && guidance.missing.length > 0 ? (
+                    <p className="text-xs text-amber-400/70 mt-1">
+                      Missing: {guidance.missing.join(' · ')}
+                      {guidance.packageManager ? ` — detected ${guidance.os} (${guidance.packageManager})` : ''}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-amber-400/70 mt-1">
+                      {ocrStatus.message || 'Required OCR components are not installed.'}
+                    </p>
+                  )}
+
+                  {guidance && guidance.commands.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      {guidance.commands.map((command, index) => (
+                        <div key={index} className="flex items-stretch gap-1.5">
+                          <code className="flex-1 text-[11px] leading-relaxed bg-black/40 text-amber-200 rounded px-2 py-1.5 overflow-x-auto whitespace-pre font-mono select-text">
+                            {command}
+                          </code>
+                          <button
+                            onClick={() => copyCommand(command, index)}
+                            className="px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded transition-colors flex items-center"
+                            title="Copy command"
+                          >
+                            {copiedCommand === index ? <Check size={12} /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-[11px] text-amber-400/60">
+                        Run this in a terminal, then click Re-check.
+                      </p>
+                    </div>
+                  )}
+
                   <button
-                    onClick={promptAndInstall}
-                    disabled={isInstalling}
+                    onClick={recheck}
+                    disabled={isChecking}
                     className="mt-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-medium rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    {isInstalling ? (
+                    {isChecking ? (
                       <>
                         <Loader2 size={12} className="animate-spin" />
-                        Installing...
+                        Checking...
                       </>
                     ) : (
                       <>
-                        <Download size={12} />
-                        Install Dependencies
+                        <RefreshCw size={12} />
+                        Re-check
                       </>
                     )}
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* OCR works, but some language packs are absent */}
+          {isOcrAvailable && guidance && guidance.missing.length > 0 && (
+            <div className="mb-4 px-3 py-2 bg-surfaceHighlight/40 border border-surfaceHighlight rounded-lg">
+              <p className="text-[11px] text-muted">
+                Note: {guidance.missing.join(' · ')} not installed — OCR runs with the available languages.
+                {guidance.commands[0] ? ` To add them: ${guidance.commands[0]}` : ''}
+              </p>
             </div>
           )}
 

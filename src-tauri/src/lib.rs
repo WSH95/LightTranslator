@@ -47,6 +47,20 @@ pub struct OcrDependencyStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct OcrInstallGuidance {
+    pub os: String,
+    #[serde(rename = "packageManager")]
+    pub package_manager: Option<String>,
+    /// Human-readable descriptions of what is missing
+    pub missing: Vec<String>,
+    /// Copy-pastable install command(s); empty when nothing is missing
+    pub commands: Vec<String>,
+}
+
+/// Languages the OCR feature wants; tesseract runs with the installed subset.
+const OCR_DESIRED_LANGS: [&str; 5] = ["chi_sim", "chi_tra", "eng", "jpn", "kor"];
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WindowDimensions {
     pub width: f64,
     pub height: f64,
@@ -194,11 +208,12 @@ async fn capture_screen() -> Result<Option<String>, String> {
     let temp_file = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
     let temp_path = temp_file.path().to_string_lossy().to_string() + ".png";
 
-    // Run gnome-screenshot with area selection
+    // Run gnome-screenshot with area selection. The OCR_DEPS_MISSING marker
+    // routes the frontend to the install-guidance popup.
     let output = Command::new("gnome-screenshot")
         .args(["-a", "-f", &temp_path])
         .output()
-        .map_err(|e| format!("Failed to run gnome-screenshot: {}", e))?;
+        .map_err(|e| format!("OCR_DEPS_MISSING: failed to run gnome-screenshot: {}", e))?;
 
     if !output.status.success() {
         // User might have cancelled
@@ -238,11 +253,32 @@ async fn ocr_image(base64_image: String) -> Result<OcrResult, String> {
     let temp_path = temp_file.path().to_string_lossy().to_string() + ".png";
     std::fs::write(&temp_path, &image_bytes).map_err(|e| e.to_string())?;
 
+    // Build the language list from what is actually installed: tesseract
+    // aborts outright if ANY requested traineddata file is absent
+    let installed = installed_tesseract_langs();
+    let desired: Vec<&str> = OCR_DESIRED_LANGS
+        .iter()
+        .copied()
+        .filter(|lang| installed.iter().any(|inst| inst == lang))
+        .collect();
+    let lang_arg = if !desired.is_empty() {
+        desired.join("+")
+    } else if !installed.is_empty() {
+        installed.join("+")
+    } else {
+        let _ = std::fs::remove_file(&temp_path);
+        return Ok(OcrResult {
+            success: false,
+            text: None,
+            error: Some("OCR_DEPS_MISSING: no tesseract language data installed".to_string()),
+        });
+    };
+
     // Run tesseract OCR
     let output = Command::new("tesseract")
-        .args([&temp_path, "stdout", "-l", "chi_sim+chi_tra+eng+jpn+kor"])
+        .args([&temp_path, "stdout", "-l", &lang_arg])
         .output()
-        .map_err(|e| format!("Failed to run tesseract: {}", e))?;
+        .map_err(|e| format!("OCR_DEPS_MISSING: failed to run tesseract: {}", e))?;
 
     // Clean up
     let _ = std::fs::remove_file(&temp_path);
@@ -271,11 +307,20 @@ async fn ocr_image(base64_image: String) -> Result<OcrResult, String> {
     }
 }
 
-#[tauri::command]
-async fn check_ocr_dependencies() -> Result<OcrDependencyStatus, String> {
-    // Check tesseract
-    let tesseract_output = Command::new("tesseract").arg("--version").output();
+fn installed_tesseract_langs() -> Vec<String> {
+    match Command::new("tesseract").arg("--list-langs").output() {
+        Ok(output) if output.status.success() => String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .skip(1) // Skip header line
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
+        _ => vec![],
+    }
+}
 
+fn ocr_dependency_status() -> OcrDependencyStatus {
+    let tesseract_output = Command::new("tesseract").arg("--version").output();
     let (tesseract_installed, tesseract_version) = match tesseract_output {
         Ok(output) if output.status.success() => {
             let version_str = String::from_utf8_lossy(&output.stdout);
@@ -285,58 +330,167 @@ async fn check_ocr_dependencies() -> Result<OcrDependencyStatus, String> {
         _ => (false, None),
     };
 
-    // Check tesseract languages
     let languages = if tesseract_installed {
-        let langs_output = Command::new("tesseract").arg("--list-langs").output();
-        match langs_output {
-            Ok(output) if output.status.success() => {
-                String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .skip(1) // Skip header line
-                    .map(|s| s.to_string())
-                    .collect()
-            }
-            _ => vec![],
-        }
+        installed_tesseract_langs()
     } else {
         vec![]
     };
 
-    // Check gnome-screenshot
     let gnome_screenshot_installed = Command::new("which")
         .arg("gnome-screenshot")
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
 
-    Ok(OcrDependencyStatus {
+    OcrDependencyStatus {
         tesseract_installed,
         tesseract_version,
         languages,
         gnome_screenshot_installed,
+    }
+}
+
+#[tauri::command]
+async fn check_ocr_dependencies() -> Result<OcrDependencyStatus, String> {
+    Ok(ocr_dependency_status())
+}
+
+fn detect_linux_package_manager() -> Option<&'static str> {
+    let content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+    let mut id = String::new();
+    let mut id_like = String::new();
+    for line in content.lines() {
+        if let Some(v) = line.strip_prefix("ID=") {
+            id = v.trim_matches('"').to_lowercase();
+        } else if let Some(v) = line.strip_prefix("ID_LIKE=") {
+            id_like = v.trim_matches('"').to_lowercase();
+        }
+    }
+    let hay = format!("{} {}", id, id_like);
+    if hay.contains("debian") || hay.contains("ubuntu") {
+        Some("apt")
+    } else if hay.contains("fedora") || hay.contains("rhel") || hay.contains("centos") {
+        Some("dnf")
+    } else if hay.contains("arch") {
+        Some("pacman")
+    } else if hay.contains("suse") {
+        Some("zypper")
+    } else {
+        None
+    }
+}
+
+/// Per-package-manager package name for a tesseract language code.
+fn lang_package(manager: &str, lang: &str) -> String {
+    match manager {
+        "apt" => format!("tesseract-ocr-{}", lang.replace('_', "-")),
+        "dnf" => format!("tesseract-langpack-{}", lang),
+        "pacman" => format!("tesseract-data-{}", lang),
+        "zypper" => {
+            let name = match lang {
+                "chi_sim" => "chinese_simplified",
+                "chi_tra" => "chinese_traditional",
+                "eng" => "english",
+                "jpn" => "japanese",
+                "kor" => "korean",
+                other => other,
+            };
+            format!("tesseract-ocr-traineddata-{}", name)
+        }
+        _ => lang.to_string(),
+    }
+}
+
+/// OCR components are deliberately NOT package dependencies: this command
+/// tells the user exactly what to install for their system when they first
+/// use OCR (see DECISIONS.md 0003).
+#[tauri::command]
+async fn get_ocr_install_guidance() -> Result<OcrInstallGuidance, String> {
+    let status = ocr_dependency_status();
+
+    let missing_core = !status.tesseract_installed;
+    let missing_screenshot = !status.gnome_screenshot_installed;
+    let missing_langs: Vec<&str> = if status.tesseract_installed {
+        OCR_DESIRED_LANGS
+            .iter()
+            .copied()
+            .filter(|lang| !status.languages.iter().any(|inst| inst == lang))
+            .collect()
+    } else {
+        OCR_DESIRED_LANGS.to_vec()
+    };
+
+    let mut missing = Vec::new();
+    if missing_core {
+        missing.push("Tesseract OCR engine".to_string());
+    }
+    if !missing_langs.is_empty() {
+        missing.push(format!("Language data: {}", missing_langs.join(", ")));
+    }
+    // Area capture currently uses gnome-screenshot, a Linux-only path
+    if missing_screenshot && cfg!(target_os = "linux") {
+        missing.push("gnome-screenshot (area capture)".to_string());
+    }
+
+    let mut commands = Vec::new();
+    let mut package_manager = None;
+    let os;
+
+    if cfg!(target_os = "linux") {
+        os = "linux".to_string();
+        if !missing.is_empty() {
+            if let Some(manager) = detect_linux_package_manager() {
+                package_manager = Some(manager.to_string());
+                let mut packages: Vec<String> = Vec::new();
+                if missing_core {
+                    packages.push(
+                        match manager {
+                            "apt" | "zypper" => "tesseract-ocr",
+                            _ => "tesseract",
+                        }
+                        .to_string(),
+                    );
+                }
+                for lang in &missing_langs {
+                    packages.push(lang_package(manager, lang));
+                }
+                if missing_screenshot {
+                    packages.push("gnome-screenshot".to_string());
+                }
+                let install = match manager {
+                    "apt" => format!("sudo apt install {}", packages.join(" ")),
+                    "dnf" => format!("sudo dnf install {}", packages.join(" ")),
+                    "pacman" => format!("sudo pacman -S {}", packages.join(" ")),
+                    "zypper" => format!("sudo zypper install {}", packages.join(" ")),
+                    _ => unreachable!(),
+                };
+                commands.push(install);
+            } else {
+                commands.push(
+                    "Install 'tesseract-ocr' (with the language data you need) and 'gnome-screenshot' using your distribution's package manager".to_string(),
+                );
+            }
+        }
+    } else if cfg!(target_os = "macos") {
+        os = "macos".to_string();
+        if missing_core || !missing_langs.is_empty() {
+            package_manager = Some("brew".to_string());
+            commands.push("brew install tesseract tesseract-lang".to_string());
+        }
+    } else {
+        os = "windows".to_string();
+        if missing_core || !missing_langs.is_empty() {
+            package_manager = Some("winget".to_string());
+            commands.push("winget install UB-Mannheim.TesseractOCR".to_string());
+        }
+    }
+
+    Ok(OcrInstallGuidance {
+        os,
+        package_manager,
+        missing,
+        commands,
     })
-}
-
-#[tauri::command]
-async fn install_ocr_dependencies() -> Result<bool, String> {
-    // This would require sudo, so we just return instructions
-    // In a real implementation, you might open a terminal or use pkexec
-    Err("Please install OCR dependencies manually: sudo apt install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra tesseract-ocr-eng tesseract-ocr-jpn tesseract-ocr-kor gnome-screenshot xdotool".to_string())
-}
-
-#[tauri::command]
-async fn show_ocr_install_prompt(app: AppHandle, message: String) -> Result<bool, String> {
-    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
-
-    let result = app
-        .dialog()
-        .message(format!("{}\n\nWould you like to install OCR dependencies?", message))
-        .title("OCR Dependencies Missing")
-        .kind(MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::OkCancel)
-        .blocking_show();
-
-    Ok(result)
 }
 
 #[tauri::command]
@@ -605,6 +759,17 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 // Trigger OCR capture
                 let app_clone = app.clone();
                 std::thread::spawn(move || {
+                    // Missing components: open the main window with the
+                    // install-guidance popup instead of failing silently
+                    let deps = ocr_dependency_status();
+                    if !(deps.tesseract_installed && deps.gnome_screenshot_installed) {
+                        if let Some(window) = app_clone.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                        let _ = app_clone.emit_to("main", "ocr-deps-missing", ());
+                        return;
+                    }
                     if let Ok(Some(image_data)) = tauri::async_runtime::block_on(capture_screen()) {
                         if let Ok(ocr_result) = tauri::async_runtime::block_on(ocr_image(image_data)) {
                             if ocr_result.success {
@@ -667,8 +832,7 @@ pub fn run() {
             capture_screen,
             ocr_image,
             check_ocr_dependencies,
-            install_ocr_dependencies,
-            show_ocr_install_prompt,
+            get_ocr_install_guidance,
             update_shortcut,
             set_proxy,
             set_auto_launch,

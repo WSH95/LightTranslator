@@ -5,7 +5,6 @@ import { SettingsModal } from './components/SettingsModal';
 import { OcrModal } from './components/OcrModal';
 import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useOcrDependencies } from './hooks/useOcrDependencies';
 import { useAppStore } from './store/useAppStore';
 import { PROVIDERS, DEFAULT_SETTINGS } from './constants';
 import { platform } from './src/lib/platform';
@@ -13,7 +12,6 @@ import { platform } from './src/lib/platform';
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
-  const hasPrompted = useRef(false);
   const { updateSettings, provider } = useAppStore();
 
   // Get current provider info
@@ -32,9 +30,6 @@ const App: React.FC = () => {
     };
   }, [isQuickMode]);
 
-  // OCR dependency management
-  const { ocrStatus, promptAndInstall } = useOcrDependencies();
-
   // Listen for open-settings event from tray menu
   useEffect(() => {
     if (platform.isAvailable()) {
@@ -44,6 +39,15 @@ const App: React.FC = () => {
       return unlisten;
     }
   }, []);
+
+  // Tray-initiated OCR with missing components: open the OCR modal, which
+  // runs the on-demand dependency check and shows install guidance
+  useEffect(() => {
+    if (isQuickMode || !platform.isAvailable()) return;
+    return platform.onOcrDepsMissing(() => {
+      setShowOCR(true);
+    });
+  }, [isQuickMode]);
 
   // Resize main window when settings modal opens/closes
   useEffect(() => {
@@ -116,18 +120,6 @@ const App: React.FC = () => {
       return unsub;
     }
   }, [isQuickMode]);
-
-  // Prompt user to install OCR dependencies if missing (only once on first check)
-  useEffect(() => {
-    if (ocrStatus.checked && !ocrStatus.available && !hasPrompted.current && !isQuickMode) {
-      hasPrompted.current = true;
-      // Small delay to ensure UI is fully loaded
-      const timer = setTimeout(() => {
-        promptAndInstall();
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [ocrStatus.checked, ocrStatus.available, isQuickMode, promptAndInstall]);
 
   if (isQuickMode) {
     return (
