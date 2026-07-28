@@ -61,8 +61,8 @@ export const isTauri = (): boolean => {
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
-let tauriWindow: { getCurrentWindow: () => { minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void> } } | null = null;
-let tauriEvent: { listen: (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void> } | null = null;
+let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void> } } | null = null;
+let tauriEvent: { listen: (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>; emitTo: (target: string, event: string, payload?: unknown) => Promise<void> } | null = null;
 
 // Initialize Tauri APIs if available
 const initTauri = async () => {
@@ -83,6 +83,38 @@ const initTauri = async () => {
 // Initialize on module load if Tauri is detected
 if (isTauri()) {
   initTauri();
+}
+
+/**
+ * Wraps async listener registration so the returned disposer works even when
+ * it runs before registration resolves. Without this, React StrictMode's
+ * mount→unmount→remount cycle runs the first cleanup while `unlisten` is
+ * still null, permanently orphaning that listener (duplicate events).
+ */
+function makeDisposableListener(
+  start: () => Promise<(() => void) | null>,
+  onRegistered?: () => void
+): () => void {
+  let cancelled = false;
+  let unlisten: (() => void) | null = null;
+  start()
+    .then((fn) => {
+      if (!fn) return;
+      if (cancelled) {
+        fn();
+      } else {
+        unlisten = fn;
+        onRegistered?.();
+      }
+    })
+    .catch((e) => console.error('Failed to register listener:', e));
+  return () => {
+    cancelled = true;
+    if (unlisten) {
+      unlisten();
+      unlisten = null;
+    }
+  };
 }
 
 /**
@@ -146,18 +178,14 @@ export const platform = {
   /**
    * Quick Translate window
    */
-  onQuickTranslate(callback: (text: string) => void): () => void {
-    let unlisten: (() => void) | null = null;
-    initTauri().then(() => {
-      if (tauriEvent) {
-        tauriEvent.listen('quick-translate-text', (event) => {
-          callback(event.payload as string);
-        }).then((fn) => {
-          unlisten = fn;
-        });
-      }
-    });
-    return () => unlisten?.();
+  onQuickTranslate(callback: (text: string) => void, onRegistered?: () => void): () => void {
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('quick-translate-text', (event) => {
+        callback(event.payload as string);
+      });
+    }, onRegistered);
   },
 
   sendQuickReady(): void {
@@ -180,19 +208,15 @@ export const platform = {
    * Listen for window blur (focus lost) events
    */
   onWindowBlur(callback: () => void): () => void {
-    let unlisten: (() => void) | null = null;
-    initTauri().then(() => {
-      if (tauriWindow) {
-        tauriWindow.getCurrentWindow().onFocusChanged((event) => {
-          if (!event.payload) {
-            callback();
-          }
-        }).then((fn) => {
-          unlisten = fn;
-        });
-      }
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriWindow) return null;
+      return tauriWindow.getCurrentWindow().onFocusChanged((event) => {
+        if (!event.payload) {
+          callback();
+        }
+      });
     });
-    return () => unlisten?.();
   },
 
   async resizeQuickWindow(dimensions: WindowDimensions): Promise<void> {
@@ -213,17 +237,40 @@ export const platform = {
    * Settings callbacks
    */
   onOpenSettings(callback: () => void): () => void {
-    let unlisten: (() => void) | null = null;
-    initTauri().then(() => {
-      if (tauriEvent) {
-        tauriEvent.listen('open-settings', () => {
-          callback();
-        }).then((fn) => {
-          unlisten = fn;
-        });
-      }
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('open-settings', () => {
+        callback();
+      });
     });
-    return () => unlisten?.();
+  },
+
+  /**
+   * Cross-window settings sync: tell the other window that persisted settings
+   * changed so it rehydrates from localStorage. emitTo targets only the other
+   * window, so the sender never reacts to its own change (no event loop).
+   */
+  async emitSettingsChanged(): Promise<void> {
+    await initTauri();
+    if (!tauriEvent || !tauriWindow) return;
+    const label = tauriWindow.getCurrentWindow().label;
+    const target = label === 'quick' ? 'main' : 'quick';
+    try {
+      await tauriEvent.emitTo(target, 'settings-changed', label);
+    } catch (e) {
+      console.warn('Failed to emit settings-changed:', e);
+    }
+  },
+
+  onSettingsChanged(callback: (sender: string) => void): () => void {
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('settings-changed', (event) => {
+        callback(event.payload as string);
+      });
+    });
   },
 
   /**
@@ -252,17 +299,13 @@ export const platform = {
    * OCR result callback (from tray menu)
    */
   onOcrResult(callback: (text: string) => void): () => void {
-    let unlisten: (() => void) | null = null;
-    initTauri().then(() => {
-      if (tauriEvent) {
-        tauriEvent.listen('ocr-result', (event) => {
-          callback(event.payload as string);
-        }).then((fn) => {
-          unlisten = fn;
-        });
-      }
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('ocr-result', (event) => {
+        callback(event.payload as string);
+      });
     });
-    return () => unlisten?.();
   },
 
   /**
@@ -336,17 +379,13 @@ export const platform = {
   },
 
   onOcrInstallProgress(callback: (progress: OcrInstallProgress) => void): () => void {
-    let unlisten: (() => void) | null = null;
-    initTauri().then(() => {
-      if (tauriEvent) {
-        tauriEvent.listen('ocr-install-progress', (event) => {
-          callback(event.payload as OcrInstallProgress);
-        }).then((fn) => {
-          unlisten = fn;
-        });
-      }
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('ocr-install-progress', (event) => {
+        callback(event.payload as OcrInstallProgress);
+      });
     });
-    return () => unlisten?.();
   },
 
   /**
