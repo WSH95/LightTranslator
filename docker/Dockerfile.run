@@ -1,0 +1,46 @@
+# Runtime image: everything the app needs EXCEPT the app itself.
+#
+# The .deb is mounted at run time and installed by the entrypoint, so shipping
+# a new build never rebuilds this image — the expensive apt layers below stay
+# cached and an update is just "restart the container".
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# The .deb's own dependencies, installed by name so dpkg -i has nothing left
+# to resolve at start. ca-certificates is not optional: without it every
+# HTTPS translation fails with a TLS error that looks like a network outage.
+#
+# fonts-noto-cjk is required, not cosmetic: the container has its own font
+# set, and without it every Chinese/Japanese/Korean translation renders as
+# empty boxes even though the translation itself succeeded.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      dbus-x11 \
+      fonts-noto-cjk \
+      libayatana-appindicator3-1 \
+      libgtk-3-0 \
+      libwebkit2gtk-4.1-0 \
+      xclip \
+      xdotool \
+    && rm -rf /var/lib/apt/lists/*
+
+# OCR components. Set to 0 for a slimmer image; the app then shows its
+# on-demand install-guidance popup instead of running OCR.
+ARG WITH_OCR=1
+RUN if [ "$WITH_OCR" = "1" ]; then \
+      apt-get update && apt-get install -y --no-install-recommends \
+        gnome-screenshot \
+        tesseract-ocr \
+        tesseract-ocr-chi-sim \
+        tesseract-ocr-chi-tra \
+        tesseract-ocr-eng \
+        tesseract-ocr-jpn \
+        tesseract-ocr-kor \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

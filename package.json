@@ -32,6 +32,12 @@
     "tauri": "cargo tauri",
     "app:dev": "cargo tauri dev",
     "app:build": "cargo tauri build",
-    "app:build:linux": "cargo tauri build --target x86_64-unknown-linux-gnu"
+    "app:build:linux": "cargo tauri build --target x86_64-unknown-linux-gnu",
+    "app:docker:build": "bash scripts/docker-build-deb.sh",
+    "app:docker": "bash scripts/docker-run.sh start",
+    "app:docker:update": "bash scripts/docker-run.sh update",
+    "app:docker:stop": "bash scripts/docker-run.sh stop",
+    "app:docker:logs": "bash scripts/docker-run.sh logs",
+    "app:docker:dev": "bash scripts/docker-dev.sh"
   }
 }

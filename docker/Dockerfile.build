@@ -1,0 +1,37 @@
+# Builder image: produces the .deb on Ubuntu 22.04 (jammy).
+#
+# Jammy is deliberate — it fixes the artifact's floor at glibc 2.35 and
+# webkit2gtk-4.1, so the .deb installs on Ubuntu 22.04/24.04 and Debian 12+.
+# Building on a newer base would raise that floor for no benefit.
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    CARGO_HOME=/opt/cargo \
+    CARGO_TARGET_DIR=/opt/target \
+    PATH=/opt/cargo/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential \
+      ca-certificates \
+      curl \
+      file \
+      libayatana-appindicator3-dev \
+      libgtk-3-dev \
+      librsvg2-dev \
+      libssl-dev \
+      libwebkit2gtk-4.1-dev \
+      pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Jammy's apt Node is v12, which the Tauri CLI refuses to run on. Purge it
+# first: installing NodeSource over it fails on file conflicts.
+RUN apt-get update \
+    && apt-get purge -y nodejs npm libnode72 libnode-dev nodejs-doc 2>/dev/null || true; \
+    apt-get autoremove -y \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+
+WORKDIR /work
