@@ -7,7 +7,7 @@ import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useOcrDependencies } from './hooks/useOcrDependencies';
 import { useAppStore } from './store/useAppStore';
-import { PROVIDERS } from './constants';
+import { PROVIDERS, DEFAULT_SETTINGS } from './constants';
 import { platform } from './src/lib/platform';
 
 const App: React.FC = () => {
@@ -56,8 +56,18 @@ const App: React.FC = () => {
     }
   }, [showSettings]);
 
-  // Sync auto-launch state with system on app startup
+  // Rehydrate when the other window persists a settings change
   useEffect(() => {
+    if (!platform.isAvailable()) return;
+    return platform.onSettingsChanged(() => {
+      useAppStore.persist.rehydrate();
+    });
+  }, []);
+
+  // Sync auto-launch state with system on app startup (main window only —
+  // the quick window also mounts App and must not race a duplicate write)
+  useEffect(() => {
+    if (isQuickMode) return;
     const syncAutoLaunchState = async () => {
       if (platform.isAvailable()) {
         try {
@@ -69,7 +79,44 @@ const App: React.FC = () => {
       }
     };
     syncAutoLaunchState();
-  }, [updateSettings]);
+  }, [updateSettings, isQuickMode]);
+
+  // Restore persisted shortcut + proxy to the Rust backend on startup.
+  // The backend boots with hardcoded defaults; without this push the UI
+  // shows the saved values while the app actually uses the defaults.
+  const didPushBackendSettings = useRef(false);
+  useEffect(() => {
+    if (isQuickMode || !platform.isAvailable() || didPushBackendSettings.current) return;
+    didPushBackendSettings.current = true; // ref survives StrictMode remount
+
+    const push = () => {
+      const s = useAppStore.getState();
+      if (s.selectionShortcut && s.selectionShortcut !== DEFAULT_SETTINGS.selectionShortcut) {
+        platform.updateShortcut(s.selectionShortcut)
+          .catch((e) => console.error('Failed to restore shortcut:', e));
+      }
+      if (s.proxyEnabled && s.proxyHost) {
+        platform.setProxy({
+          enabled: true,
+          protocol: s.proxyProtocol,
+          host: s.proxyHost,
+          port: s.proxyPort,
+          username: s.proxyUsername,
+          password: s.proxyPassword,
+        }).catch((e) => console.error('Failed to restore proxy settings:', e));
+      }
+    };
+
+    if (useAppStore.persist.hasHydrated()) {
+      push();
+    } else {
+      const unsub = useAppStore.persist.onFinishHydration(() => {
+        unsub();
+        push();
+      });
+      return unsub;
+    }
+  }, [isQuickMode]);
 
   // Prompt user to install OCR dependencies if missing (only once on first check)
   useEffect(() => {

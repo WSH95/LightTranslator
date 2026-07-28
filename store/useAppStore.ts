@@ -2,6 +2,21 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppSettings, LanguageCode, TranslationProviderId, ModelVerificationState } from '../types';
 import { DEFAULT_SETTINGS } from '../constants';
+import { platform } from '../src/lib/platform';
+
+// Cross-window sync: each window runs its own store instance over one shared
+// localStorage. After a persisted settings write, nudge the other window to
+// rehydrate so neither side keeps (and later persists) a stale snapshot.
+// Debounced so bursts (typing in Settings) coalesce into one event.
+let broadcastTimer: ReturnType<typeof setTimeout> | null = null;
+function broadcastSettingsChanged() {
+  if (!platform.isAvailable()) return;
+  if (broadcastTimer) clearTimeout(broadcastTimer);
+  broadcastTimer = setTimeout(() => {
+    broadcastTimer = null;
+    platform.emitSettingsChanged();
+  }, 250);
+}
 
 // OCR dependency status
 interface OcrStatus {
@@ -82,14 +97,14 @@ export const useAppStore = create<AppState>()(
         error: null,
       },
 
-      // Actions
-      setSourceLang: (lang) => set({ sourceLang: lang }),
-      setTargetLang: (lang) => set({ targetLang: lang }),
-      setQuickSourceLang: (lang) => set({ quickSourceLang: lang }),
-      setQuickTargetLang: (lang) => set({ quickTargetLang: lang }),
-      setProvider: (id) => set({ provider: id }),
-      toggleAutoTranslate: () => set((state) => ({ autoTranslate: !state.autoTranslate })),
-      updateSettings: (newSettings) => set((state) => ({ ...state, ...newSettings })),
+      // Actions (settings writes notify the other window — see broadcastSettingsChanged)
+      setSourceLang: (lang) => { set({ sourceLang: lang }); broadcastSettingsChanged(); },
+      setTargetLang: (lang) => { set({ targetLang: lang }); broadcastSettingsChanged(); },
+      setQuickSourceLang: (lang) => { set({ quickSourceLang: lang }); broadcastSettingsChanged(); },
+      setQuickTargetLang: (lang) => { set({ quickTargetLang: lang }); broadcastSettingsChanged(); },
+      setProvider: (id) => { set({ provider: id }); broadcastSettingsChanged(); },
+      toggleAutoTranslate: () => { set((state) => ({ autoTranslate: !state.autoTranslate })); broadcastSettingsChanged(); },
+      updateSettings: (newSettings) => { set((state) => ({ ...state, ...newSettings })); broadcastSettingsChanged(); },
 
       setInputText: (text) => set({ inputText: text }),
       setTranslatedText: (text) => set({ translatedText: text }),
