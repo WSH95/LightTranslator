@@ -28,7 +28,7 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] R5 Functional verification on the installed deb (Xvfb + openbox): typing translates ("Good morning, my friend." → 早上好，我的朋友。); hotkey → popup → translation ("The weather is beautiful today." → 今天天气真好。)
 - [x] R6 **Crash found and fixed**: hotkey killed the app (exit 1, nondeterministic) because window ops ran on the global-shortcut thread; now via `run_on_main_thread` (58db330). 5/5 presses stable after fix
 - [x] R7 Test image `lighttranslator-test:1.2.0` + `run-lighttranslator-deb.sh` so the app (installed from the deb) runs on this 20.04 desktop via shared X11
-- [ ] R8 **User acceptance test** — interactive desktop session, then merge to `main` (+ optional `v1.2.0` tag)
+- [x] R8 User acceptance done — Electron build installed and run natively on 20.04; merged and released as v1.2.0
 
 ## Dual backend for older distributions (2026-07-28)
 
@@ -49,7 +49,7 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] P2 Both artifacts rebuilt from HEAD — the Tauri one was stale (predated the clipboard/capture fixes in 94b9866)
 - [x] P3 Branch pushed; PR #2 opened against `main` (merge commit or rebase requested, not squash)
 - [x] P4 Draft release v1.2.0 created targeting `main`, with both .debs named by Ubuntu range and compatibility instructions; upload verified by checksum round-trip
-- [ ] P5 **User merges PR #2**, then the draft release is published (`gh release edit v1.2.0 --draft=false`) so the tag lands on `main`
+- [x] P5 PR #2 merged (squash → `cbe1df9`; tree verified identical to the built commit) and release **v1.2.0 published** — tag on `main`, both .debs live
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 

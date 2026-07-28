@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-07-28T16:55:00Z
-updated_by: claude-code (PR #2 open, v1.2.0 draft release ready)
-session_status: active
-branch: fix/2026-07-review-stabilization
-last_commit: 9663bd8
+updated_at: 2026-07-28T17:56:00Z
+updated_by: claude-code (session wrap — v1.2.0 shipped)
+session_status: closed
+branch: main
+last_commit: cbe1df9
 ---
 
 # Handoff
@@ -13,44 +13,41 @@ another device). Keep every section current at wrap-up.
 
 ## Now
 
-Two backends now ship from one codebase (DECISIONS 0007):
+**v1.2.0 is shipped.** PR #2 merged into `main` (squash → `cbe1df9`; its tree is
+byte-identical to the built commit `fa113e7`) and the release is published at
+https://github.com/WSH95/LightTranslator/releases/tag/v1.2.0 with both packages:
 
-- **Tauri** (`src-tauri/`) for Ubuntu 22.04+/Debian 12+ — ~5 MB, ~60 MB RAM.
-  Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.2.0_amd64.deb`
-- **Electron** (`electron/`) for Ubuntu 18.04-20.04, where Tauri 2 cannot run —
-  ~92 MB, ~200 MB RAM. Artifact: `dist-electron/lighttranslator_1.2.0_amd64.deb`
+- `LightTranslator-1.2.0-amd64-ubuntu22.04-or-newer.deb` — Tauri, 5 MB
+- `LightTranslator-1.2.0-amd64-ubuntu20.04-or-older.deb` — Electron, 92 MB
 
-The React UI is shared verbatim, so the interface is identical; only the ~13
-backend commands exist twice. `PlatformBackend` (src/lib/platform.ts) is derived
-from the Tauri backend, so `npm run typecheck` fails if the Electron backend is
-missing anything. Behavior parity is checked by the 18-point list in VERIFY.md.
+The app now ships two interchangeable backends from one codebase: Tauri for
+Ubuntu 22.04+/Debian 12+, Electron for 18.04-20.04 where Tauri 2's
+webkit2gtk-4.1 does not exist. The React UI is shared, so the interface is
+identical; `PlatformBackend` in `src/lib/platform.ts` enforces surface parity at
+typecheck time and VERIFY.md carries an 18-point behavior checklist.
 
-Verified natively on this 20.04 host: the packaged Electron build launches, both
-windows appear with the right titles/sizes, the global hotkey works, and the
-popup renders a live translation ("Electron 在 Ubuntu 20.04 上原生运行。").
+This session also delivered: a full code review (~50 findings) with all broken
+behaviors and likely bugs fixed, security hardening, on-demand OCR
+dependencies, the Docker build/run path for old hosts, and Project Steward
+initialization.
 
 ## In flight
 
-- **PR #2** — https://github.com/WSH95/LightTranslator/pull/2 — 25 commits,
-  base `main`. Waiting for the user to merge (merge commit or rebase, NOT
-  squash, so the release tag lands on a commit in `main`'s history).
-- **Draft release v1.2.0** targeting `main`, both .debs attached:
-  `LightTranslator-1.2.0-amd64-ubuntu22.04-or-newer.deb` (Tauri, 5 MB) and
-  `LightTranslator-1.2.0-amd64-ubuntu20.04-or-older.deb` (Electron, 92 MB).
-  Publish after the merge: `gh release edit v1.2.0 --draft=false`.
-- The user has the Electron build installed at /opt/LightTranslator and
-  running; it is byte-identical to the released artifact.
+- (none — working tree clean, `main` checked out and up to date)
 
 ## Next steps
 
-1. User merges PR #2 into `main`.
-2. Publish the draft release: `gh release edit v1.2.0 --draft=false`.
-3. Optionally walk the VERIFY.md parity checklist against both builds.
-4. Then the "Later" backlog (Wayland, single-instance, secure key storage).
+1. Optional cleanup: delete the merged branch
+   (`git branch -d fix/2026-07-review-stabilization` and the remote one).
+2. Walk `VERIFY.md`'s parity checklist against both builds when convenient —
+   several rows (proxy with auth, DeepL zh-TW, OCR guidance) were verified by
+   code review or on one backend only.
+3. Pick up the "Later" backlog in PLAN.md — highest value first: Wayland
+   selection capture, single-instance guard, secure API-key storage.
 
 ## Blockers
 
-- (none — waiting on user acceptance only)
+- (none)
 
 ## Manual checklist for the user acceptance test
 
