@@ -24,7 +24,7 @@ const secretPatterns = [
 ];
 
 // Files and directories to skip
-const skipDirs = ['node_modules', 'dist', 'dist-electron', '.git', 'assets'];
+const skipDirs = ['node_modules', 'dist', '.git', 'src-tauri', '.project-steward'];
 const skipFiles = ['.env', '.env.local', '.env.example', 'check-secrets.js', 'package-lock.json'];
 const allowedExtensions = ['.ts', '.tsx', '.js', '.jsx', '.json', '.html'];
 
@@ -113,8 +113,8 @@ if (warnings.length > 0) {
   });
   console.log('Please review these files and ensure no real API keys are committed.');
   console.log('Use environment variables or the app settings UI for API key configuration.\n');
-  // Exit with warning but don't fail the build
-  process.exit(0);
+  // Fail the build: a detected key must be looked at, not shipped
+  process.exit(1);
 } else {
   console.log('✅ No obvious secrets detected in source code.\n');
   process.exit(0);

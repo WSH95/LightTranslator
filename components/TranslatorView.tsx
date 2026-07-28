@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { X, Copy, Check, ScanText, Loader2, ArrowDown, ClipboardList, AlertTriangle, Bot, Cloud, RefreshCw } from 'lucide-react';
+import { X, Copy, Check, ScanText, Loader2, ClipboardList } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { translateText, translateImage, verifyModelIdentity } from '../services/geminiService';
+import { translateText, translateImage } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS } from '../constants';
 import { platform } from '../src/lib/platform';
@@ -34,12 +34,10 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     microsoftSubscriptionKey,
     microsoftRegion,
     ocrStatus,
-    modelVerification,
     setInputText,
     setTranslatedText,
     setIsTranslating,
     setErrorMessage,
-    setModelVerification,
     clearModelVerification
   } = useAppStore();
 
@@ -138,71 +136,20 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     }
   }, [setInputText]);
 
-  // Get provider info
-  const currentProvider = PROVIDERS.find(p => p.id === provider);
-  const isLlmProvider = currentProvider?.category === 'llm';
-
-  // Get the configured model name for display
-  const configuredModelName = provider === 'gemini' ? modelId : provider === 'openrouter' ? openrouterModel : openaiModel;
-
-  // Clear verification when provider or model changes (don't auto-verify to save quota)
+  // Clear stale verification state when provider or model changes
   useEffect(() => {
     clearModelVerification();
   }, [provider, modelId, openaiModel, openrouterModel, clearModelVerification]);
 
-  // Manual verification handler - only runs when user clicks verify button
-  const handleVerify = useCallback(async () => {
-    if (!isLlmProvider) return;
-
-    // Check credentials
-    const hasCredentials =
-      (provider === 'gemini' && geminiApiKey) ||
-      (provider === 'openai' && openaiApiKey && openaiBaseUrl) ||
-      (provider === 'openrouter' && openrouterApiKey);
-
-    if (!hasCredentials) {
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: null,
-        error: 'API key not configured'
-      });
-      return;
-    }
-
-    setModelVerification({ isVerifying: true, error: null });
-
-    try {
-      const identity = await verifyModelIdentity({
-        provider,
-        geminiApiKey,
-        modelId,
-        openaiBaseUrl,
-        openaiApiKey,
-        openaiModel,
-        openrouterApiKey,
-        openrouterModel
-      });
-
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: identity,
-        lastVerifiedAt: Date.now(),
-        error: null
-      });
-    } catch (error: any) {
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: null,
-        error: error.message || 'Verification failed'
-      });
-    }
-  }, [provider, geminiApiKey, modelId, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, isLlmProvider, setModelVerification]);
-
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (translatedText) {
-      navigator.clipboard.writeText(translatedText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(translatedText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        setErrorMessage('Failed to copy to clipboard.');
+      }
     }
   };
 

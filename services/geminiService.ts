@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { TranslationProviderId } from "../types";
+import { DEFAULT_SETTINGS } from "../constants";
 import { platform } from "../src/lib/platform";
 
 // --- Types ---
@@ -34,15 +34,6 @@ interface VerifyModelOptions {
   openrouterApiKey?: string;
   openrouterModel?: string;
 }
-
-// Helper to get Gemini client with the provided API key
-const getGeminiClient = (apiKey?: string) => {
-  const key = apiKey || process.env.API_KEY || '';
-  if (!key) {
-    throw new Error("Gemini API Key is required. Please configure it in Settings.");
-  }
-  return new GoogleGenAI({ apiKey: key });
-};
 
 /**
  * Main Translation Function
@@ -106,7 +97,7 @@ export const verifyModelIdentity = async (options: VerifyModelOptions): Promise<
     if (!geminiApiKey) {
       throw new Error("Gemini API Key is required for verification.");
     }
-    const requestedModel = modelId || 'gemini-2.0-flash';
+    const requestedModel = modelId || DEFAULT_SETTINGS.modelId;
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${requestedModel}?key=${geminiApiKey}`;
@@ -222,7 +213,7 @@ const translateWithGemini = async (text: string, source: string, target: string,
     throw new Error("Gemini API Key is required. Please configure it in Settings.");
   }
 
-  const modelId = options.modelId || 'gemini-2.0-flash';
+  const modelId = options.modelId || DEFAULT_SETTINGS.modelId;
   const systemPromptEnabled = options.systemPromptEnabled !== false;
 
   let systemInstruction: string | undefined = undefined;
@@ -296,7 +287,7 @@ const translateImageWithGemini = async (base64Image: string, targetLang: string,
   }
 
   const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-  const modelId = options.modelId || 'gemini-2.0-flash';
+  const modelId = options.modelId || DEFAULT_SETTINGS.modelId;
 
   const prompt = `Extract text and translate to ${targetLang}. Return JSON: { "extracted": "...", "translation": "..." }`;
 
@@ -394,8 +385,9 @@ const translateWithOpenAI = async (text: string, source: string, target: string,
       });
 
       if (!response.ok) {
+        // No provider prefix here — the outer catch adds the single one
         const errData = response.data || response.error || 'Unknown error';
-        throw new Error(`OpenAI API Error: ${errData}`);
+        throw new Error(String(errData));
       }
 
       const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
@@ -464,8 +456,9 @@ const translateWithOpenRouter = async (text: string, source: string, target: str
       });
 
       if (!response.ok) {
+        // No provider prefix here — the outer catch adds the single one
         const errData = response.data || response.error || 'Unknown error';
-        throw new Error(`OpenRouter API Error: ${errData}`);
+        throw new Error(String(errData));
       }
 
       const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;

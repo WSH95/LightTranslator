@@ -22,7 +22,6 @@ const App: React.FC = () => {
   // Initialize directly from URL to avoid flash/race conditions
   const [isQuickMode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    console.log('App mounted. Search params:', window.location.search);
     return params.get('mode') === 'quick';
   });
   useEffect(() => {
@@ -142,12 +141,7 @@ const App: React.FC = () => {
     <ErrorBoundary>
       {/* Changed: Removed padding and centering. Now fills the viewport (window). */}
       <div className="w-screen h-screen overflow-hidden">
-        {/* 
-          Main Window Container 
-          Changed: Removed fixed max-width and height. 
-          Added h-full w-full to fill the Electron window.
-          Removed rounded corners (optional, depending on if you want frameless window)
-        */}
+        {/* Main window container: fills the frameless Tauri window */}
         <div className="w-full h-full flex flex-col overflow-hidden relative transition-all duration-300">
 
           {/* Unified Header */}

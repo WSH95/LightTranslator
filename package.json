@@ -8,7 +8,6 @@
   "license": "MIT",
   "homepage": "https://github.com/user/lighttranslator",
   "dependencies": {
-    "@google/genai": "^1.34.0",
     "@tauri-apps/api": "^2",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
@@ -28,7 +27,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "prebuild": "node scripts/check-secrets.js || true",
+    "prebuild": "node scripts/check-secrets.js",
     "typecheck": "tsc --noEmit",
     "tauri": "cargo tauri",
     "app:dev": "cargo tauri dev",

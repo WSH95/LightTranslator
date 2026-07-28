@@ -7,9 +7,10 @@ import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
 import { LanguageCode } from '../types';
 
-// Window size constraints
-const MIN_WIDTH = 100;
-const MIN_HEIGHT = 100;
+// Window size constraints (min values mirror tauri.conf.json's quick window —
+// the window manager clamps to those anyway)
+const MIN_WIDTH = 300;
+const MIN_HEIGHT = 80;
 const MAX_WIDTH = 600;
 const MAX_HEIGHT = 500;
 const HEADER_HEIGHT = 32;
@@ -275,7 +276,11 @@ export const QuickTranslateWindow: React.FC = () => {
             </div>
           ) : (
             <div className="text-sm text-gray-900 font-medium leading-relaxed break-words">
-              {translated || <span className="text-gray-300 italic">Translating...</span>}
+              {translated || (
+                <span className="text-gray-300 italic">
+                  {loading ? 'Translating…' : 'Select text and press the shortcut'}
+                </span>
+              )}
             </div>
           )}
         </div>
