@@ -19,6 +19,17 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] S9 `docs`: add MIT LICENSE, README truth pass (tauri-cli prerequisite, honest platform claims, key-storage description, typecheck, on-demand OCR)
 - [x] S10 Wrap: full verification (`typecheck`, `build`, `cargo check`, `npm ci` — all green 2026-07-28), HANDOFF rewritten with manual smoke checklist. Remaining: user decides on merging `fix/2026-07-review-stabilization` into `main`
 
+## Release 1.2.0 (2026-07-28)
+
+- [x] R1 Version bumped to 1.2.0 in package.json, tauri.conf.json, Cargo.toml + both lockfiles
+- [x] R2 `.deb` built in an Ubuntu 22.04 (jammy) container → `src-tauri/target/release/bundle/deb/LightTranslator_1.2.0_amd64.deb` (installs on Ubuntu 22.04/24.04, Debian 12+)
+- [x] R3 Clean-install smoke in a fresh container: `apt install --no-install-recommends` succeeds, tesseract absent, app launches, main window present
+- [x] R4 Deb metadata verified: `Depends: xdotool, libayatana-appindicator3-1, libwebkit2gtk-4.1-0, libgtk-3-0`; OCR packages under `Recommends` (on-demand promise holds)
+- [x] R5 Functional verification on the installed deb (Xvfb + openbox): typing translates ("Good morning, my friend." → 早上好，我的朋友。); hotkey → popup → translation ("The weather is beautiful today." → 今天天气真好。)
+- [x] R6 **Crash found and fixed**: hotkey killed the app (exit 1, nondeterministic) because window ops ran on the global-shortcut thread; now via `run_on_main_thread` (58db330). 5/5 presses stable after fix
+- [x] R7 Test image `lighttranslator-test:1.2.0` + `run-lighttranslator-deb.sh` so the app (installed from the deb) runs on this 20.04 desktop via shared X11
+- [ ] R8 **User acceptance test** — interactive desktop session, then merge to `main` (+ optional `v1.2.0` tag)
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

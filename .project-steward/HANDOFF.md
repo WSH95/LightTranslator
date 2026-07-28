@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-07-28T12:37:09Z
-updated_by: claude-code (review + stabilization session)
-session_status: closed
+updated_at: 2026-07-28T13:42:00Z
+updated_by: claude-code (release 1.2.0 built + smoke-tested)
+session_status: active
 branch: fix/2026-07-review-stabilization
-last_commit: 7ad0c66
+last_commit: 58db330
 ---
 
 # Handoff
@@ -13,28 +13,43 @@ another device). Keep every section current at wrap-up.
 
 ## Now
 
-The 2026-07 full code review is done and the entire Stabilization
-milestone (PLAN S1–S9) is implemented and committed: 10 commits on
-`fix/2026-07-review-stabilization` (branched from `main` @ cef32ff).
-All automated checks pass. The branch is NOT merged — that is the user's
-call (DECISIONS 0004). Nothing has been pushed.
+Release 1.2.0 is built, installed from the .deb in a clean container, and
+functionally verified. 14 commits on `fix/2026-07-review-stabilization`.
+Smoke testing found and fixed a real crash (see R6/DECISIONS 0006): the
+quick-translate hotkey killed the app because window operations ran on
+the global-shortcut thread instead of the main thread.
+
+Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.2.0_amd64.deb`
+(gitignored; installs on Ubuntu 22.04/24.04 and Debian 12+).
+
+Verified on the installed deb: clean `--no-install-recommends` install
+with no OCR packages, app launches, typing translates
+("Good morning, my friend." -> 早上好，我的朋友。), hotkey -> popup ->
+translation ("The weather is beautiful today." -> 今天天气真好。),
+5/5 hotkey presses stable after the fix.
 
 ## In flight
 
-- (none — all planned commits landed; working tree is clean)
+- Awaiting the USER's interactive acceptance test (PLAN R8) before merge.
 
 ## Next steps
 
-1. **User decision**: merge `fix/2026-07-review-stabilization` into
-   `main` (fast-forward works) — or review the commits first
-   (`git log main..fix/2026-07-review-stabilization`).
-2. Run the **manual smoke checklist** below on a real X11 session — the
-   app was never launched interactively this session (this machine
-   cannot run it, see Warnings).
-3. Pick up backlog items from PLAN.md "Later" as wanted (Wayland support
-   and single-instance guard give the most user value).
+1. User runs the app on their desktop (the app cannot run natively on
+   this 20.04 host; it runs from the deb inside a container sharing X11):
+   `bash <session-scratchpad>/run-lighttranslator-deb.sh`
+   Image `lighttranslator-test:1.2.0`; settings persist in docker volume
+   `lt-testdata`. If the scratchpad is gone, recreate: install the deb in
+   an ubuntu:22.04 container (plus ca-certificates), `docker commit`, then
+   `xhost +SI:localuser:root` and run with `-e DISPLAY -v /tmp/.X11-unix`.
+2. On user OK: `git checkout main && git merge fix/2026-07-review-stabilization`
+   (fast-forward), optional tag `v1.2.0`. No pushes without approval.
+3. Then the "Later" backlog (Wayland, single-instance, secure key storage).
 
-## Manual smoke checklist (needs a machine that can run the app)
+## Blockers
+
+- (none — waiting on user acceptance only)
+
+## Manual checklist for the user acceptance test
 
 - Fresh launch fires NO translation of the clipboard (was: every launch)
 - Hotkey with selected text → popup at cursor, correct on HiDPI, uses
@@ -51,8 +66,8 @@ call (DECISIONS 0004). Nothing has been pushed.
 - OCR with tesseract missing → guidance popup with correct distro
   command; Copy works; install + Re-check proceeds into capture; with
   only some language packs, OCR runs with the installed subset
-- Built .deb (`npm run app:build`): `dpkg-deb -I` shows Depends: xdotool
-  only, tesseract/gnome-screenshot under Recommends
+- (verified automatically already: deb metadata, clean install, launch,
+  typed translation, hotkey translation)
 - DeepL with target zh-TW returns Traditional Chinese
 - Dev run (StrictMode): one translation per hotkey press, not two
 

@@ -24,3 +24,5 @@ Project initialized as a Project Steward managed project.
   all green. Manual smoke checklist is in HANDOFF.md — the app was NOT
   run interactively this session.
 - Remaining: S10 merge decision (user), backlog items under "Later".
+- [auto-checkpoint] 2026-07-28 ~13:00Z — 1.2.0 version bump committed (52495e1); jammy deb-build container provisioning; smoke + user desktop test pending before merge.
+- [auto-checkpoint] 2026-07-28 ~13:40Z — 1.2.0 deb built + smoke-tested from a clean install; hotkey crash found and fixed (58db330); test image + run script ready for user acceptance test.
