@@ -505,26 +505,29 @@ const translateWithDeepL = async (text: string, source: string, target: string, 
   // Let's do some basic mapping if needed.
   let targetLang = target.toUpperCase();
   if (targetLang === 'EN') targetLang = 'EN-US'; // Default to US English
-  if (targetLang === 'ZH-CN') targetLang = 'ZH';
-  
+  if (targetLang === 'ZH-CN') targetLang = 'ZH-HANS';
+  if (targetLang === 'ZH-TW') targetLang = 'ZH-HANT'; // 'ZH-TW' is not a valid DeepL target
+
+  // Text goes in the form body, not the URL: query strings have length
+  // limits and end up in proxy/server logs
   const params = new URLSearchParams();
   params.append('text', text);
   params.append('target_lang', targetLang);
   if (source !== 'auto') {
     params.append('source_lang', source.toUpperCase().split('-')[0]); // DeepL source is usually 2 chars (EN, ZH, JA)
   }
-
-  const url = `${baseUrl}?${params.toString()}`;
+  const body = params.toString();
 
   try {
     // Use platform proxy if available (better for bypassing firewalls/CORS)
     if (platform.isAvailable()) {
-        const response = await platform.request(url, {
+        const response = await platform.request(baseUrl, {
           method: 'POST',
           headers: {
              'Authorization': `DeepL-Auth-Key ${options.deeplApiKey}`,
              'Content-Type': 'application/x-www-form-urlencoded'
-          }
+          },
+          body
         });
 
         if (!response.ok) {
@@ -537,12 +540,13 @@ const translateWithDeepL = async (text: string, source: string, target: string, 
         return data.translations?.[0]?.text || "Translation empty.";
     } else {
         // Fallback for Web
-        const response = await fetch(url, {
+        const response = await fetch(baseUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `DeepL-Auth-Key ${options.deeplApiKey}`,
                 'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            },
+            body
         });
 
         if (!response.ok) {
@@ -590,7 +594,11 @@ const translateWithGoogleFree = async (text: string, source: string, target: str
 
   } catch (error: any) {
     console.error("Google Free Error:", error);
-    throw new Error("Google Translate Failed. If using Web, this is likely CORS. Please use the Desktop App.");
+    // Keep the real cause; the CORS hint only makes sense in web mode
+    const detail = error?.message ? `: ${error.message}` : '';
+    throw new Error(platform.isAvailable()
+      ? `Google Translate failed${detail}`
+      : `Google Translate failed${detail} (web mode is often blocked by CORS — use the desktop app)`);
   }
 };
 

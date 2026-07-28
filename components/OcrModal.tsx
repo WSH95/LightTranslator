@@ -27,10 +27,16 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
     provider,
     modelId,
     customSystemInstruction,
+    systemPromptEnabled,
+    geminiApiKey,
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
-    deeplApiKey
+    openrouterApiKey,
+    openrouterModel,
+    deeplApiKey,
+    microsoftSubscriptionKey,
+    microsoftRegion
   } = useAppStore();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,10 +107,16 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
         provider,
         modelId,
         customSystemInstruction,
+        systemPromptEnabled,
+        geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
-        deeplApiKey
+        openrouterApiKey,
+        openrouterModel,
+        deeplApiKey,
+        microsoftSubscriptionKey,
+        microsoftRegion
       });
 
       setTranslatedText(translatedResult);

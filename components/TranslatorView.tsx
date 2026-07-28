@@ -102,12 +102,20 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     }
   }, [sourceLang, targetLang, provider, modelId, customSystemInstruction, systemPromptEnabled, geminiApiKey, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
 
+  // performTranslation's identity changes with every settings value; effects
+  // call through this ref so editing a key/model/prompt in Settings doesn't
+  // re-fire translations or re-register listeners.
+  const performTranslationRef = useRef(performTranslation);
+  useEffect(() => {
+    performTranslationRef.current = performTranslation;
+  });
+
   useEffect(() => {
     if (!autoTranslate) return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (inputText.trim()) {
-      debounceTimer.current = setTimeout(() => performTranslation(inputText), debounceMs);
+      debounceTimer.current = setTimeout(() => performTranslationRef.current(inputText), debounceMs);
     } else {
       // If input is cleared, clear immediately and cancel any pending translation display
       setTranslatedText('');
@@ -115,18 +123,20 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       latestRequestText.current = '';
     }
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-  }, [inputText, performTranslation, autoTranslate, debounceMs, setTranslatedText, setIsTranslating]);
+    // sourceLang/targetLang stay as triggers on purpose: changing language
+    // should retranslate. Other settings edits should not.
+  }, [inputText, autoTranslate, debounceMs, sourceLang, targetLang, setTranslatedText, setIsTranslating]);
 
-  // Listen for OCR result from tray menu
+  // Listen for OCR result from tray menu (registered once, not per settings edit)
   useEffect(() => {
     if (platform.isAvailable()) {
       const unlisten = platform.onOcrResult((text: string) => {
         setInputText(text);
-        performTranslation(text);
+        performTranslationRef.current(text);
       });
       return unlisten;
     }
-  }, [setInputText, performTranslation]);
+  }, [setInputText]);
 
   // Get provider info
   const currentProvider = PROVIDERS.find(p => p.id === provider);
@@ -230,8 +240,10 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         const result = await translateImage(reader.result as string, targetLang, { modelId, geminiApiKey });
         setInputText(result.detectedText);
         setTranslatedText(result.translatedText);
-      } catch (err) {
-        setErrorMessage("Failed to process pasted image.");
+      } catch (err: any) {
+        // Image translation always uses Gemini; surface the real cause
+        // (e.g. "Gemini API Key is required") instead of a generic message
+        setErrorMessage(err?.message || "Failed to process pasted image.");
       } finally {
         setIsProcessingImage(false);
       }
