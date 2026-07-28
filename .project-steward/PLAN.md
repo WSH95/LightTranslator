@@ -30,11 +30,23 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] R7 Test image `lighttranslator-test:1.2.0` + `run-lighttranslator-deb.sh` so the app (installed from the deb) runs on this 20.04 desktop via shared X11
 - [ ] R8 **User acceptance test** — interactive desktop session, then merge to `main` (+ optional `v1.2.0` tag)
 
+## Dual backend for older distributions (2026-07-28)
+
+- [x] D1 Shared platform contract: `PlatformBackend` derived from the Tauri backend; Electron backend typed against it (typecheck enforces surface parity)
+- [x] D2 OCR text reflow moved into shared `utils/textUtils.cleanTextLineBreaks`; both backends return raw tesseract layout
+- [x] D3 `electron/` restored from 339f55c and rewritten to mirror `lib.rs`; webSecurity on, CSP applied, preload listeners return unsubscribers
+- [x] D4 Net-new Electron behaviors: resize-main-window, OCR install guidance with distro detection, ocr-deps-missing + tray pre-check, settings-changed hub, quick-window-ready handshake, OCR language subset, Wayland warning, transactional shortcut, scheme check + 60s timeout
+- [x] D5 electron-builder packaging: Depends xdotool only, OCR under Recommends, Conflicts with the Tauri package, icons shared from `src-tauri/icons`
+- [x] D6 Verified natively on this Ubuntu 20.04 host: app launches, global hotkey works, popup renders a live translation
+- [x] D7 Ported back to Tauri: clipboard save/restore around Ctrl+C (C12), hide main window during capture
+- [x] D8 VERIFY.md backend-parity checklist (18 points)
+- [ ] D9 Add the "backend changes land in both backends" rule to AGENTS.md — **needs user approval** (guardrailed file)
+- [ ] D10 Run the full parity checklist against both builds interactively (user acceptance)
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)
 - [ ] Single-instance plugin (autostart + manual launch = duplicate processes; C4)
-- [ ] Clipboard save/restore around simulated Ctrl+C; detect nothing-selected instead of translating stale clipboard (C12)
 - [ ] Temp-file TOCTOU/leak in screenshot/OCR path — create PNG via tempfile Builder suffix, cleanup on all paths (C13)
 - [ ] Move blocking `Command::output()`/sleeps off async runtime + hotkey thread (`tokio::process`/`spawn_blocking`) (C18)
 - [ ] Quick-window focus/blur race — replace 50/100ms sleeps with a readiness handshake (C14)

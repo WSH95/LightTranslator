@@ -72,3 +72,43 @@ long-standing code, made more fragile by the HiDPI clamp's extra
 tray OCR handler uses the same helper.
 **Consequences**: Hotkey is stable (5/5 presses verified). Any future
 window manipulation from a background thread must follow this pattern.
+
+## 0007 — 2026-07-28 — Dual backend: Tauri for 22.04+, Electron for 18.04-20.04
+
+**Context**: Ubuntu 20.04 and older cannot run Tauri 2 at all —
+webkit2gtk-4.1/libsoup3 have no candidate in any focal repo, and a jammy
+build additionally needs GLIBC_2.32-2.34 against focal's 2.31. The only
+ways to run there ship their own userspace (Docker/Flatpak/Snap), and
+the user did not want containers as the daily path. Electron bundles
+Chromium and officially supports Ubuntu 18.04+, which is why the app's
+pre-4291514 builds ran natively there.
+**Decision**: ship both backends from one codebase. The entire React UI
+is shared, so the interface is identical by construction; only the ~13
+backend commands exist twice. Electron restored from 339f55c but
+rewritten to mirror src-tauri/src/lib.rs rather than dropped in, because
+the legacy code predated the whole 2026-07 review.
+**Anti-drift measures**: (1) `PlatformBackend` in src/lib/platform.ts is
+derived from the Tauri backend, so the compiler rejects an incomplete
+Electron backend; (2) non-OS logic lives in shared React/TS — OCR text
+reflow moved to utils/textUtils.cleanTextLineBreaks and both backends
+now return raw tesseract output; (3) VERIFY.md carries an 18-point
+behavior checklist both builds must pass; (4) backend changes land in
+both backends in the same commit.
+**Consequences**: 20.04 gets a native install (~92 MB, ~200 MB RAM)
+while modern systems keep the light Tauri build (~5 MB, ~60 MB). The two
+packages Conflict in dpkg and store settings separately. Two backends
+means double implementation for backend-level work; UI, providers and
+settings work stays single-cost.
+
+## 0008 — 2026-07-28 — Behaviors adopted from the legacy Electron code
+
+**Context**: The 2024 Electron implementation was better than the Rust
+port in two places, found while porting.
+**Decision**: adopt both in BOTH backends — save/clear/restore the
+clipboard around the synthesized Ctrl+C (so "nothing selected" no longer
+translates stale content, review item C12), and hide the main window
+during area capture. Rejected by contrast: the pkexec auto-installer for
+OCR, which DECISIONS 0003 deliberately replaced with copy-pastable
+guidance.
+**Consequences**: C12 is closed; the Tauri backend gained two fixes it
+would otherwise still be missing.
