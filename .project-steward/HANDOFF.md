@@ -1,6 +1,6 @@
 ---
-updated_at: 2026-07-28T13:42:00Z
-updated_by: claude-code (release 1.2.0 built + smoke-tested)
+updated_at: 2026-07-28T15:15:00Z
+updated_by: claude-code (docker path committed; dual-backend work starting)
 session_status: active
 branch: fix/2026-07-review-stabilization
 last_commit: 58db330
@@ -30,26 +30,16 @@ translation ("The weather is beautiful today." -> 今天天气真好。),
 
 ## In flight
 
-- Awaiting the USER's interactive acceptance test (PLAN R8) before merge.
-
-## Next steps
-
-1. User runs the app on their desktop (the app cannot run natively on
-   this 20.04 host; it runs from the deb inside a container sharing X11):
-   `bash <session-scratchpad>/run-lighttranslator-deb.sh` (also accepts
-   `stop` and `logs`; runs the container detached — `docker run -it` fails
-   with "the input device is not a TTY" when launched from the agent shell).
-   Image `lighttranslator-test:1.2.0`; settings persist in docker volume
-   `lt-testdata`. The app is RUNNING on the user's desktop right now. If the scratchpad is gone, recreate: install the deb in
-   an ubuntu:22.04 container (plus ca-certificates), `docker commit`, then
-   `xhost +SI:localuser:root` and run with `-e DISPLAY -v /tmp/.X11-unix`.
-2. On user OK: `git checkout main && git merge fix/2026-07-review-stabilization`
-   (fast-forward), optional tag `v1.2.0`. No pushes without approval.
-3. Then the "Later" backlog (Wayland, single-instance, secure key storage).
-
-## Blockers
-
-- (none — waiting on user acceptance only)
+- **Dual-backend work just started** (approved plan): keep Tauri for
+  22.04+, add an Electron backend for 18.04-20.04 so old distros get a
+  native install instead of Docker. Electron 39 officially supports
+  Ubuntu 18.04+ because it bundles Chromium. The React UI is shared, so
+  the interface is identical by construction; only the ~13-command
+  backend is duplicated. Legacy code to restore from `339f55c`:
+  electron/main.js (933 lines), preload.cjs, dependencyChecker.js.
+- Docker path is committed (d3b0d99) and stays useful: it is how the
+  *Tauri* .deb gets built on this 20.04 host.
+- Awaiting the USER's acceptance test of 1.2.0 before merging to `main`.
 
 ## Manual checklist for the user acceptance test
 
