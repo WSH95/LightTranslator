@@ -203,17 +203,36 @@ async fn proxy_request(
 }
 
 #[tauri::command]
-async fn capture_screen() -> Result<Option<String>, String> {
+async fn capture_screen(app: AppHandle) -> Result<Option<String>, String> {
     // Create a temp file for the screenshot
     let temp_file = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
     let temp_path = temp_file.path().to_string_lossy().to_string() + ".png";
+
+    // Get the app's own window out of the shot
+    let was_visible = app
+        .get_webview_window("main")
+        .and_then(|w| w.is_visible().ok())
+        .unwrap_or(false);
+    if was_visible {
+        set_main_window_visible(&app, false);
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    let restore = || {
+        if was_visible {
+            set_main_window_visible(&app, true);
+        }
+    };
 
     // Run gnome-screenshot with area selection. The OCR_DEPS_MISSING marker
     // routes the frontend to the install-guidance popup.
     let output = Command::new("gnome-screenshot")
         .args(["-a", "-f", &temp_path])
         .output()
-        .map_err(|e| format!("OCR_DEPS_MISSING: failed to run gnome-screenshot: {}", e))?;
+        .map_err(|e| {
+            restore();
+            format!("OCR_DEPS_MISSING: failed to run gnome-screenshot: {}", e)
+        })?;
+    restore();
 
     if !output.status.success() {
         // User might have cancelled
@@ -646,7 +665,12 @@ fn trigger_quick_translate(app: &AppHandle) {
 
     warn_if_wayland(app);
 
-    // Get clipboard content first using xdotool to simulate Ctrl+C
+    // Save and clear the clipboard first, so an empty clipboard afterwards
+    // means "nothing was selected" — then the user's previous content is
+    // restored and reused instead of translating whatever was copied earlier.
+    let previous = app.clipboard().read_text().unwrap_or_default();
+    let _ = app.clipboard().write_text(String::new());
+
     let _ = Command::new("xdotool")
         .args(["key", "--clearmodifiers", "ctrl+c"])
         .output();
@@ -654,8 +678,15 @@ fn trigger_quick_translate(app: &AppHandle) {
     // Small delay for clipboard to update
     std::thread::sleep(Duration::from_millis(150));
 
-    // Read the clipboard text
-    let clipboard_text = app.clipboard().read_text().unwrap_or_default();
+    let copied = app.clipboard().read_text().unwrap_or_default();
+    let clipboard_text = if copied.trim().is_empty() {
+        if !previous.is_empty() {
+            let _ = app.clipboard().write_text(previous.clone());
+        }
+        previous
+    } else {
+        copied
+    };
 
     // Cursor position in PHYSICAL pixels (xdotool's unit; wrapping these in a
     // LogicalPosition lands the window at scale× the cursor on HiDPI displays)
@@ -726,16 +757,25 @@ fn trigger_quick_translate(app: &AppHandle) {
     }
 }
 
-/// Show + focus the main window from any thread (window ops touch GTK, which
-/// is main-thread-only).
-fn show_main_window(app: &AppHandle) {
+/// Show/hide the main window from any thread (window ops touch GTK, which is
+/// main-thread-only).
+fn set_main_window_visible(app: &AppHandle, visible: bool) {
     let app = app.clone();
     let _ = app.clone().run_on_main_thread(move || {
         if let Some(window) = app.get_webview_window("main") {
-            let _ = window.show();
-            let _ = window.set_focus();
+            if visible {
+                let _ = window.show();
+                let _ = window.set_focus();
+            } else {
+                let _ = window.hide();
+            }
         }
     });
+}
+
+/// Show + focus the main window from any thread.
+fn show_main_window(app: &AppHandle) {
+    set_main_window_visible(app, true);
 }
 
 fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -783,7 +823,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                         let _ = app_clone.emit_to("main", "ocr-deps-missing", ());
                         return;
                     }
-                    if let Ok(Some(image_data)) = tauri::async_runtime::block_on(capture_screen()) {
+                    if let Ok(Some(image_data)) =
+                        tauri::async_runtime::block_on(capture_screen(app_clone.clone()))
+                    {
                         if let Ok(ocr_result) = tauri::async_runtime::block_on(ocr_image(image_data)) {
                             if ocr_result.success {
                                 if let Some(text) = ocr_result.text {

@@ -177,6 +177,9 @@ const webPreferences = () => ({
 function createMainWindow({ startHidden = false } = {}) {
   const iconPath = getResourcePath('icon.png');
   mainWindow = new BrowserWindow({
+    // Titles match tauri.conf.json: window managers and the xdotool
+    // activation below identify the windows by name.
+    title: 'LightTranslator',
     width: 480,
     height: 680,
     minWidth: 400,
@@ -190,6 +193,9 @@ function createMainWindow({ startHidden = false } = {}) {
     webPreferences: webPreferences(),
   });
   mainWindow.label = 'main';
+  // Keep the title we set; the shared index.html would otherwise rename both
+  // windows to the same thing and break window lookup by name.
+  mainWindow.on('page-title-updated', (event) => event.preventDefault());
 
   mainWindow.loadURL(rendererUrl());
 
@@ -220,6 +226,7 @@ function createQuickWindow() {
   if (quickWindow) return;
   // Sizes mirror tauri.conf.json's "quick" window
   quickWindow = new BrowserWindow({
+    title: 'Quick Translate',
     width: 500,
     height: 350,
     minWidth: 300,
@@ -236,6 +243,7 @@ function createQuickWindow() {
     webPreferences: webPreferences(),
   });
   quickWindow.label = 'quick';
+  quickWindow.on('page-title-updated', (event) => event.preventDefault());
 
   quickWindow.loadURL(rendererUrl('?mode=quick'));
 
