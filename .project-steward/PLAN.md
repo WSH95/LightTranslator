@@ -16,7 +16,7 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] S6 `fix(security)`: single tray icon (drop config `trayIcon` block), minimal capabilities, remove unused shell/http/process plugins, drop `devtools` feature from release, Cargo version → 1.1.2, tightened CSP + `devCsp`
 - [x] S7 `chore`: regenerate stale package-lock.json (Electron remnants; `npm ci` currently broken), delete dead files (`ControlPanel.tsx`, `metadata.json`, orphan assets, `@google/genai`), Electron leftovers in configs, dev-only `GEMINI_API_KEY` inlining, truthful `.env.example`, blocking `check-secrets.js`, frontend nits (B12/B14/B19/B20, model fallback mismatch, UI polish)
 - [x] S8 `feat(ocr)`: on-demand OCR dependencies — no tesseract/gnome-screenshot in deb Depends (xdotool stays), `get_ocr_install_guidance` with distro detection (apt/dnf/pacman/zypper, brew, winget), dynamic tesseract `-l` from installed langs, check-on-use with in-app guidance popup (copyable command + Re-check), tray path via `ocr-deps-missing` event
-- [ ] S9 `docs`: add MIT LICENSE, README truth pass (tauri-cli prerequisite, honest platform claims, key-storage description, typecheck, on-demand OCR)
+- [x] S9 `docs`: add MIT LICENSE, README truth pass (tauri-cli prerequisite, honest platform claims, key-storage description, typecheck, on-demand OCR)
 - [ ] S10 Wrap: full verification (`typecheck`, `build`, `cargo check`, `npm ci`), HANDOFF rewrite with manual smoke checklist, offer merge of `fix/2026-07-review-stabilization` into `main`
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
