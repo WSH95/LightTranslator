@@ -36,9 +36,11 @@ translation ("The weather is beautiful today." -> 今天天气真好。),
 
 1. User runs the app on their desktop (the app cannot run natively on
    this 20.04 host; it runs from the deb inside a container sharing X11):
-   `bash <session-scratchpad>/run-lighttranslator-deb.sh`
+   `bash <session-scratchpad>/run-lighttranslator-deb.sh` (also accepts
+   `stop` and `logs`; runs the container detached — `docker run -it` fails
+   with "the input device is not a TTY" when launched from the agent shell).
    Image `lighttranslator-test:1.2.0`; settings persist in docker volume
-   `lt-testdata`. If the scratchpad is gone, recreate: install the deb in
+   `lt-testdata`. The app is RUNNING on the user's desktop right now. If the scratchpad is gone, recreate: install the deb in
    an ubuntu:22.04 container (plus ca-certificates), `docker commit`, then
    `xhost +SI:localuser:root` and run with `-e DISPLAY -v /tmp/.X11-unix`.
 2. On user OK: `git checkout main && git merge fix/2026-07-review-stabilization`
