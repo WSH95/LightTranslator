@@ -7,6 +7,7 @@
   "author": "LightTranslator",
   "license": "MIT",
   "homepage": "https://github.com/user/lighttranslator",
+  "main": "electron/main.js",
   "dependencies": {
     "@tauri-apps/api": "^2",
     "lucide-react": "^0.562.0",
@@ -18,11 +19,15 @@
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.23",
+    "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^9.0.3"
   },
   "scripts": {
     "dev": "vite",
@@ -38,6 +43,58 @@
     "app:docker:update": "bash scripts/docker-run.sh update",
     "app:docker:stop": "bash scripts/docker-run.sh stop",
     "app:docker:logs": "bash scripts/docker-run.sh logs",
-    "app:docker:dev": "bash scripts/docker-dev.sh"
+    "app:docker:dev": "bash scripts/docker-dev.sh",
+    "electron": "wait-on tcp:5173 && electron .",
+    "electron:dev": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "electron:build": "npm run build && electron-builder --linux",
+    "electron:build:deb": "npm run build && electron-builder --linux deb"
+  },
+  "build": {
+    "appId": "com.lighttranslator.app",
+    "productName": "LightTranslator",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "src-tauri/icons",
+        "to": "icons",
+        "filter": [
+          "*.png"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "deb",
+        "AppImage"
+      ],
+      "icon": "src-tauri/icons/icon.png",
+      "category": "Utility",
+      "maintainer": "LightTranslator",
+      "synopsis": "轻量级翻译工具"
+    },
+    "deb": {
+      "fpm": [
+        "--conflicts",
+        "light-translator"
+      ],
+      "depends": [
+        "xdotool"
+      ],
+      "recommends": [
+        "tesseract-ocr",
+        "tesseract-ocr-eng",
+        "tesseract-ocr-chi-sim",
+        "tesseract-ocr-chi-tra",
+        "tesseract-ocr-jpn",
+        "tesseract-ocr-kor",
+        "gnome-screenshot"
+      ]
+    }
   }
 }

@@ -38,10 +38,14 @@ let waylandWarned = false;
 
 const isDev = () => !app.isPackaged;
 
+/**
+ * Icons come from src-tauri/icons so both backends ship identical artwork —
+ * icon.png is the same file the Tauri tray embeds.
+ */
 function getResourcePath(relativePath) {
   return app.isPackaged
-    ? path.join(process.resourcesPath, 'assets', relativePath)
-    : path.join(__dirname, '../assets', relativePath);
+    ? path.join(process.resourcesPath, 'icons', relativePath)
+    : path.join(__dirname, '../src-tauri/icons', relativePath);
 }
 
 function rendererUrl(query = '') {
@@ -79,7 +83,7 @@ function setLinuxAutoLaunch(enabled) {
     return;
   }
   fs.mkdirSync(path.dirname(desktopFilePath), { recursive: true });
-  const iconPath = getResourcePath('logo.png');
+  const iconPath = getResourcePath('icon.png');
   const desktopEntry = [
     '[Desktop Entry]',
     'Type=Application',
@@ -171,7 +175,7 @@ const webPreferences = () => ({
 });
 
 function createMainWindow({ startHidden = false } = {}) {
-  const iconPath = getResourcePath('logo.png');
+  const iconPath = getResourcePath('icon.png');
   mainWindow = new BrowserWindow({
     width: 480,
     height: 680,
@@ -350,10 +354,9 @@ function registerShortcut(accelerator) {
 // --- Tray (labels and ids mirror setup_tray) ---
 
 function createTray() {
-  const iconPath = getResourcePath('tray-icon.png');
-  const fallbackIcon = getResourcePath('logo.png');
+  // Same source icon as the Tauri tray, scaled for the tray area
   const image = nativeImage
-    .createFromPath(fs.existsSync(iconPath) ? iconPath : fallbackIcon)
+    .createFromPath(getResourcePath('icon.png'))
     .resize({ width: 22, height: 22 });
 
   tray = new Tray(image);

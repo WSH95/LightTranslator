@@ -24,7 +24,9 @@ const secretPatterns = [
 ];
 
 // Files and directories to skip
-const skipDirs = ['node_modules', 'dist', '.git', 'src-tauri', '.project-steward'];
+// Build outputs are scanned before they exist in a fresh clone; skipping them
+// also avoids false positives from bundled third-party licence files.
+const skipDirs = ['node_modules', 'dist', 'dist-electron', '.git', 'src-tauri', '.project-steward'];
 const skipFiles = ['.env', '.env.local', '.env.example', 'check-secrets.js', 'package-lock.json'];
 const allowedExtensions = ['.ts', '.tsx', '.js', '.jsx', '.json', '.html'];
 

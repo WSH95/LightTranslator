@@ -36,3 +36,6 @@ release_notes_*.md
 .project-steward/tmp/
 .project-steward/migration-backup-projectforge/
 # PROJECT-STEWARD:END runtime-state
+
+# Electron build output
+dist-electron
