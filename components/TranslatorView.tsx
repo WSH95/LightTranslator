@@ -129,8 +129,9 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
   useEffect(() => {
     if (platform.isAvailable()) {
       const unlisten = platform.onOcrResult((text: string) => {
-        setInputText(text);
-        performTranslationRef.current(text);
+        const cleaned = cleanTextLineBreaks(text);
+        setInputText(cleaned);
+        performTranslationRef.current(cleaned);
       });
       return unlisten;
     }

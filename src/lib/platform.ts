@@ -1,9 +1,14 @@
 /**
- * Platform Abstraction Layer (Tauri-only)
+ * Platform Abstraction Layer
  *
- * This module provides a unified API for the Tauri backend.
- * It automatically detects the Tauri runtime and provides
- * fallbacks for web environments where applicable.
+ * One contract, three backends: Tauri (Ubuntu 22.04+/Debian 12+), Electron
+ * (Ubuntu 18.04-20.04, where Tauri 2's webkit2gtk-4.1 does not exist), and a
+ * plain-web fallback. The React UI above this file is shared verbatim, so the
+ * interface is identical everywhere; only these implementations differ.
+ *
+ * PARITY RULE: `PlatformBackend` is derived from the Tauri implementation, so
+ * the compiler rejects an Electron backend that is missing anything. Behavior
+ * parity is enforced separately by the checklist in .project-steward/VERIFY.md.
  */
 
 // Type definitions for the platform API
@@ -61,6 +66,39 @@ export const isTauri = (): boolean => {
   return typeof window !== 'undefined' &&
     ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
 };
+
+// Detect Electron runtime (preload exposes window.electron via contextBridge)
+export const isElectron = (): boolean => {
+  return typeof window !== 'undefined' && 'electron' in window;
+};
+
+/** Shape exposed by electron/preload.cjs — see PlatformBackend for the contract. */
+interface ElectronBridge {
+  request(url: string, options?: ProxyRequestOptions): Promise<ProxyResponse>;
+  minimize(): void;
+  maximize(): void;
+  close(): void;
+  onQuickTranslate(cb: (text: string) => void): () => void;
+  sendQuickReady(): void;
+  closeQuickWindow(): void;
+  onOpenSettings(cb: () => void): () => void;
+  emitSettingsChanged(): void;
+  onSettingsChanged(cb: (sender: string) => void): () => void;
+  captureScreen(): Promise<{ success: boolean; data?: string; cancelled?: boolean; error?: string }>;
+  ocrImage(base64Image: string): Promise<OcrResult>;
+  onOcrResult(cb: (text: string) => void): () => void;
+  onOcrDepsMissing(cb: () => void): () => void;
+  setProxy(settings: ProxySettings): Promise<{ success: boolean }>;
+  updateShortcut(shortcut: string): Promise<{ success: boolean; message?: string }>;
+  setAutoLaunch(enabled: boolean): Promise<{ success: boolean }>;
+  getAutoLaunch(): Promise<{ success: boolean; enabled: boolean }>;
+  resizeQuickWindow(dimensions: WindowDimensions): Promise<unknown>;
+  resizeMainWindow(dimensions: WindowDimensions): Promise<unknown>;
+  checkOcrDependencies(): Promise<OcrDependencyStatus>;
+  getOcrInstallGuidance(): Promise<OcrInstallGuidance>;
+}
+
+const bridge = (): ElectronBridge => (window as unknown as { electron: ElectronBridge }).electron;
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
@@ -121,9 +159,11 @@ function makeDisposableListener(
 }
 
 /**
- * Platform API - Tauri interface
+ * Tauri backend. This object also defines the contract (see PlatformBackend
+ * below), so anything added here must be added to the Electron backend too —
+ * the compiler will say so.
  */
-export const platform = {
+const tauriBackend = {
   /**
    * Make an HTTP request through the backend (bypasses CORS)
    */
@@ -390,18 +430,173 @@ export const platform = {
     });
   },
 
-  /**
-   * Check if Tauri backend is available
-   */
-  isAvailable(): boolean {
-    return isTauri();
+};
+
+/**
+ * The contract every backend must satisfy, derived from the Tauri backend so
+ * the two can never drift apart silently.
+ */
+export type PlatformBackend = typeof tauriBackend;
+
+/**
+ * Electron backend. Mirrors the Tauri semantics exactly; the main process
+ * (electron/main.js) implements the same behaviors as src-tauri/src/lib.rs.
+ */
+const electronBackend: PlatformBackend = {
+  async request(url: string, options: ProxyRequestOptions = {}): Promise<ProxyResponse> {
+    try {
+      return await bridge().request(url, options);
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
   },
 
-  /**
-   * Get the current platform name
-   */
-  getPlatformName(): 'tauri' | 'web' {
+  async minimize(): Promise<void> {
+    bridge().minimize();
+  },
+
+  async maximize(): Promise<void> {
+    bridge().maximize();
+  },
+
+  async close(): Promise<void> {
+    // Hide to tray, matching the Tauri behavior
+    bridge().close();
+  },
+
+  onQuickTranslate(callback: (text: string) => void, onRegistered?: () => void): () => void {
+    return makeDisposableListener(
+      async () => bridge().onQuickTranslate(callback),
+      onRegistered
+    );
+  },
+
+  sendQuickReady(): void {
+    bridge().sendQuickReady();
+  },
+
+  closeQuickWindow(): void {
+    bridge().closeQuickWindow();
+  },
+
+  onWindowBlur(callback: () => void): () => void {
+    // Electron delivers focus loss to the renderer as a DOM event
+    const handler = () => callback();
+    window.addEventListener('blur', handler);
+    return () => window.removeEventListener('blur', handler);
+  },
+
+  async resizeQuickWindow(dimensions: WindowDimensions): Promise<void> {
+    await bridge().resizeQuickWindow(dimensions);
+  },
+
+  async resizeMainWindow(dimensions: WindowDimensions): Promise<void> {
+    await bridge().resizeMainWindow(dimensions);
+  },
+
+  onOpenSettings(callback: () => void): () => void {
+    return makeDisposableListener(async () => bridge().onOpenSettings(callback));
+  },
+
+  async emitSettingsChanged(): Promise<void> {
+    bridge().emitSettingsChanged();
+  },
+
+  onSettingsChanged(callback: (sender: string) => void): () => void {
+    return makeDisposableListener(async () => bridge().onSettingsChanged(callback));
+  },
+
+  async captureScreen(): Promise<string | null> {
+    const result = await bridge().captureScreen();
+    if (result?.success && result.data) return result.data;
+    if (result?.cancelled) return null;
+    if (result?.error) throw new Error(result.error);
+    return null;
+  },
+
+  async ocrImage(base64Image: string): Promise<OcrResult> {
+    return bridge().ocrImage(base64Image);
+  },
+
+  onOcrResult(callback: (text: string) => void): () => void {
+    return makeDisposableListener(async () => bridge().onOcrResult(callback));
+  },
+
+  async setProxy(settings: ProxySettings): Promise<void> {
+    await bridge().setProxy(settings);
+  },
+
+  async updateShortcut(shortcut: string): Promise<boolean> {
+    const result = await bridge().updateShortcut(shortcut);
+    if (!result?.success) {
+      throw new Error(result?.message || `Failed to register '${shortcut}'`);
+    }
+    return true;
+  },
+
+  async setAutoLaunch(enabled: boolean): Promise<void> {
+    await bridge().setAutoLaunch(enabled);
+  },
+
+  async getAutoLaunch(): Promise<boolean> {
+    const result = await bridge().getAutoLaunch();
+    return Boolean(result?.enabled);
+  },
+
+  async checkOcrDependencies(): Promise<OcrDependencyStatus> {
+    return bridge().checkOcrDependencies();
+  },
+
+  async getOcrInstallGuidance(): Promise<OcrInstallGuidance | null> {
+    return bridge().getOcrInstallGuidance();
+  },
+
+  onOcrDepsMissing(callback: () => void): () => void {
+    return makeDisposableListener(async () => bridge().onOcrDepsMissing(callback));
+  },
+};
+
+/** Tauri wins if both are somehow present. */
+const activeBackend = (): PlatformBackend =>
+  !isTauri() && isElectron() ? electronBackend : tauriBackend;
+
+/**
+ * Platform API used by the UI. Delegates to whichever backend is running.
+ */
+export const platform = {
+  request: (url: string, options?: ProxyRequestOptions) => activeBackend().request(url, options),
+  minimize: () => activeBackend().minimize(),
+  maximize: () => activeBackend().maximize(),
+  close: () => activeBackend().close(),
+  onQuickTranslate: (cb: (text: string) => void, onRegistered?: () => void) =>
+    activeBackend().onQuickTranslate(cb, onRegistered),
+  sendQuickReady: () => activeBackend().sendQuickReady(),
+  closeQuickWindow: () => activeBackend().closeQuickWindow(),
+  onWindowBlur: (cb: () => void) => activeBackend().onWindowBlur(cb),
+  resizeQuickWindow: (dimensions: WindowDimensions) => activeBackend().resizeQuickWindow(dimensions),
+  resizeMainWindow: (dimensions: WindowDimensions) => activeBackend().resizeMainWindow(dimensions),
+  onOpenSettings: (cb: () => void) => activeBackend().onOpenSettings(cb),
+  emitSettingsChanged: () => activeBackend().emitSettingsChanged(),
+  onSettingsChanged: (cb: (sender: string) => void) => activeBackend().onSettingsChanged(cb),
+  captureScreen: () => activeBackend().captureScreen(),
+  ocrImage: (base64Image: string) => activeBackend().ocrImage(base64Image),
+  onOcrResult: (cb: (text: string) => void) => activeBackend().onOcrResult(cb),
+  onOcrDepsMissing: (cb: () => void) => activeBackend().onOcrDepsMissing(cb),
+  setProxy: (settings: ProxySettings) => activeBackend().setProxy(settings),
+  updateShortcut: (shortcut: string) => activeBackend().updateShortcut(shortcut),
+  setAutoLaunch: (enabled: boolean) => activeBackend().setAutoLaunch(enabled),
+  getAutoLaunch: () => activeBackend().getAutoLaunch(),
+  checkOcrDependencies: () => activeBackend().checkOcrDependencies(),
+  getOcrInstallGuidance: () => activeBackend().getOcrInstallGuidance(),
+
+  /** True when a native backend (Tauri or Electron) is present. */
+  isAvailable(): boolean {
+    return isTauri() || isElectron();
+  },
+
+  getPlatformName(): 'tauri' | 'electron' | 'web' {
     if (isTauri()) return 'tauri';
+    if (isElectron()) return 'electron';
     return 'web';
   },
 };

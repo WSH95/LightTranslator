@@ -284,17 +284,15 @@ async fn ocr_image(base64_image: String) -> Result<OcrResult, String> {
     let _ = std::fs::remove_file(&temp_path);
 
     if output.status.success() {
-        let text = String::from_utf8_lossy(&output.stdout).to_string();
-        // Clean up the text (remove extra whitespace, normalize line breaks)
-        let cleaned_text = text
-            .lines()
-            .filter(|line| !line.trim().is_empty())
-            .collect::<Vec<_>>()
-            .join(" ");
+        // Return the raw layout: the shared frontend cleaner
+        // (utils/textUtils.cleanTextLineBreaks) reflows paragraphs, so both
+        // backends produce identical OCR output. Joining lines here would
+        // destroy the blank-line paragraph breaks it needs.
+        let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
         Ok(OcrResult {
             success: true,
-            text: Some(cleaned_text),
+            text: Some(text),
             error: None,
         })
     } else {

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Copy, Check, RefreshCw } from 'lucide-react';
 import { translateText } from '../services/geminiService';
+import { cleanTextLineBreaks } from '../utils/textUtils';
 import { useAppStore } from '../store/useAppStore';
 import { useOcrDependencies } from '../hooks/useOcrDependencies';
 import { platform } from '../src/lib/platform';
@@ -117,7 +118,9 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
         throw new Error(ocrResult.error || 'OCR failed');
       }
 
-      const extractedText = ocrResult.text || '';
+      // Backends return raw OCR layout; reflow paragraphs in shared code so
+      // every backend yields the same text
+      const extractedText = cleanTextLineBreaks(ocrResult.text || '');
       setInputText(extractedText);
 
       // Step 2: Translate using the user's selected provider
