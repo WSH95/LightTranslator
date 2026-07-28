@@ -1,25 +1,43 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { platform } from '../src/lib/platform';
+import { platform, OcrDependencyStatus, OcrInstallGuidance } from '../src/lib/platform';
+
+// OCR components are optional at install time: nothing is probed at app
+// startup. The check runs when the user actually invokes OCR, and missing
+// components surface as OS-specific install guidance (DECISIONS.md 0003).
+
+// Module-level in-flight guard so concurrent callers share one probe
+let inFlightCheck: Promise<OcrDependencyStatus | null> | null = null;
 
 /**
- * Hook to manage OCR dependency checking and installation
+ * Hook for on-demand OCR dependency checking and install guidance
  */
 export function useOcrDependencies() {
   const { ocrStatus, setOcrStatus } = useAppStore();
+  const [guidance, setGuidance] = useState<OcrInstallGuidance | null>(null);
 
-  // Check OCR dependencies
-  const checkDependencies = useCallback(async () => {
+  // Check OCR dependencies (deduplicated across concurrent callers)
+  const checkDependencies = useCallback(async (): Promise<OcrDependencyStatus | null> => {
     if (!platform.isAvailable()) {
-      // Not in native environment
       setOcrStatus({ checked: true, available: false, message: 'Not running in native environment' });
-      return;
+      return null;
+    }
+
+    if (!inFlightCheck) {
+      inFlightCheck = (async () => {
+        try {
+          return await platform.checkOcrDependencies();
+        } finally {
+          inFlightCheck = null;
+        }
+      })();
     }
 
     setOcrStatus({ checking: true });
 
     try {
-      const result = await platform.checkOcrDependencies();
+      const result = await inFlightCheck;
+      if (!result) return null;
 
       setOcrStatus({
         checking: false,
@@ -49,64 +67,36 @@ export function useOcrDependencies() {
     }
   }, [setOcrStatus]);
 
-  // Show install prompt and install if user accepts
-  const promptAndInstall = useCallback(async () => {
-    if (!platform.isAvailable()) return false;
-
+  // Fetch OS-specific install guidance (also reports partially missing
+  // language packs while OCR itself remains usable)
+  const loadGuidance = useCallback(async (): Promise<OcrInstallGuidance | null> => {
+    if (!platform.isAvailable()) return null;
     try {
-      // Show native dialog prompt
-      const shouldInstall = await platform.showOcrInstallPrompt(ocrStatus.message || 'OCR components are missing');
-
-      if (!shouldInstall) {
-        return false; // User chose to skip
-      }
-
-      // User wants to install
-      setOcrStatus({ installing: true });
-
-      const success = await platform.installOcrDependencies();
-
-      // Re-check dependencies after install
-      const result = await platform.checkOcrDependencies();
-
-      setOcrStatus({
-        installing: false,
-        available: result.tesseractInstalled && result.gnomeScreenshotInstalled,
-        message: success ? null : 'Installation may have failed',
-        details: {
-          tesseract: {
-            installed: result.tesseractInstalled,
-            version: result.tesseractVersion || null,
-            languages: result.languages,
-            missingLangs: [],
-          },
-          screenshotTool: result.gnomeScreenshotInstalled,
-        },
-      });
-
-      return success;
-    } catch (error: any) {
-      setOcrStatus({
-        installing: false,
-        message: error.message || 'Installation failed',
-      });
-      return false;
+      const result = await platform.getOcrInstallGuidance();
+      setGuidance(result);
+      return result;
+    } catch (error) {
+      console.error('Failed to load OCR install guidance:', error);
+      return null;
     }
-  }, [ocrStatus.message, setOcrStatus]);
+  }, []);
 
-  // Check on mount (only if not already checked)
-  useEffect(() => {
-    if (!ocrStatus.checked && !ocrStatus.checking) {
-      checkDependencies();
+  // Check + refresh guidance; used on modal open and by the Re-check button
+  const recheck = useCallback(async () => {
+    const result = await checkDependencies();
+    if (result) {
+      await loadGuidance();
     }
-  }, [ocrStatus.checked, ocrStatus.checking, checkDependencies]);
+    return result;
+  }, [checkDependencies, loadGuidance]);
 
   return {
     ocrStatus,
+    guidance,
     checkDependencies,
-    promptAndInstall,
+    loadGuidance,
+    recheck,
     isOcrAvailable: ocrStatus.available,
     isChecking: ocrStatus.checking,
-    isInstalling: ocrStatus.installing,
   };
 }

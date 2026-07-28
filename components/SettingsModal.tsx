@@ -42,12 +42,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'llm' | 'cloud' | 'selection' | 'general'>('llm');
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [tempShortcut, setTempShortcut] = useState('');
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
 
   const selectedProvider = PROVIDERS.find(p => p.id === provider);
   const isLlmProvider = selectedProvider?.category === 'llm';
-
-  // Get the display value for system prompt (show default if empty, otherwise show custom)
-  const systemPromptDisplayValue = customSystemInstruction || DEFAULT_SYSTEM_PROMPT;
 
   // Handle system prompt change with auto-revert logic
   const handleSystemPromptChange = (value: string) => {
@@ -107,12 +105,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     }
   };
 
-  const saveShortcut = () => {
+  const saveShortcut = async () => {
     if (tempShortcut) {
-      updateSettings({ selectionShortcut: tempShortcut });
-      // Notify platform to update the shortcut
+      setShortcutError(null);
       if (platform.isAvailable()) {
-        platform.updateShortcut(tempShortcut);
+        try {
+          // Register first; the backend keeps the old shortcut on failure,
+          // so a broken accelerator is never saved to settings
+          await platform.updateShortcut(tempShortcut);
+          updateSettings({ selectionShortcut: tempShortcut });
+        } catch (e: any) {
+          setShortcutError(String(e?.message ?? e) || 'Failed to register shortcut');
+          setIsRecordingShortcut(false);
+          setTempShortcut('');
+          return;
+        }
+      } else {
+        updateSettings({ selectionShortcut: tempShortcut });
       }
     }
     setIsRecordingShortcut(false);
@@ -121,7 +130,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
   const formatShortcut = (shortcut: string) => {
     return shortcut
-      .replace('CommandOrControl', navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl')
+      .replace('CommandOrControl', navigator.userAgent.includes('Mac') ? 'Cmd' : 'Ctrl')
       .replace(/\+/g, ' + ');
   };
 
@@ -164,8 +173,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           <div className="mt-auto pt-4 border-t border-black/5">
             <button
               onClick={onClose}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-macos-text hover:bg-black/5 transition-all"
             >
-              Close
+              <X size={18} className="text-macos-muted" />
+              <span>Close</span>
             </button>
           </div>
         </div>
@@ -355,7 +366,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 
                   <div className="space-y-3">
                     <textarea
-                      value={systemPromptDisplayValue}
+                      value={customSystemInstruction}
                       onChange={(e) => handleSystemPromptChange(e.target.value)}
                       onBlur={handleSystemPromptBlur}
                       rows={3}
@@ -554,6 +565,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                         ? 'Press modifier keys (Ctrl/Cmd, Alt, Shift) + a letter/key'
                         : 'Click to record a new shortcut. This triggers the pop-up window.'}
                     </p>
+                    {shortcutError && (
+                      <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-md px-2 py-1.5">
+                        {shortcutError} — the previous shortcut is still active.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -685,7 +701,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                               port: proxyPort,
                               username: proxyUsername,
                               password: proxyPassword
-                            });
+                            }).catch((err) => console.error('Failed to apply proxy:', err));
                           }
                         }}
                         className="sr-only peer"
@@ -762,7 +778,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                               port: proxyPort,
                               username: proxyUsername,
                               password: proxyPassword
-                            });
+                            }).catch((err) => console.error('Failed to apply proxy:', err));
                           }
                         }}
                         className="w-full py-2 bg-macos-active text-white font-medium rounded-lg hover:bg-macos-active/90 transition-colors text-sm"

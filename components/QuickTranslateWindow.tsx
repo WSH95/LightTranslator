@@ -7,9 +7,10 @@ import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
 import { LanguageCode } from '../types';
 
-// Window size constraints
-const MIN_WIDTH = 100;
-const MIN_HEIGHT = 100;
+// Window size constraints (min values mirror tauri.conf.json's quick window —
+// the window manager clamps to those anyway)
+const MIN_WIDTH = 300;
+const MIN_HEIGHT = 80;
 const MAX_WIDTH = 600;
 const MAX_HEIGHT = 500;
 const HEADER_HEIGHT = 32;
@@ -33,6 +34,10 @@ export const QuickTranslateWindow: React.FC = () => {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Always-current handleTranslate for the mount-once event listener
+  const handleTranslateRef = useRef<(text: string) => void>(() => {});
+  // Monotonic token so a slow response can't overwrite a newer request
+  const requestSeq = useRef(0);
 
   const {
     provider,
@@ -73,16 +78,17 @@ export const QuickTranslateWindow: React.FC = () => {
 
   useEffect(() => {
     if (platform.isAvailable()) {
-      platform.sendQuickReady();
-
-      const unlisten = platform.onQuickTranslate((receivedText: string) => {
-        console.log('Received text:', receivedText);
-        const cleanedText = cleanTextLineBreaks(receivedText);
-        setSourceText(cleanedText);
-        handleTranslate(cleanedText);
-      });
-
-      return unlisten;
+      // Signal readiness only AFTER the listener is registered — the backend
+      // parks hotkey text until quick_window_ready, so the old order lost or
+      // raced the very first event.
+      return platform.onQuickTranslate(
+        (receivedText: string) => {
+          const cleanedText = cleanTextLineBreaks(receivedText);
+          setSourceText(cleanedText);
+          handleTranslateRef.current(cleanedText);
+        },
+        () => platform.sendQuickReady()
+      );
     }
   }, []);
 
@@ -112,6 +118,7 @@ export const QuickTranslateWindow: React.FC = () => {
   const handleTranslate = async (inputText: string) => {
     if (!inputText.trim()) return;
 
+    const seq = ++requestSeq.current;
     setTranslated('');
     setLoading(true);
     setError(null);
@@ -119,10 +126,12 @@ export const QuickTranslateWindow: React.FC = () => {
     try {
       await refreshSettings();
       const {
+        quickSourceLang,
         quickTargetLang,
         provider,
         modelId,
         customSystemInstruction,
+        systemPromptEnabled,
         geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
@@ -133,10 +142,11 @@ export const QuickTranslateWindow: React.FC = () => {
         microsoftSubscriptionKey,
         microsoftRegion
       } = useAppStore.getState();
-      const result = await translateText(inputText, 'auto', quickTargetLang, {
+      const result = await translateText(inputText, quickSourceLang, quickTargetLang, {
         provider,
         modelId,
         customSystemInstruction,
+        systemPromptEnabled,
         geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
@@ -147,13 +157,18 @@ export const QuickTranslateWindow: React.FC = () => {
         microsoftSubscriptionKey,
         microsoftRegion
       });
-      setTranslated(result);
+      if (seq === requestSeq.current) setTranslated(result);
     } catch (err: any) {
-      setError(err.message || 'Translation failed');
+      if (seq === requestSeq.current) setError(err.message || 'Translation failed');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   };
+
+  // Keep the listener's view of handleTranslate current on every render
+  useEffect(() => {
+    handleTranslateRef.current = handleTranslate;
+  });
 
   const handleClose = () => {
     if (platform.isAvailable()) {
@@ -162,24 +177,28 @@ export const QuickTranslateWindow: React.FC = () => {
   };
 
   const toggleDropdown = useCallback(() => {
-    setLangDropdownOpen((prev) => {
-      const next = !prev;
-      if (next && platform.isAvailable()) {
-        // Expand window to fit dropdown
-        platform.resizeQuickWindow({ width: MAX_WIDTH, height: DROPDOWN_MIN_HEIGHT });
-      } else {
-        // Shrink back after a brief delay for the close to render
-        setTimeout(resizeToFitContent, 50);
-      }
-      return next;
-    });
-  }, [resizeToFitContent]);
+    // Side effects stay OUT of the setState updater (React calls updaters
+    // twice in StrictMode, doubling the resize)
+    const next = !langDropdownOpen;
+    setLangDropdownOpen(next);
+    if (next && platform.isAvailable()) {
+      // Expand window to fit dropdown
+      platform.resizeQuickWindow({ width: MAX_WIDTH, height: DROPDOWN_MIN_HEIGHT })
+        .catch((e) => console.error('Failed to resize quick window:', e));
+    } else {
+      // Shrink back after a brief delay for the close to render
+      setTimeout(resizeToFitContent, 50);
+    }
+  }, [langDropdownOpen, resizeToFitContent]);
 
-  const handleSelectLang = (code: LanguageCode) => {
+  const handleSelectLang = async (code: LanguageCode) => {
     if (code === quickTargetLang) {
       setLangDropdownOpen(false);
       return;
     }
+    // Pull the latest persisted snapshot first so this write doesn't clobber
+    // settings the main window saved while this window held a stale copy
+    await refreshSettings();
     setQuickTargetLang(code);
     setLangDropdownOpen(false);
     setTimeout(resizeToFitContent, 50);
@@ -257,7 +276,11 @@ export const QuickTranslateWindow: React.FC = () => {
             </div>
           ) : (
             <div className="text-sm text-gray-900 font-medium leading-relaxed break-words">
-              {translated || <span className="text-gray-300 italic">Translating...</span>}
+              {translated || (
+                <span className="text-gray-300 italic">
+                  {loading ? 'Translating…' : 'Select text and press the shortcut'}
+                </span>
+              )}
             </div>
           )}
         </div>

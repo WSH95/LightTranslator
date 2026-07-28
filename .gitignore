@@ -9,7 +9,6 @@ lerna-debug.log*
 
 node_modules
 dist
-dist-electron
 dist-ssr
 *.local
 
@@ -31,3 +30,12 @@ dist-ssr
 *.sw?
 
 release_notes_*.md
+
+# PROJECT-STEWARD:BEGIN runtime-state
+.project-steward/runtime/
+.project-steward/tmp/
+.project-steward/migration-backup-projectforge/
+# PROJECT-STEWARD:END runtime-state
+
+# Electron build output
+dist-electron

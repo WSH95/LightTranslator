@@ -29,7 +29,6 @@
   "exclude": [
     "node_modules",
     "src-tauri",
-    "dist",
-    "dist-electron"
+    "dist"
   ]
 }

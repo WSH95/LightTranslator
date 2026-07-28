@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { X, Copy, Check, ScanText, Loader2, ArrowDown, ClipboardList, AlertTriangle, Bot, Cloud, RefreshCw } from 'lucide-react';
+import { X, Copy, Check, ScanText, Loader2, ClipboardList } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { translateText, translateImage, verifyModelIdentity } from '../services/geminiService';
+import { translateText, translateImage } from '../services/geminiService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS } from '../constants';
 import { platform } from '../src/lib/platform';
@@ -34,12 +34,10 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     microsoftSubscriptionKey,
     microsoftRegion,
     ocrStatus,
-    modelVerification,
     setInputText,
     setTranslatedText,
     setIsTranslating,
     setErrorMessage,
-    setModelVerification,
     clearModelVerification
   } = useAppStore();
 
@@ -102,12 +100,20 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     }
   }, [sourceLang, targetLang, provider, modelId, customSystemInstruction, systemPromptEnabled, geminiApiKey, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
 
+  // performTranslation's identity changes with every settings value; effects
+  // call through this ref so editing a key/model/prompt in Settings doesn't
+  // re-fire translations or re-register listeners.
+  const performTranslationRef = useRef(performTranslation);
+  useEffect(() => {
+    performTranslationRef.current = performTranslation;
+  });
+
   useEffect(() => {
     if (!autoTranslate) return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (inputText.trim()) {
-      debounceTimer.current = setTimeout(() => performTranslation(inputText), debounceMs);
+      debounceTimer.current = setTimeout(() => performTranslationRef.current(inputText), debounceMs);
     } else {
       // If input is cleared, clear immediately and cancel any pending translation display
       setTranslatedText('');
@@ -115,84 +121,36 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       latestRequestText.current = '';
     }
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-  }, [inputText, performTranslation, autoTranslate, debounceMs, setTranslatedText, setIsTranslating]);
+    // sourceLang/targetLang stay as triggers on purpose: changing language
+    // should retranslate. Other settings edits should not.
+  }, [inputText, autoTranslate, debounceMs, sourceLang, targetLang, setTranslatedText, setIsTranslating]);
 
-  // Listen for OCR result from tray menu
+  // Listen for OCR result from tray menu (registered once, not per settings edit)
   useEffect(() => {
     if (platform.isAvailable()) {
       const unlisten = platform.onOcrResult((text: string) => {
-        setInputText(text);
-        performTranslation(text);
+        const cleaned = cleanTextLineBreaks(text);
+        setInputText(cleaned);
+        performTranslationRef.current(cleaned);
       });
       return unlisten;
     }
-  }, [setInputText, performTranslation]);
+  }, [setInputText]);
 
-  // Get provider info
-  const currentProvider = PROVIDERS.find(p => p.id === provider);
-  const isLlmProvider = currentProvider?.category === 'llm';
-
-  // Get the configured model name for display
-  const configuredModelName = provider === 'gemini' ? modelId : provider === 'openrouter' ? openrouterModel : openaiModel;
-
-  // Clear verification when provider or model changes (don't auto-verify to save quota)
+  // Clear stale verification state when provider or model changes
   useEffect(() => {
     clearModelVerification();
   }, [provider, modelId, openaiModel, openrouterModel, clearModelVerification]);
 
-  // Manual verification handler - only runs when user clicks verify button
-  const handleVerify = useCallback(async () => {
-    if (!isLlmProvider) return;
-
-    // Check credentials
-    const hasCredentials =
-      (provider === 'gemini' && geminiApiKey) ||
-      (provider === 'openai' && openaiApiKey && openaiBaseUrl) ||
-      (provider === 'openrouter' && openrouterApiKey);
-
-    if (!hasCredentials) {
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: null,
-        error: 'API key not configured'
-      });
-      return;
-    }
-
-    setModelVerification({ isVerifying: true, error: null });
-
-    try {
-      const identity = await verifyModelIdentity({
-        provider,
-        geminiApiKey,
-        modelId,
-        openaiBaseUrl,
-        openaiApiKey,
-        openaiModel,
-        openrouterApiKey,
-        openrouterModel
-      });
-
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: identity,
-        lastVerifiedAt: Date.now(),
-        error: null
-      });
-    } catch (error: any) {
-      setModelVerification({
-        isVerifying: false,
-        verifiedIdentity: null,
-        error: error.message || 'Verification failed'
-      });
-    }
-  }, [provider, geminiApiKey, modelId, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, isLlmProvider, setModelVerification]);
-
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (translatedText) {
-      navigator.clipboard.writeText(translatedText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      try {
+        await navigator.clipboard.writeText(translatedText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        setErrorMessage('Failed to copy to clipboard.');
+      }
     }
   };
 
@@ -230,8 +188,10 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         const result = await translateImage(reader.result as string, targetLang, { modelId, geminiApiKey });
         setInputText(result.detectedText);
         setTranslatedText(result.translatedText);
-      } catch (err) {
-        setErrorMessage("Failed to process pasted image.");
+      } catch (err: any) {
+        // Image translation always uses Gemini; surface the real cause
+        // (e.g. "Gemini API Key is required") instead of a generic message
+        setErrorMessage(err?.message || "Failed to process pasted image.");
       } finally {
         setIsProcessingImage(false);
       }
