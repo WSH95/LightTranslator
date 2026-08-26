@@ -64,6 +64,21 @@ after a few requests; Chromium keeps reusing it, so every later call is HTTP
 - [x] G4 Verification (2026-08-26): `npm run typecheck` and `npm run build` green. Dev Electron + local mock: first GTX GET is HTTP 429 on socket 1 → `[proxy-request]` log (host only, no `q=`) → heal → retry on socket 2 returns 200 → renderer shows 你好. UTF-8: 3200-char CJK body split on 2-byte writes decoded intact. GET 500 and POST 429: one hit, no extra heal. Transport: `net::ERR_UNSAFE_PORT` heals+retries; TCP forwarder to `127.0.0.1:17888` then SIGSTOP logs `net::ERR_TIMED_OUT` + heal. Post-CONT follow-up got a real Google 429 on the *fresh* connection (IP/proxy-exit throttle — DECISIONS 0010 residual; unmasked 429 in the log). Tauri code untouched.
 - [x] G5 Version bumped to 1.2.1 in package.json, tauri.conf.json, Cargo.toml + both lockfiles
 
+## Google free-endpoint failover / Release 1.2.2 (2026-08-26)
+
+Live follow-up disproved the IP-only / poisoned-socket diagnosis: GTX GET and
+POST remained HTTP 429 across proxy routes while the Chrome Dictionary endpoint
+returned HTTP 200 through the same route. This milestone supersedes the 1.2.1
+recovery policy with provider-level failover.
+
+- [x] F1 Use POST bodies and structured Chrome Dictionary responses, with one GTX fallback
+- [x] F2 Make provider requests non-cacheable in both backends and clear legacy Electron HTTP cache
+- [x] F3 Remove Electron's HTTP-429 socket retry and eliminate duplicate frontend translation triggers
+- [x] F4 Correct Google availability/error copy and Project Steward diagnosis records
+- [x] F5 Verify primary/fallback/both-fail/UTF-8/request-count behavior with mock and live traffic
+- [x] F6 Bump all five version locations to 1.2.2
+- [x] F7 Build and inspect both local 1.2.2 `.deb` artifacts; do not publish
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

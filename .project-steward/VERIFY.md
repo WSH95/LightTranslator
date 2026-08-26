@@ -12,12 +12,15 @@ How to check the project is healthy. Agents run these before claiming
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
 
-Last verified: 2026-08-26T02:25Z — `npm run typecheck` ok, `npm run build` ok.
-Electron G4 (this branch): mock 429-heal + UTF-8 + GET/POST policy + timeout
-heal observed in a live `electron .` session; post-CONT Google 429 on a fresh
-connection is the documented IP-level residual (row 19 heal still fired).
-Tauri code was not changed; no `cargo check` this session. No automated test
-suite yet.
+Last verified: 2026-08-26T04:30Z — `npm ci`, `npm run typecheck`, production
+build, secret scan, and Electron syntax all pass. Five deterministic Google
+probes cover primary structured parsing, exactly-one fallback after 429 or a
+malformed body, long UTF-8 text in a POST body (not a URL), and truthful dual
+failure. An isolated dev Electron instance completed 10/10 live translations
+through the configured proxy without restart or provider error. Final Electron
+and Docker/Tauri release builds produced and inspected both 1.2.2 amd64 Debian
+packages; the Docker release build also compiled the changed Rust backend. No
+committed automated test suite yet.
 
 ## Backend parity checklist
 
@@ -47,7 +50,9 @@ mistyped Electron method fails `npm run typecheck`.
 | 13 | OCR result | Paragraphs preserved (shared `cleanTextLineBreaks`), not flattened to one line |
 | 14 | Screen capture | Main window hides during area selection, reappears after |
 | 15 | Proxy with auth | Requests succeed through an authenticated proxy |
-| 16 | Provider errors | Real cause shown (not a generic/CORS message). Google 429 is named as a rate limit; other non-2xx include HTTP status + body snippet; transport failures show the backend error (`net::ERR_…`, timeout) |
+| 16 | Provider errors | Real cause shown (not a generic/CORS/IP guess). If both Google endpoints fail, the message names each endpoint's HTTP/transport result and suggests retrying or another engine |
 | 17 | Editing settings | Typing an API key does not fire translations |
-| 18 | Package metadata | `Depends: xdotool` only; OCR packages under `Recommends`; both builds emit `LightTranslator_<version>_amd64.deb` and Conflict with each other |
-| 19 | Transport/429 recovery | No app restart needed. Electron: on GET/HEAD 429 or transport failure, drop pooled connections (`closeAllConnections` + `forceReloadProxyConfig`) and retry once; POST transport failure heals without retry. Tauri: immune by construction (new `reqwest::Client` per request). Intentional divergence — no Rust change |
+| 18 | Package metadata | Electron depends on `xdotool`; Tauri also carries generated GTK/WebKit/AppIndicator dependencies. OCR packages are under `Recommends`; both builds emit `LightTranslator_<version>_amd64.deb`, and Electron's package conflict prevents coexistence with Tauri |
+| 19 | Google endpoint recovery | No app restart needed. Both builds POST source text to the structured Chrome endpoint first, then try GTX once after any HTTP/transport/malformed-response failure; no text appears in request URLs |
+| 20 | Transport recovery | Electron heals/retries only idempotent GET/HEAD transport failures; HTTP statuses are returned to provider logic. POST transport failures heal without retry. Tauri uses a fresh reqwest client and returns every HTTP status directly |
+| 21 | Translation request count | Clipboard/tray OCR uses the debounced path when auto-translate is on and one immediate request when off; Ctrl+Enter cancels its pending debounce; pasted-image results do not trigger a second text translation |

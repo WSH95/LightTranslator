@@ -1,6 +1,7 @@
 import { TranslationProviderId } from "../types";
 import { DEFAULT_SETTINGS } from "../constants";
 import { platform } from "../src/lib/platform";
+import { translateWithGoogleFreeEndpoints } from "./googleTranslateService";
 
 // --- Types ---
 interface TranslateOptions {
@@ -556,50 +557,17 @@ const translateWithDeepL = async (text: string, source: string, target: string, 
 };
 
 /**
- * Google Translate (Free/GTX) Implementation
- * Note: This endpoint is rate-limited and intended for browser internal use.
- * In a production App, use the Cloud API or a proxy server.
+ * Google Translate (no-key web endpoints) implementation.
+ * These endpoints are unofficial and may be throttled or changed by Google.
+ * Production deployments that require a supported API should use Cloud Translation.
  * When running in Electron, we should route this through the main process to avoid CORS.
  */
 const translateWithGoogleFree = async (text: string, source: string, target: string) => {
   try {
-    const sl = source === 'auto' ? 'auto' : source;
-    // Fix language codes for Google (e.g., zh-CN -> zh-CN is usually fine, but ensure compatibility)
-    const tl = target;
-
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`;
-
-    // Check if we are in native platform environment
-    if (platform.isAvailable()) {
-        // Use platform proxy to fetch (bypasses CORS)
-        const response = await platform.request(url);
-        if (!response.ok) {
-          if (response.statusCode === 429) {
-            throw new Error(
-              'Google rate limit (HTTP 429) — Google is throttling this network/proxy exit IP. Wait a while, switch proxy node, or use another engine.'
-            );
-          }
-          if (response.statusCode != null) {
-            const raw = response.data ?? response.error ?? '';
-            const snippet = String(raw).replace(/\s+/g, ' ').trim().slice(0, 200);
-            throw new Error(`HTTP ${response.statusCode} - ${snippet}`);
-          }
-          throw new Error(response.error || 'Unknown network error');
-        }
-        // Google GTX returns [[["Translated Text", "Original", ...], ...], ...]
-        const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-        return data[0].map((s: any) => s[0]).join('');
-    } else {
-        // Fallback for Web (May hit CORS)
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Google API Error (CORS or Limit)");
-        const data = await response.json();
-        return data[0].map((s: any) => s[0]).join('');
-    }
-
+    return await translateWithGoogleFreeEndpoints(text, source, target, platform.request);
   } catch (error: any) {
     console.error("Google Free Error:", error);
-    // Keep the real cause; the CORS hint only makes sense in web mode
+    // Keep the endpoint-specific cause; the CORS hint only makes sense in web mode.
     const detail = error?.message ? `: ${error.message}` : '';
     throw new Error(platform.isAvailable()
       ? `Google Translate failed${detail}`

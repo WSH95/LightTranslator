@@ -2,6 +2,21 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-08-26T06:57:19Z — cli
+PR #4 opened from commit 8daafd0 with a concise humanized description; branch pushed. Release publication and local main fast-forward are gated on the user's manual merge.
+
+### 2026-08-26T04:41:42Z — cli
+[auto-checkpoint] Final v1.2.2 packages rebuilt after closing stale-debounce/image-paste races; Electron and Docker/Tauri builds pass, manifests are 1.2.2 amd64, and final artifact hashes were refreshed in HANDOFF.md.
+
+### 2026-08-26T04:34:22Z — cli
+[auto-checkpoint] Completed v1.2.2 Google free-endpoint failover: deterministic probes, 10-translation isolated Electron soak, clean install/typecheck/build, and inspected Electron/Tauri Debian packages pass; handoff refreshed, no commit or publication.
+
+### 2026-08-26T04:06:17Z — cli
+Implemented v1.2.2 Google provider fix: Chrome-dictionary POST primary plus one GTX POST fallback, no-store backends/cache cleanup, HTTP-429 de-heal, truthful errors, and duplicate-trigger suppression. Typecheck, Electron syntax, and five pure endpoint probes pass.
+
+### 2026-08-26T04:00:39Z — cli
+Starting v1.2.2 Google free-endpoint failover: corrected diagnosis after live GTX 429 and clients5 200 on the same proxy route; no-key failover and local package builds approved.
+
 ### 2026-08-26T02:30:00Z — grok
 Version bumped to 1.2.1 (package.json, tauri.conf.json, Cargo.toml, both lockfiles). Pushing `fix/electron-google-429-heal` and opening a PR (user-approved).
 

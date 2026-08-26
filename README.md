@@ -27,6 +27,11 @@ LightTranslator is a high-performance, lightweight translation tool built with *
 
 > **Platform support**: Linux with X11 is the primary target (`.deb` and AppImage bundles). Two interchangeable builds share the same UI and features — **Tauri** for Ubuntu 22.04+/Debian 12+ and **Electron** for Ubuntu 18.04–20.04; see [Which build for which system](#which-build-for-which-system). Selected-text capture and screenshots use `xdotool` / `gnome-screenshot`, which do not work under Wayland (the app warns and falls back to translating the clipboard). Windows/macOS bundles are not currently configured or tested.
 
+> **Google Translate availability**: the no-key option uses Google web
+> endpoints with an automatic same-provider fallback, not the supported Google
+> Cloud Translation API. It requires no account, but either endpoint may be
+> throttled or changed without notice.
+
 ## Installation
 
 ### Prerequisites

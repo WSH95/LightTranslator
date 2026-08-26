@@ -442,7 +442,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     <div>
                       <h4 className="text-sm font-semibold text-green-800">No API Key Required</h4>
                       <p className="text-xs text-green-700 mt-1 leading-relaxed">
-                        Google Translate is accessed via the public web API. No key configuration is needed, but rate limits may apply.
+                        Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.
                       </p>
                     </div>
                   </div>

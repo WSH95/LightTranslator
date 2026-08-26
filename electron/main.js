@@ -35,7 +35,7 @@ let quickReady = false;
 /** Text captured by the hotkey before the quick webview was ready. */
 let pendingQuickText = null;
 let waylandWarned = false;
-/** Last time we dropped pooled sockets after a transport/429 failure. */
+/** Last time we dropped pooled sockets after a transport failure. */
 let lastHealAt = 0;
 
 const isDev = () => !app.isPackaged;
@@ -603,7 +603,13 @@ app.on('login', (event, _webContents, _details, authInfo, callback) => {
  */
 function attemptRequest(url, options) {
   return new Promise((resolve) => {
-    const request = net.request({ method: (options.method || 'GET').toUpperCase(), url });
+    const request = net.request({
+      method: (options.method || 'GET').toUpperCase(),
+      url,
+      // Provider/API responses can contain private text or credentials in
+      // request URLs. They must never enter Chromium's persistent HTTP cache.
+      cache: 'no-store',
+    });
     Object.entries(options.headers || {}).forEach(([key, value]) => request.setHeader(key, value));
 
     // Match the Rust client's 60s overall timeout
@@ -683,13 +689,11 @@ ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
   const transportFailure = first.statusCode == null;
   const idempotent = method === 'GET' || method === 'HEAD';
 
-  // GET/HEAD 429 or transport error: drop the flagged/stale pooled connection
-  // and retry once. POST transport failure: heal only (not idempotent-safe).
-  // Other non-2xx: the pool is fine — the provider answered.
-  if (idempotent && (first.statusCode === 429 || transportFailure)) {
-    await healNetworkSession(
-      first.statusCode === 429 ? 'HTTP 429' : (first.error || 'transport error')
-    );
+  // Only transport errors indicate stale network state. HTTP failures,
+  // including 429, came from the provider and are handled by provider-level
+  // fallback logic. POST transport failures heal without an unsafe retry.
+  if (idempotent && transportFailure) {
+    await healNetworkSession(first.error || 'transport error');
     const second = await attemptRequest(url, options);
     if (!second.ok) logFailure(parsed.host, method, second);
     return second;
@@ -792,7 +796,15 @@ ipcMain.on('settings-changed', (event) => {
 
 // --- Lifecycle ---
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // v1.2.1 and older put GET provider URLs (including translation text and
+  // occasionally credentials) in Chromium's disk cache. HTTP cache is
+  // disposable and separate from localStorage, where app settings live.
+  try {
+    await session.defaultSession.clearCache();
+  } catch (error) {
+    console.error(`Failed to clear legacy HTTP cache: ${error.message}`);
+  }
   applyContentSecurityPolicy();
   createMainWindow({ startHidden: shouldStartHidden() });
   createQuickWindow();

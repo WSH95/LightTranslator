@@ -56,7 +56,7 @@ export const PROVIDERS: TranslationProvider[] = [
     category: 'cloud',
     enabled: true,
     requiresKey: false,
-    description: 'Web API'
+    description: 'No-key web endpoints'
   },
   {
     id: 'microsoft',
