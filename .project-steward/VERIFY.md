@@ -45,6 +45,7 @@ mistyped Electron method fails `npm run typecheck`.
 | 13 | OCR result | Paragraphs preserved (shared `cleanTextLineBreaks`), not flattened to one line |
 | 14 | Screen capture | Main window hides during area selection, reappears after |
 | 15 | Proxy with auth | Requests succeed through an authenticated proxy |
-| 16 | Provider errors | Real cause shown (not a generic/CORS message) |
+| 16 | Provider errors | Real cause shown (not a generic/CORS message). Google 429 is named as a rate limit; other non-2xx include HTTP status + body snippet; transport failures show the backend error (`net::ERR_…`, timeout) |
 | 17 | Editing settings | Typing an API key does not fire translations |
 | 18 | Package metadata | `Depends: xdotool` only; OCR packages under `Recommends`; both builds emit `LightTranslator_<version>_amd64.deb` and Conflict with each other |
+| 19 | Transport/429 recovery | No app restart needed. Electron: on GET/HEAD 429 or transport failure, drop pooled connections (`closeAllConnections` + `forceReloadProxyConfig`) and retry once; POST transport failure heals without retry. Tauri: immune by construction (new `reqwest::Client` per request). Intentional divergence — no Rust change |

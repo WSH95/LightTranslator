@@ -2,6 +2,15 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-08-26T02:15:00Z — grok
+Implemented Electron Google 429 self-heal on `fix/electron-google-429-heal`: UTF-8 chunk decode, unmasked Google errors, session heal+single GET retry. Steward: DECISIONS 0010, VERIFY rows 16/19, PLAN G1–G3. Verification (G4) next.
+
+### 2026-08-26T02:10:47Z — cli
+Starting implementation of approved Electron Google 429 heal plan on branch fix/electron-google-429-heal
+
+### 2026-08-26T02:05:06Z — cli
+Diagnosed Electron 'Google Network Error': Google 429-flags the pooled connection (per-connection, not per-IP; fresh instance works while old fails). Plan approved: unmask errors, failure logging, session heal+retry, UTF-8 chunk fix. Delegating implementation to Grok Build.
+
 ### 2026-07-28T12:10:31Z — project-steward init
 Project initialized as a Project Steward managed project.
 

@@ -1,11 +1,10 @@
 ---
-updated_at: 2026-07-28T17:56:00Z
-updated_by: claude-code (session wrap — v1.2.0 shipped)
-session_status: closed
-branch: main
-last_commit: cbe1df9
+updated_at: 2026-08-26T02:15:00Z
+updated_by: grok
+session_status: active
+branch: fix/electron-google-429-heal
+last_commit: 5821ca8
 ---
-
 # Handoff
 
 Written for a zero-context successor (another agent, another tool,
@@ -33,17 +32,20 @@ initialization.
 
 ## In flight
 
-- (none — working tree clean, `main` checked out and up to date)
+- Branch `fix/electron-google-429-heal`: Electron Google 429 self-heal.
+  G1 (UTF-8 decode) and G2 (unmask errors) committed; G3 (heal+retry +
+  steward docs) in this working tree. No Tauri change (intentional).
 
 ## Next steps
 
-1. Optional cleanup: delete the merged branch
-   (`git branch -d fix/2026-07-review-stabilization` and the remote one).
-2. Walk `VERIFY.md`'s parity checklist against both builds when convenient —
-   several rows (proxy with auth, DeepL zh-TW, OCR guidance) were verified by
-   code review or on one backend only.
-3. Pick up the "Later" backlog in PLAN.md — highest value first: Wayland
-   selection capture, single-instance guard, secure API-key storage.
+1. Finish G3 commit, then G4 verification: `npm run typecheck` &&
+   `npm run build`; deterministic local 429-heal mock (then revert URL);
+   transport-variant via TCP forwarder to the user's proxy on 17888
+   (60s timeout path); long CJK UTF-8; VERIFY rows 16 and 19.
+2. If mock/logs show 429 persisting across a fresh connection, do not
+   ship the silent-heal claim — the unmasked 429 message still helps, and
+   the alternate-endpoint fallback is backlog.
+3. After G4: wrap, propose merge. Do not push without approval.
 
 ## Blockers
 

@@ -51,6 +51,18 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [x] P4 Draft release v1.2.0 created targeting `main`, with both .debs named by Ubuntu range and compatibility instructions; upload verified by checksum round-trip
 - [x] P5 PR #2 merged (squash → `cbe1df9`; tree verified identical to the built commit) and release **v1.2.0 published** — tag on `main`, both .debs live
 
+## Electron Google Translate 429 self-heal (2026-08-26)
+
+Google's free GTX endpoint flags Electron's pooled keep-alive/H2 connection
+after a few requests; Chromium keeps reusing it, so every later call is HTTP
+429 until restart. Plan of record: approved fix
+`when-using-the-electron-immutable-rossum.md`. Decision: DECISIONS 0010.
+
+- [x] G1 `fix(electron)`: decode `proxy-request` bodies as UTF-8 across chunk boundaries
+- [x] G2 `fix(translate)`: show the real cause when Google Translate fails (VERIFY row 16)
+- [x] G3 `fix(electron)`: heal session state and retry once on GET/HEAD 429 or transport failure; POST transport heals without retry; log failures without the URL (`q=` is user text)
+- [ ] G4 Verification: `typecheck` + `build`; deterministic mock 429-heal; transport-variant via TCP forwarder; long CJK UTF-8; VERIFY.md rows 16 and 19
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)
@@ -64,3 +76,5 @@ DECISIONS 0002; plan of record approved by the user in-session).
 - [ ] Cross-platform screenshot capture (macOS `screencapture`, Windows) to back the README's platform claims
 - [ ] Test-suite bootstrap (vitest + cargo test) — then replace `Test: TODO` in AGENTS.md commands block
 - [ ] `proxy_request` SSRF surface: revisit once CSP has soaked (scheme check landed in S1; full allowlist conflicts with custom `openaiBaseUrl`/local LLMs)
+- [ ] Google GTX alternate-endpoint fallback if 429 persists across fresh connections (deferred from 0010; logs will show this if it happens)
+- [ ] Spoofed browser UA for Google GTX (deferred from 0010 — speculative, and would make the working Tauri fingerprint less consistent)
