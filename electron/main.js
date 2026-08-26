@@ -615,14 +615,14 @@ ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
     }, 60000);
 
     request.on('response', (response) => {
-      let body = '';
-      response.on('data', (chunk) => { body += chunk.toString(); });
+      const chunks = [];
+      response.on('data', (chunk) => { chunks.push(chunk); });
       response.on('end', () => {
         clearTimeout(timer);
         resolve({
           ok: response.statusCode >= 200 && response.statusCode < 300,
           statusCode: response.statusCode,
-          data: body,
+          data: Buffer.concat(chunks).toString('utf8'),
         });
       });
       response.on('error', (error) => {
