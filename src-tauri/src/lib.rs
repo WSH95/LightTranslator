@@ -175,6 +175,10 @@ async fn proxy_request(
         request = request.body(body);
     }
 
+    // reqwest has no persistent response cache, and this request directive
+    // also tells intermediary caches not to retain provider URLs/responses.
+    request = request.header(reqwest::header::CACHE_CONTROL, "no-store");
+
     match request.send().await {
         Ok(response) => {
             let status = response.status();

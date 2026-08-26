@@ -177,3 +177,49 @@ heal retry will not help, but the UI and logs now say HTTP 429 explicitly.
 G4 (2026-08-26) reproduced that residual on the user's proxy after a
 SIGSTOP/CONT transport test: the healed retry reached Google and got a
 fresh-connection 429 (`Sorry…`), distinct from the pooled-socket case.
+
+## 0011 — 2026-08-26 — Supersede the Google 429 socket/IP diagnosis with endpoint failover
+
+**Context**: Real-world use of v1.2.1 reproduced the failure after a few
+translations. The newly unmasked message claimed Google was throttling the
+proxy exit IP, but changing the Google proxy route/IP did not fix it. Live
+probes through the same configured proxy then showed:
+
+- `translate.googleapis.com` GTX returned HTTP 429 for both GET and POST;
+- `translate.google.com` GTX also returned HTTP 429;
+- `clients5.google.com` with `client=dict-chrome-ex` returned HTTP 200, for
+  both the compact and `dj=1` structured response modes;
+- Electron's disk cache contained historical 429 transactions keyed by full
+  GET URLs, including long translated text.
+
+This disproves Decision 0010's asserted per-connection root cause and its
+IP-specific UI message. Google's classifier is opaque, so the supported claim
+is narrower: the throttle is endpoint/client-specific (or at least not solely
+socket- or exit-IP-specific). Decision 0010 remains as the historical record
+of why v1.2.1 was built, but its causal conclusion and HTTP-429 heal policy are
+superseded here.
+
+**Decision**:
+1. The no-key Google provider POSTs form-encoded text to the Chrome Dictionary
+   endpoint first (`client=dict-chrome-ex`, `dj=1`) and parses
+   `sentences[].trans`.
+2. Any primary HTTP/transport/malformed-response failure gets exactly one GTX
+   POST fallback. If both fail, the UI names both endpoint results without
+   claiming an IP or proxy cause. No automatic non-Google provider fallback.
+3. HTTP 429 is an application/provider response, not a transport fault:
+   Electron no longer closes sockets or retries it. Existing idempotent
+   transport-error healing remains; Tauri already returns HTTP statuses
+   directly.
+4. Source text stays in POST bodies. Both backends mark provider traffic
+   `no-store`; Electron also bypasses and clears its disposable HTTP cache.
+5. Clipboard/OCR/manual triggers issue one intended translation rather than an
+   immediate request plus the auto-translate request.
+6. The user chose no-key failover over adding the supported, credentialed
+   Google Cloud Translation API.
+
+**Consequences**: The failure observed on the user's route now succeeds without
+restart because the working endpoint is primary. GTX remains useful as a
+same-provider fallback if the primary changes. Both endpoints are unofficial
+and can still fail together; that limitation is described honestly in Settings
+and README. Private translation text and credential-bearing provider URLs no
+longer enter Electron's HTTP cache.

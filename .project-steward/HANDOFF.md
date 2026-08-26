@@ -1,124 +1,93 @@
 ---
-updated_at: 2026-08-26T02:30:00Z
-updated_by: grok
+updated_at: 2026-08-26T04:41:42Z
+updated_by: cli
 session_status: active
-branch: fix/electron-google-429-heal
-last_commit: 0b66889
+branch: fix/google-free-endpoint-failover
+last_commit: e6c7eb7
 ---
 # Handoff
 
-Written for a zero-context successor (another agent, another tool,
-another device). Keep every section current at wrap-up.
+Written for a zero-context successor (another agent, another tool, another
+device). Keep every section current at wrap-up.
 
 ## Now
 
-**v1.2.0 is shipped.** PR #2 merged into `main` (squash → `cbe1df9`; its tree is
-byte-identical to the built commit `fa113e7`) and the release is published at
-https://github.com/WSH95/LightTranslator/releases/tag/v1.2.0 with both packages:
+The v1.2.2 Google no-key endpoint fix is implemented and verified on
+`fix/google-free-endpoint-failover`. The working tree is intentionally
+uncommitted; nothing has been pushed or published.
 
-- `LightTranslator-1.2.0-amd64-ubuntu22.04-or-newer.deb` — Tauri, 5 MB
-- `LightTranslator-1.2.0-amd64-ubuntu20.04-or-older.deb` — Electron, 92 MB
+The previous v1.2.1 diagnosis was too strong. Through the same configured proxy,
+GTX returned HTTP 429 for GET and POST while `clients5.google.com` with
+`client=dict-chrome-ex` returned HTTP 200. Changing the Google proxy route also
+did not resolve GTX. Decision 0011 supersedes the old IP/socket claim without
+pretending Google's internal classifier is known.
 
-The app now ships two interchangeable backends from one codebase: Tauri for
-Ubuntu 22.04+/Debian 12+, Electron for 18.04-20.04 where Tauri 2's
-webkit2gtk-4.1 does not exist. The React UI is shared, so the interface is
-identical; `PlatformBackend` in `src/lib/platform.ts` enforces surface parity at
-typecheck time and VERIFY.md carries an 18-point behavior checklist.
+Implemented state:
 
-This session also delivered: a full code review (~50 findings) with all broken
-behaviors and likely bugs fixed, security hardening, on-demand OCR
-dependencies, the Docker build/run path for old hosts, and Project Steward
-initialization.
+- Google source text is form-encoded in POST bodies, never request URLs.
+- The structured Chrome Dictionary endpoint is primary; GTX is tried exactly
+  once after a primary HTTP, transport, malformed, or empty-response failure.
+- Dual failure messages name both endpoint results and make no IP/proxy claim.
+- Electron no longer treats HTTP 429 as a transport fault, bypasses response
+  caching, and clears its legacy HTTP cache at startup. Tauri adds `no-store`.
+- Clipboard, tray OCR, Ctrl+Enter, and pasted-image paths avoid duplicate
+  translations, including the same-text/pending-debounce edge case.
+- Version metadata is synchronized at 1.2.2 and both local Debian packages are
+  built.
 
 ## In flight
 
-- Branch `fix/electron-google-429-heal` — G1–G5 done (429 heal + 1.2.1
-  version bump). Pushing and opening a PR against `main` (user-approved).
-  No Tauri behavior change (intentional; VERIFY row 19).
+- Awaiting user review and approval for a Conventional Commit. No commit, PR,
+  tag, release, or package installation has been performed.
+- Local build artifacts (ignored by git):
+  - Electron / Ubuntu 18.04–20.04:
+    `dist-electron/LightTranslator_1.2.2_amd64.deb`
+  - Tauri / Ubuntu 22.04+/Debian 12+:
+    `src-tauri/target/release/bundle/deb/LightTranslator_1.2.2_amd64.deb`
+
+## Validation completed
+
+- `npm ci`, `npm run typecheck`, `npm run build`, and
+  `node --check electron/main.js` pass.
+- Five deterministic Google probes pass: primary structured parsing, 429
+  fallback, malformed-response fallback, long UTF-8 POST/no-text-in-URL, and
+  truthful dual-failure reporting with exactly two attempts.
+- An isolated dev Electron instance completed 10/10 live translations through
+  the user's configured proxy at normal cadence without restart or provider
+  error. The same route returned GTX 429 during the diagnosis.
+- `npm run electron:build:deb` and `npm run app:docker:build` pass. Both package
+  manifests report version 1.2.2, architecture amd64, and the intended runtime
+  dependency split.
+- Final SHA-256:
+  - Electron: `67af2815b8041348a196035d61ab0f1740f620645c10358f535752969656a63c`
+  - Tauri: `b6b06cb9c2c77859a4d23e7398c1c5a7e09468a8394704679b4171b6971c0c90`
 
 ## Next steps
 
-1. After PR merge: tag/release v1.2.1 with both `.deb`s. Real-world soak
-   on the Electron build: a wild 429 should log `status=429 … Sorry` and
-   the healed retry should succeed, or the UI now names the rate limit.
-2. Optional: delete merged `fix/2026-07-review-stabilization`.
-3. Later backlog in PLAN.md (Wayland, single-instance, keyring).
+1. Review the diff and, if approved, commit it (suggested message:
+   `fix(google): add resilient no-key endpoint failover`).
+2. Install the package appropriate for the target Ubuntu version and perform a
+   longer real-workload Google soak, including clipboard, hotkey, OCR, and
+   Ctrl+Enter paths.
+3. Only with explicit approval: push/open a PR, then tag and publish v1.2.2 with
+   both packages.
+4. Separately triage the existing development/build dependency advisories; do
+   not mix a major Electron/toolchain migration into this patch.
 
 ## Blockers
 
-- (none)
-
-## Manual checklist for the user acceptance test
-
-- Fresh launch fires NO translation of the clipboard (was: every launch)
-- Hotkey with selected text → popup at cursor, correct on HiDPI, uses
-  the quick-window language pair (quickSourceLang was previously ignored)
-- Hotkey within ~1s of launch still delivers (pending-text path)
-- Settings → shortcut: invalid accelerator shows inline error and the old
-  shortcut keeps working; valid one takes over; after app restart the
-  custom shortcut and proxy settings are restored
-- Change quick target language in popup → visible in main Settings;
-  change an API key in main → popup uses it (cross-window sync)
-- Exactly ONE tray icon; tray Quit exits cleanly
-- Devtools console: no "not allowed" permission errors, no CSP
-  violations while using titlebar buttons, drag, resize, tray, OCR modal
-- OCR with tesseract missing → guidance popup with correct distro
-  command; Copy works; install + Re-check proceeds into capture; with
-  only some language packs, OCR runs with the installed subset
-- (verified automatically already: deb metadata, clean install, launch,
-  typed translation, hotkey translation)
-- DeepL with target zh-TW returns Traditional Chinese
-- Dev run (StrictMode): one translation per hotkey press, not two
-
-## Blockers
-
-- (none)
-
-## Key files
-
-- `.project-steward/PLAN.md` — S1–S9 done, S10 = merge decision; "Later"
-  backlog carries the deferred review findings (IDs like C12 refer to the
-  review's finding list, summarized in each commit message)
-- `src-tauri/src/lib.rs` — all backend logic (single file)
-- `src/lib/platform.ts` — frontend↔Tauri bridge incl. the
-  `makeDisposableListener` pattern and settings-changed sync channel
-- `store/useAppStore.ts` — Zustand store; settings actions broadcast to
-  the other window (debounced 250ms)
-- `hooks/useOcrDependencies.ts` + `components/OcrModal.tsx` — on-demand
-  OCR dependency check + install-guidance popup
-- `src-tauri/capabilities/default.json` — minimal permission set; if a
-  webview action logs "not allowed", re-add ONLY the named permission
-
-## Tried and rejected
-
-- `deb.recommends` was uncertain — verified: tauri.conf schema accepts it
-  (cargo check passes), so OCR packages are Recommends, not Depends.
-- reqwest `socks` feature: turned out to be a no-op compat marker in the
-  locked reqwest 0.12.28 (SOCKS is built in); the real fix for
-  authenticated SOCKS was credentials-in-proxy-URL in `proxy_request`.
-- Full provider allowlist for `proxy_request` rejected: it would break
-  the custom `openaiBaseUrl` feature (incl. localhost LLM servers).
-  Landed scheme check + strict CSP instead (RISKS.md).
+- None.
 
 ## Warnings
 
-- **This machine (Ubuntu 20.04) cannot compile or run the TAURI build** (the Electron build runs natively here) (no
-  webkit2gtk-4.1, no Rust toolchain). Rust verification runs in the
-  Docker container `lt-rust-check` (stopped after the session):
-  `docker start lt-rust-check && docker exec -w /work/src-tauri lt-rust-check cargo check`
-  The container mounts the repo at /work and keeps a warm cargo cache;
-  after a cargo command that rewrites Cargo.lock, chown it back
-  (`docker exec lt-rust-check chown 1000:1000 /work/src-tauri/Cargo.lock`).
-- Behavior change shipped on purpose (commit "fix(translate)"):
-  editing provider/API-key/model/prompt no longer auto-retranslates the
-  current input; language changes still do.
-- `npm run build` now FAILS if `scripts/check-secrets.js` finds
-  key-shaped strings (it used to only warn). False positives: extend its
-  skip lists rather than re-adding `|| true`.
-- API keys still live unencrypted in localStorage (RISKS.md, backlog).
-- Electron's binary download from GitHub is blocked on this network. Use
-  `ELECTRON_MIRROR=https://registry.npmmirror.com/-/binary/electron/` and
-  `ELECTRON_BUILDER_BINARIES_MIRROR=https://registry.npmmirror.com/-/binary/electron-builder-binaries/`
-  (documented in the README).
-- Launching the app from a Bash tool call that then returns kills it by SIGHUP;
-  run the app and its test in ONE script (see the session scratchpad scripts).
+- Both Google endpoints are unofficial and can still throttle or change
+  together. The supported Google Cloud API remains a future opt-in design.
+- `npm audit --omit=dev` reports zero production-dependency vulnerabilities;
+  the full development/build tree reports 11 advisories (1 low, 10 high),
+  including Electron's downloader dependency and Vite-era tooling. This is
+  recorded in RISKS.md and was not auto-fixed in the focused patch.
+- Tauri packaging emits existing warnings about the `.app` bundle identifier
+  and missing `__TAURI_BUNDLE_TYPE`; the Debian bundle still completes.
+- This Ubuntu 20.04 host cannot run the Tauri build natively; its Rust release
+  compilation and Debian bundling were completed in the repository's Ubuntu
+  22.04 Docker builder.

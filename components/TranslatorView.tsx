@@ -48,6 +48,14 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
 
   // We use a ref to track the latest request to prevent race conditions
   const latestRequestText = useRef<string>('');
+  // Image translation already supplies the translated result. Suppress only
+  // the matching auto-translate pass; a later language or text change still
+  // translates normally.
+  const skipAutoTranslateRef = useRef<{
+    text: string;
+    sourceLang: string;
+    targetLang: string;
+  } | null>(null);
 
   const performTranslation = useCallback(async (text: string) => {
     // Immediate clear if empty, providing instant feedback
@@ -108,9 +116,48 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     performTranslationRef.current = performTranslation;
   });
 
+  const cancelPendingDebounce = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
+  }, []);
+
+  const setInputAndTranslateOnce = useCallback((text: string) => {
+    const state = useAppStore.getState();
+    const inputChanged = state.inputText !== text;
+    // Cancel the previous input's timer before changing state. Waiting for the
+    // next effect cleanup leaves a small window where the stale request fires.
+    cancelPendingDebounce();
+    setInputText(text);
+
+    // Auto-translate owns changed input. Explicit actions still work when it
+    // is disabled, and re-run once when the requested text is already shown.
+    if (!state.autoTranslate || !inputChanged) {
+      performTranslationRef.current(text);
+    }
+  }, [cancelPendingDebounce, setInputText]);
+
+  const performImmediateTranslation = useCallback((text: string) => {
+    cancelPendingDebounce();
+    performTranslation(text);
+  }, [cancelPendingDebounce, performTranslation]);
+
   useEffect(() => {
     if (!autoTranslate) return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    const skip = skipAutoTranslateRef.current;
+    if (skip) {
+      skipAutoTranslateRef.current = null;
+      if (
+        skip.text === inputText &&
+        skip.sourceLang === sourceLang &&
+        skip.targetLang === targetLang
+      ) {
+        return;
+      }
+    }
 
     if (inputText.trim()) {
       debounceTimer.current = setTimeout(() => performTranslationRef.current(inputText), debounceMs);
@@ -130,12 +177,11 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     if (platform.isAvailable()) {
       const unlisten = platform.onOcrResult((text: string) => {
         const cleaned = cleanTextLineBreaks(text);
-        setInputText(cleaned);
-        performTranslationRef.current(cleaned);
+        setInputAndTranslateOnce(cleaned);
       });
       return unlisten;
     }
-  }, [setInputText]);
+  }, [setInputAndTranslateOnce]);
 
   // Clear stale verification state when provider or model changes
   useEffect(() => {
@@ -159,8 +205,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       const text = await navigator.clipboard.readText();
       if (text) {
         const cleanedText = cleanTextLineBreaks(text);
-        setInputText(cleanedText);
-        performTranslation(cleanedText);
+        setInputAndTranslateOnce(cleanedText);
       }
     } catch (err) {
       setErrorMessage("Failed to read clipboard.");
@@ -172,6 +217,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
         e.preventDefault();
+        cancelPendingDebounce();
         const blob = items[i].getAsFile();
         if (blob) processPastedImage(blob);
         return;
@@ -186,6 +232,12 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       try {
         setErrorMessage(null);
         const result = await translateImage(reader.result as string, targetLang, { modelId, geminiApiKey });
+        cancelPendingDebounce();
+        skipAutoTranslateRef.current = {
+          text: result.detectedText,
+          sourceLang,
+          targetLang,
+        };
         setInputText(result.detectedText);
         setTranslatedText(result.translatedText);
       } catch (err: any) {
@@ -213,7 +265,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
               e.preventDefault();
-              performTranslation(inputText);
+              performImmediateTranslation(inputText);
             }
           }}
           onPaste={handlePaste}
