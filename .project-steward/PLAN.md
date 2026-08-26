@@ -62,6 +62,7 @@ after a few requests; Chromium keeps reusing it, so every later call is HTTP
 - [x] G2 `fix(translate)`: show the real cause when Google Translate fails (VERIFY row 16)
 - [x] G3 `fix(electron)`: heal session state and retry once on GET/HEAD 429 or transport failure; POST transport heals without retry; log failures without the URL (`q=` is user text)
 - [x] G4 Verification (2026-08-26): `npm run typecheck` and `npm run build` green. Dev Electron + local mock: first GTX GET is HTTP 429 on socket 1 → `[proxy-request]` log (host only, no `q=`) → heal → retry on socket 2 returns 200 → renderer shows 你好. UTF-8: 3200-char CJK body split on 2-byte writes decoded intact. GET 500 and POST 429: one hit, no extra heal. Transport: `net::ERR_UNSAFE_PORT` heals+retries; TCP forwarder to `127.0.0.1:17888` then SIGSTOP logs `net::ERR_TIMED_OUT` + heal. Post-CONT follow-up got a real Google 429 on the *fresh* connection (IP/proxy-exit throttle — DECISIONS 0010 residual; unmasked 429 in the log). Tauri code untouched.
+- [x] G5 Version bumped to 1.2.1 in package.json, tauri.conf.json, Cargo.toml + both lockfiles
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 

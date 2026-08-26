@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-08-26T02:25:25Z
+updated_at: 2026-08-26T02:30:00Z
 updated_by: grok
 session_status: active
 branch: fix/electron-google-429-heal
-last_commit: 0dda4d3
+last_commit: 0b66889
 ---
 # Handoff
 
@@ -32,17 +32,15 @@ initialization.
 
 ## In flight
 
-- Branch `fix/electron-google-429-heal` (3 commits: c547710, 5821ca8,
-  0dda4d3) — G1–G4 done, not merged. Working tree dirty only with this
-  G4 steward note until the chore commit. No Tauri change (intentional).
+- Branch `fix/electron-google-429-heal` — G1–G5 done (429 heal + 1.2.1
+  version bump). Pushing and opening a PR against `main` (user-approved).
+  No Tauri behavior change (intentional; VERIFY row 19).
 
 ## Next steps
 
-1. User: merge locally, push/PR, or keep the branch (do not push without
-   approval). Real-world soak: rebuild the Electron `.deb` with the
-   terminal visible; a wild 429 should log `status=429 … Sorry` and the
-   healed retry should succeed, or — if 429 persists on the fresh
-   connection — the UI now names the rate limit (IP-level residual).
+1. After PR merge: tag/release v1.2.1 with both `.deb`s. Real-world soak
+   on the Electron build: a wild 429 should log `status=429 … Sorry` and
+   the healed retry should succeed, or the UI now names the rate limit.
 2. Optional: delete merged `fix/2026-07-review-stabilization`.
 3. Later backlog in PLAN.md (Wayland, single-instance, keyring).
 

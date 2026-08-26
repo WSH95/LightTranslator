@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-08-26T02:30:00Z — grok
+Version bumped to 1.2.1 (package.json, tauri.conf.json, Cargo.toml, both lockfiles). Pushing `fix/electron-google-429-heal` and opening a PR (user-approved).
+
 ### 2026-08-26T02:25:25Z — grok
 G4 on `fix/electron-google-429-heal`: typecheck+build green; Electron mock 429-heal (socket 1 → 429 → heal → socket 2 → 200 → UI 你好); UTF-8 CJK 2-byte splits; GET 500 / POST 429 no extra heal; SIGSTOP forwarder → TIMED_OUT + heal. Post-CONT Google 429 on a fresh connection (IP-level residual, unmasked in logs).
 
