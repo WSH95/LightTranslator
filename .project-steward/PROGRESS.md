@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-08-26T06:57:19Z — cli
+PR #4 opened from commit 8daafd0 with a concise humanized description; branch pushed. Release publication and local main fast-forward are gated on the user's manual merge.
+
 ### 2026-08-26T04:41:42Z — cli
 [auto-checkpoint] Final v1.2.2 packages rebuilt after closing stale-debounce/image-paste races; Electron and Docker/Tauri builds pass, manifests are 1.2.2 amd64, and final artifact hashes were refreshed in HANDOFF.md.
 

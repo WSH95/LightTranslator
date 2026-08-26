@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-08-26T04:41:42Z
+updated_at: 2026-08-26T06:57:19Z
 updated_by: cli
 session_status: active
 branch: fix/google-free-endpoint-failover
-last_commit: e6c7eb7
+last_commit: 8daafd0
 ---
 # Handoff
 
@@ -13,8 +13,9 @@ device). Keep every section current at wrap-up.
 ## Now
 
 The v1.2.2 Google no-key endpoint fix is implemented and verified on
-`fix/google-free-endpoint-failover`. The working tree is intentionally
-uncommitted; nothing has been pushed or published.
+`fix/google-free-endpoint-failover`. Commit `8daafd0` is pushed, and
+[PR #4](https://github.com/WSH95/LightTranslator/pull/4) is open against
+`main`. No tag or release has been published.
 
 The previous v1.2.1 diagnosis was too strong. Through the same configured proxy,
 GTX returned HTTP 429 for GET and POST while `clients5.google.com` with
@@ -37,8 +38,9 @@ Implemented state:
 
 ## In flight
 
-- Awaiting user review and approval for a Conventional Commit. No commit, PR,
-  tag, release, or package installation has been performed.
+- PR #4 is awaiting the user's manual GitHub merge. After it merges, update
+  local `main` before creating the v1.2.2 tag and release from that merged
+  commit.
 - Local build artifacts (ignored by git):
   - Electron / Ubuntu 18.04–20.04:
     `dist-electron/LightTranslator_1.2.2_amd64.deb`
@@ -64,19 +66,22 @@ Implemented state:
 
 ## Next steps
 
-1. Review the diff and, if approved, commit it (suggested message:
-   `fix(google): add resilient no-key endpoint failover`).
-2. Install the package appropriate for the target Ubuntu version and perform a
+1. Wait for the user to merge PR #4 in GitHub.
+2. Fetch, switch to local `main`, and fast-forward it to `origin/main`; verify
+   that the merged tree contains version 1.2.2.
+3. Create/update the v1.2.2 GitHub release from the merged `main` commit and
+   upload both checksum-verified Debian packages. Do not publish from the topic
+   branch.
+4. Install the package appropriate for the target Ubuntu version and perform a
    longer real-workload Google soak, including clipboard, hotkey, OCR, and
    Ctrl+Enter paths.
-3. Only with explicit approval: push/open a PR, then tag and publish v1.2.2 with
-   both packages.
-4. Separately triage the existing development/build dependency advisories; do
+5. Separately triage the existing development/build dependency advisories; do
    not mix a major Electron/toolchain migration into this patch.
 
 ## Blockers
 
-- None.
+- PR #4 must be merged manually before local `main`, the v1.2.2 tag, or the
+  release can be finalized.
 
 ## Warnings
 
