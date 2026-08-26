@@ -1,11 +1,10 @@
 ---
-updated_at: 2026-07-28T17:56:00Z
-updated_by: claude-code (session wrap — v1.2.0 shipped)
-session_status: closed
-branch: main
-last_commit: cbe1df9
+updated_at: 2026-08-26T02:30:00Z
+updated_by: grok
+session_status: active
+branch: fix/electron-google-429-heal
+last_commit: 0b66889
 ---
-
 # Handoff
 
 Written for a zero-context successor (another agent, another tool,
@@ -33,17 +32,17 @@ initialization.
 
 ## In flight
 
-- (none — working tree clean, `main` checked out and up to date)
+- Branch `fix/electron-google-429-heal` — G1–G5 done (429 heal + 1.2.1
+  version bump). Pushing and opening a PR against `main` (user-approved).
+  No Tauri behavior change (intentional; VERIFY row 19).
 
 ## Next steps
 
-1. Optional cleanup: delete the merged branch
-   (`git branch -d fix/2026-07-review-stabilization` and the remote one).
-2. Walk `VERIFY.md`'s parity checklist against both builds when convenient —
-   several rows (proxy with auth, DeepL zh-TW, OCR guidance) were verified by
-   code review or on one backend only.
-3. Pick up the "Later" backlog in PLAN.md — highest value first: Wayland
-   selection capture, single-instance guard, secure API-key storage.
+1. After PR merge: tag/release v1.2.1 with both `.deb`s. Real-world soak
+   on the Electron build: a wild 429 should log `status=429 … Sorry` and
+   the healed retry should succeed, or the UI now names the rate limit.
+2. Optional: delete merged `fix/2026-07-review-stabilization`.
+3. Later backlog in PLAN.md (Wayland, single-instance, keyring).
 
 ## Blockers
 

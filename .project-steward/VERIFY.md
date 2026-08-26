@@ -12,10 +12,12 @@ How to check the project is healthy. Agents run these before claiming
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
 
-Last verified: 2026-07-28T16:10Z — build ok, typecheck ok, `npm ci` ok,
-`cargo check` ok (in the `lt-rust-check` container — host Ubuntu 20.04 cannot
-compile Tauri 2; see HANDOFF Warnings), Electron `.deb` built and run natively
-on 20.04, doctor 25/25 ok. No automated test suite yet.
+Last verified: 2026-08-26T02:25Z — `npm run typecheck` ok, `npm run build` ok.
+Electron G4 (this branch): mock 429-heal + UTF-8 + GET/POST policy + timeout
+heal observed in a live `electron .` session; post-CONT Google 429 on a fresh
+connection is the documented IP-level residual (row 19 heal still fired).
+Tauri code was not changed; no `cargo check` this session. No automated test
+suite yet.
 
 ## Backend parity checklist
 
@@ -45,6 +47,7 @@ mistyped Electron method fails `npm run typecheck`.
 | 13 | OCR result | Paragraphs preserved (shared `cleanTextLineBreaks`), not flattened to one line |
 | 14 | Screen capture | Main window hides during area selection, reappears after |
 | 15 | Proxy with auth | Requests succeed through an authenticated proxy |
-| 16 | Provider errors | Real cause shown (not a generic/CORS message) |
+| 16 | Provider errors | Real cause shown (not a generic/CORS message). Google 429 is named as a rate limit; other non-2xx include HTTP status + body snippet; transport failures show the backend error (`net::ERR_…`, timeout) |
 | 17 | Editing settings | Typing an API key does not fire translations |
 | 18 | Package metadata | `Depends: xdotool` only; OCR packages under `Recommends`; both builds emit `LightTranslator_<version>_amd64.deb` and Conflict with each other |
+| 19 | Transport/429 recovery | No app restart needed. Electron: on GET/HEAD 429 or transport failure, drop pooled connections (`closeAllConnections` + `forceReloadProxyConfig`) and retry once; POST transport failure heals without retry. Tauri: immune by construction (new `reqwest::Client` per request). Intentional divergence — no Rust change |

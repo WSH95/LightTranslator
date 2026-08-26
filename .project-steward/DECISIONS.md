@@ -125,3 +125,55 @@ checked against VERIFY.md's parity list — plus Electron/Tauri build rows
 in the managed commands block.
 **Consequences**: future sessions are told about the dual backend by the
 file they read first, instead of discovering it from the tree.
+
+## 0010 — 2026-08-26 — Electron Google 429: heal pooled connection and unmask errors
+
+**Context**: On the Electron backend (Ubuntu 20.04), Google Translate worked
+for the first few requests after launch, then consistently returned
+"Google Translate failed: Google Network Error" until restart. Live
+evidence while the bug was occurring:
+
+- curl through the user's proxy (`127.0.0.1:17888`, required to reach
+  Google) got HTTP 429 with Google's "Sorry…" block page, including with
+  a Chrome UA header.
+- A freshly launched second app instance worked while the old one kept
+  failing, concurrently, same proxy → poisoned state is per-process
+  (per-connection), not per-IP.
+- Failure appeared within ~2s → Google is answering 429, not timing out.
+- Restart fixed it immediately (fresh connection). Tauri is immune: it
+  builds a new `reqwest::Client` per request (`src-tauri/src/lib.rs`).
+
+Root cause: Electron routes every `proxy-request` through `net.request` on
+the shared Chromium default session, which pools one keep-alive/H2
+connection to Google. Once that connection is flagged, Google answers
+429 on it forever while the TCP socket stays healthy, so Chromium keeps
+reusing it. The renderer then discarded `statusCode`/`error` and threw
+the fixed string "Google Network Error".
+
+**Decision**:
+1. Unmask the real cause in `translateWithGoogleFree` (429 named as a
+   rate limit; other non-2xx include status + body snippet; transport
+   failures show the backend error).
+2. On Electron, after a failed request: log host/method/status/error plus
+   a ~200-char body snippet (never the full URL — `q=` is user text).
+3. Self-heal: `session.defaultSession.closeAllConnections()` then
+   `forceReloadProxyConfig()`, with a 10s cooldown. Retry **once** only
+   for GET/HEAD when status is 429 or missing (transport/timeout). POST
+   transport failure heals without retry (not idempotent). Other non-2xx
+   (including POST 429 = provider quota) neither heals nor retries —
+   the response arrived, the pool is not the problem.
+4. No Tauri change (immune by construction). Recorded as an intentional
+   VERIFY.md divergence (row 19).
+5. Deferred: spoofed browser UA (speculative; risks making the working
+   Tauri fingerprint less consistent) and an alternate-endpoint fallback
+   (revisit if logs ever show 429 persisting across fresh connections).
+
+**Consequences**: a flagged connection self-heals on the next GET (Google
+Free is the only GET engine). LLM/DeepL/Microsoft POST rate-limits do
+not trigger connection kills. `closeAllConnections()` can abort a
+concurrent in-flight POST once; mitigated by firing only after an actual
+failure plus the 10s cooldown. If Google flags the whole exit IP, the
+heal retry will not help, but the UI and logs now say HTTP 429 explicitly.
+G4 (2026-08-26) reproduced that residual on the user's proxy after a
+SIGSTOP/CONT transport test: the healed retry reached Google and got a
+fresh-connection 429 (`Sorry…`), distinct from the pooled-socket case.

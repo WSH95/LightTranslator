@@ -573,7 +573,19 @@ const translateWithGoogleFree = async (text: string, source: string, target: str
     if (platform.isAvailable()) {
         // Use platform proxy to fetch (bypasses CORS)
         const response = await platform.request(url);
-        if (!response.ok) throw new Error("Google Network Error");
+        if (!response.ok) {
+          if (response.statusCode === 429) {
+            throw new Error(
+              'Google rate limit (HTTP 429) — Google is throttling this network/proxy exit IP. Wait a while, switch proxy node, or use another engine.'
+            );
+          }
+          if (response.statusCode != null) {
+            const raw = response.data ?? response.error ?? '';
+            const snippet = String(raw).replace(/\s+/g, ' ').trim().slice(0, 200);
+            throw new Error(`HTTP ${response.statusCode} - ${snippet}`);
+          }
+          throw new Error(response.error || 'Unknown network error');
+        }
         // Google GTX returns [[["Translated Text", "Original", ...], ...], ...]
         const data = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         return data[0].map((s: any) => s[0]).join('');

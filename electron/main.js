@@ -35,6 +35,8 @@ let quickReady = false;
 /** Text captured by the hotkey before the quick webview was ready. */
 let pendingQuickText = null;
 let waylandWarned = false;
+/** Last time we dropped pooled sockets after a transport/429 failure. */
+let lastHealAt = 0;
 
 const isDev = () => !app.isPackaged;
 
@@ -593,17 +595,13 @@ app.on('login', (event, _webContents, _details, authInfo, callback) => {
 
 // --- IPC: same command names as the Tauri backend ---
 
-ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
-  let parsed;
-  try {
-    parsed = new URL(url);
-  } catch (error) {
-    return { ok: false, error: `Invalid URL: ${error.message}` };
-  }
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    return { ok: false, error: `Unsupported URL scheme '${parsed.protocol.replace(':', '')}'` };
-  }
-
+/**
+ * One Chromium net.request. Timeout abort + the subsequent net::ERR_ABORTED
+ * error event both resolve this Promise; the second is a no-op (first wins).
+ * Callers own retry — do not retry here, or the abort error would look like
+ * a distinct transport failure.
+ */
+function attemptRequest(url, options) {
   return new Promise((resolve) => {
     const request = net.request({ method: (options.method || 'GET').toUpperCase(), url });
     Object.entries(options.headers || {}).forEach(([key, value]) => request.setHeader(key, value));
@@ -615,14 +613,14 @@ ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
     }, 60000);
 
     request.on('response', (response) => {
-      let body = '';
-      response.on('data', (chunk) => { body += chunk.toString(); });
+      const chunks = [];
+      response.on('data', (chunk) => { chunks.push(chunk); });
       response.on('end', () => {
         clearTimeout(timer);
         resolve({
           ok: response.statusCode >= 200 && response.statusCode < 300,
           statusCode: response.statusCode,
-          data: body,
+          data: Buffer.concat(chunks).toString('utf8'),
         });
       });
       response.on('error', (error) => {
@@ -639,6 +637,69 @@ ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
     if (options.body) request.write(options.body);
     request.end();
   });
+}
+
+function logFailure(host, method, result) {
+  const raw = result.data || result.error || '';
+  const snippet = String(raw).replace(/\s+/g, ' ').trim().slice(0, 200);
+  console.error(
+    `[proxy-request] ${method} ${host} failed status=${result.statusCode ?? 'none'} error=${result.error ?? ''} body="${snippet}"`
+  );
+}
+
+async function healNetworkSession(reason) {
+  const now = Date.now();
+  if (now - lastHealAt < 10000) {
+    console.error(`[proxy-request] heal skipped (cooldown): ${reason}`);
+    return;
+  }
+  lastHealAt = now;
+  try {
+    console.error(`[proxy-request] healing session: ${reason}`);
+    await session.defaultSession.closeAllConnections();
+    await session.defaultSession.forceReloadProxyConfig();
+  } catch (error) {
+    console.error(`[proxy-request] heal failed: ${error.message}`);
+  }
+}
+
+ipcMain.handle('proxy-request', async (_event, url, options = {}) => {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch (error) {
+    return { ok: false, error: `Invalid URL: ${error.message}` };
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { ok: false, error: `Unsupported URL scheme '${parsed.protocol.replace(':', '')}'` };
+  }
+
+  const method = (options.method || 'GET').toUpperCase();
+  const first = await attemptRequest(url, options);
+  if (first.ok) return first;
+
+  logFailure(parsed.host, method, first);
+
+  const transportFailure = first.statusCode == null;
+  const idempotent = method === 'GET' || method === 'HEAD';
+
+  // GET/HEAD 429 or transport error: drop the flagged/stale pooled connection
+  // and retry once. POST transport failure: heal only (not idempotent-safe).
+  // Other non-2xx: the pool is fine — the provider answered.
+  if (idempotent && (first.statusCode === 429 || transportFailure)) {
+    await healNetworkSession(
+      first.statusCode === 429 ? 'HTTP 429' : (first.error || 'transport error')
+    );
+    const second = await attemptRequest(url, options);
+    if (!second.ok) logFailure(parsed.host, method, second);
+    return second;
+  }
+
+  if (!idempotent && transportFailure) {
+    await healNetworkSession(first.error || 'transport error');
+  }
+
+  return first;
 });
 
 ipcMain.handle('capture-screen', () => captureScreen());
