@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-08-26T02:25:25Z — grok
+G4 on `fix/electron-google-429-heal`: typecheck+build green; Electron mock 429-heal (socket 1 → 429 → heal → socket 2 → 200 → UI 你好); UTF-8 CJK 2-byte splits; GET 500 / POST 429 no extra heal; SIGSTOP forwarder → TIMED_OUT + heal. Post-CONT Google 429 on a fresh connection (IP-level residual, unmasked in logs).
+
 ### 2026-08-26T02:15:00Z — grok
 Implemented Electron Google 429 self-heal on `fix/electron-google-429-heal`: UTF-8 chunk decode, unmasked Google errors, session heal+single GET retry. Steward: DECISIONS 0010, VERIFY rows 16/19, PLAN G1–G3. Verification (G4) next.
 

@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-08-26T02:15:00Z
+updated_at: 2026-08-26T02:25:25Z
 updated_by: grok
 session_status: active
 branch: fix/electron-google-429-heal
-last_commit: 5821ca8
+last_commit: 0dda4d3
 ---
 # Handoff
 
@@ -32,20 +32,19 @@ initialization.
 
 ## In flight
 
-- Branch `fix/electron-google-429-heal`: Electron Google 429 self-heal.
-  G1 (UTF-8 decode) and G2 (unmask errors) committed; G3 (heal+retry +
-  steward docs) in this working tree. No Tauri change (intentional).
+- Branch `fix/electron-google-429-heal` (3 commits: c547710, 5821ca8,
+  0dda4d3) — G1–G4 done, not merged. Working tree dirty only with this
+  G4 steward note until the chore commit. No Tauri change (intentional).
 
 ## Next steps
 
-1. Finish G3 commit, then G4 verification: `npm run typecheck` &&
-   `npm run build`; deterministic local 429-heal mock (then revert URL);
-   transport-variant via TCP forwarder to the user's proxy on 17888
-   (60s timeout path); long CJK UTF-8; VERIFY rows 16 and 19.
-2. If mock/logs show 429 persisting across a fresh connection, do not
-   ship the silent-heal claim — the unmasked 429 message still helps, and
-   the alternate-endpoint fallback is backlog.
-3. After G4: wrap, propose merge. Do not push without approval.
+1. User: merge locally, push/PR, or keep the branch (do not push without
+   approval). Real-world soak: rebuild the Electron `.deb` with the
+   terminal visible; a wild 429 should log `status=429 … Sorry` and the
+   healed retry should succeed, or — if 429 persists on the fresh
+   connection — the UI now names the rate limit (IP-level residual).
+2. Optional: delete merged `fix/2026-07-review-stabilization`.
+3. Later backlog in PLAN.md (Wayland, single-instance, keyring).
 
 ## Blockers
 

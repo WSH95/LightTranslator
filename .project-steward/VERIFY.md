@@ -12,10 +12,12 @@ How to check the project is healthy. Agents run these before claiming
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
 
-Last verified: 2026-07-28T16:10Z — build ok, typecheck ok, `npm ci` ok,
-`cargo check` ok (in the `lt-rust-check` container — host Ubuntu 20.04 cannot
-compile Tauri 2; see HANDOFF Warnings), Electron `.deb` built and run natively
-on 20.04, doctor 25/25 ok. No automated test suite yet.
+Last verified: 2026-08-26T02:25Z — `npm run typecheck` ok, `npm run build` ok.
+Electron G4 (this branch): mock 429-heal + UTF-8 + GET/POST policy + timeout
+heal observed in a live `electron .` session; post-CONT Google 429 on a fresh
+connection is the documented IP-level residual (row 19 heal still fired).
+Tauri code was not changed; no `cargo check` this session. No automated test
+suite yet.
 
 ## Backend parity checklist
 

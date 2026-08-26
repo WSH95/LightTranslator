@@ -174,3 +174,6 @@ not trigger connection kills. `closeAllConnections()` can abort a
 concurrent in-flight POST once; mitigated by firing only after an actual
 failure plus the 10s cooldown. If Google flags the whole exit IP, the
 heal retry will not help, but the UI and logs now say HTTP 429 explicitly.
+G4 (2026-08-26) reproduced that residual on the user's proxy after a
+SIGSTOP/CONT transport test: the healed retry reached Google and got a
+fresh-connection 429 (`Sorry…`), distinct from the pooled-socket case.
