@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-19T23:35:00Z — claude
+[auto-checkpoint] Rust backend compiles and its unit tests pass; Tauri app verified on Wayland (GNOME entry, 0.18s trigger, PRIMARY read, translation request); release .deb build running; dev shortcut entry cleaned up.
+
 ### 2026-09-19T23:20:00Z — claude
 Quick Translate now works under Wayland. Both backends: GNOME custom shortcut
 (X11 keeps its own grab and removes the entry), `--quick-translate` delivered

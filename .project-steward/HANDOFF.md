@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-08-26T06:57:19Z
-updated_by: cli
+updated_at: 2026-09-19T23:35:00Z
+updated_by: claude
 session_status: active
-branch: fix/google-free-endpoint-failover
-last_commit: 8daafd0
+branch: fix/wayland-quick-translate
+last_commit: 4d08071
 ---
 # Handoff
 
@@ -12,87 +12,91 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-The v1.2.2 Google no-key endpoint fix is implemented and verified on
-`fix/google-free-endpoint-failover`. Commit `8daafd0` is pushed, and
-[PR #4](https://github.com/WSH95/LightTranslator/pull/4) is open against
-`main`. No tag or release has been published.
+Working on `fix/wayland-quick-translate` (4 commits on top of `main`), fixing
+three things the user reported on Ubuntu 24.04 / GNOME 46 / Wayland:
 
-The previous v1.2.1 diagnosis was too strong. Through the same configured proxy,
-GTX returned HTTP 429 for GET and POST while `clients5.google.com` with
-`client=dict-chrome-ex` returned HTTP 200. Changing the Google proxy route also
-did not resolve GTX. Decision 0011 supersedes the old IP/socket claim without
-pretending Google's internal classifier is known.
+1. the Quick Translate hotkey did nothing under Wayland,
+2. the OCR dialog overflowed a non-maximized window,
+3. the main window had square corners.
 
-Implemented state:
+All three are implemented in both backends. Plan of record:
+`~/.claude/plans/pasted-content-id-d703-i-have-noble-eclipse.md` (approved,
+including the user's choices: X11 keeps the app's own key grab, Wayland uses a
+GNOME custom shortcut, popup placement comes from a bundled GNOME Shell
+extension that installs itself, OCR dialog restyled).
 
-- Google source text is form-encoded in POST bodies, never request URLs.
-- The structured Chrome Dictionary endpoint is primary; GTX is tried exactly
-  once after a primary HTTP, transport, malformed, or empty-response failure.
-- Dual failure messages name both endpoint results and make no IP/proxy claim.
-- Electron no longer treats HTTP 429 as a transport fault, bypasses response
-  caching, and clears its legacy HTTP cache at startup. Tauri adds `no-store`.
-- Clipboard, tray OCR, Ctrl+Enter, and pasted-image paths avoid duplicate
-  translations, including the same-text/pending-debounce edge case.
-- Version metadata is synchronized at 1.2.2 and both local Debian packages are
-  built.
+Earlier history this file had not recorded: v1.2.2 **was** released — PR #4 was
+squash-merged as `c17bec0`, and the tag and GitHub release went out on
+2026-08-26 with both .debs. Verified with `git` and `gh` at the start of this
+session.
 
 ## In flight
 
-- PR #4 is awaiting the user's manual GitHub merge. After it merges, update
-  local `main` before creating the v1.2.2 tag and release from that merged
-  commit.
-- Local build artifacts (ignored by git):
-  - Electron / Ubuntu 18.04–20.04:
-    `dist-electron/LightTranslator_1.2.2_amd64.deb`
-  - Tauri / Ubuntu 22.04+/Debian 12+:
-    `src-tauri/target/release/bundle/deb/LightTranslator_1.2.2_amd64.deb`
+- `cargo tauri build --bundles deb` is running (release); the artifact will be
+  `src-tauri/target/release/bundle/deb/LightTranslator_1.2.2_amd64.deb`. It is
+  needed both for the user to install and for screenshots of the Tauri UI
+  (WebKitGTK), because a Wayland-native window cannot be captured with `xwd` —
+  run the release binary with `GDK_BACKEND=x11` for that.
+- Nothing is pushed. The branch is local only.
 
 ## Validation completed
 
-- `npm ci`, `npm run typecheck`, `npm run build`, and
-  `node --check electron/main.js` pass.
-- Five deterministic Google probes pass: primary structured parsing, 429
-  fallback, malformed-response fallback, long UTF-8 POST/no-text-in-URL, and
-  truthful dual-failure reporting with exactly two attempts.
-- An isolated dev Electron instance completed 10/10 live translations through
-  the user's configured proxy at normal cadence without restart or provider
-  error. The same route returned GTX 429 during the diagnosis.
-- `npm run electron:build:deb` and `npm run app:docker:build` pass. Both package
-  manifests report version 1.2.2, architecture amd64, and the intended runtime
-  dependency split.
-- Final SHA-256:
-  - Electron: `67af2815b8041348a196035d61ab0f1740f620645c10358f535752969656a63c`
-  - Tauri: `b6b06cb9c2c77859a4d23e7398c1c5a7e09468a8394704679b4171b6971c0c90`
+- `npm run typecheck`, `npm run build`, `node --check electron/main.js` pass.
+- 15 JS/TS unit tests:
+  `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js`
+  (pass files, not directories — `node --test <dir>` executes non-test files).
+- `cargo check --all-targets` clean; `cargo test` 4/4 (needs the WebKitGTK dev
+  packages, installed by the user this session).
+- Electron backend on this GNOME 46 Wayland session, end to end: text selected
+  in a Wayland-native GTK app came back translated in the popup; GNOME entry
+  written with the right name/command/binding; repeat triggers work; a second
+  plain launch focuses the running app instead of duplicating it; extension
+  auto-installed and enabled; Settings reports the true state.
+- Tauri backend on the same session: registers the GNOME shortcut, reports the
+  extension as pending-restart, and a `--quick-translate` second instance
+  delivers the trigger in **0.18s** (Electron's costs ~1.4s), after which the
+  log shows the PRIMARY read and the translation request.
+- Independent evidence for the core assumption: text selected in a
+  Wayland-native app is readable from an X11 client, i.e. mutter bridges the
+  PRIMARY selection regardless of focus.
+- UI at 480x680, at the 400x500 minimum and maximized (Electron/Chromium):
+  OCR dialog stays inside the window and scrolls; corners rounded when
+  windowed, square when maximized.
 
 ## Next steps
 
-1. Wait for the user to merge PR #4 in GitHub.
-2. Fetch, switch to local `main`, and fast-forward it to `origin/main`; verify
-   that the merged tree contains version 1.2.2.
-3. Create/update the v1.2.2 GitHub release from the merged `main` commit and
-   upload both checksum-verified Debian packages. Do not publish from the topic
-   branch.
-4. Install the package appropriate for the target Ubuntu version and perform a
-   longer real-workload Google soak, including clipboard, hotkey, OCR, and
-   Ctrl+Enter paths.
-5. Separately triage the existing development/build dependency advisories; do
-   not mix a major Electron/toolchain migration into this patch.
+1. When the build finishes: run the release binary with `GDK_BACKEND=x11` and
+   capture the main window, the OCR dialog and a maximized window to confirm
+   WebKitGTK renders the corners and the dialog like Chromium did.
+2. Sanity-check the X11 code path without leaving Wayland by starting the app
+   with `XDG_SESSION_TYPE=x11` forced: it must remove the GNOME entry and grab
+   the key itself, and Settings must say "Registered directly with the X server".
+3. Hand the `.deb` to the user to install (`sudo apt install ./<file>.deb`),
+   ask them to quit the running 1.2.2 instance first, then log out and back in
+   so GNOME loads the placement extension.
+4. User-only checks: pressing the real Ctrl+Shift+X, and a full pass in an
+   "Ubuntu on Xorg" session (popup still follows the cursor, the GNOME entry is
+   removed automatically, changing the shortcut still works).
+5. Update VERIFY.md's "Last verified" block, wrap the session, and propose the
+   PR (never push without asking).
 
 ## Blockers
 
-- PR #4 must be merged manually before local `main`, the v1.2.2 tag, or the
-  release can be finalized.
+- None blocking implementation. Two things only the user can do: log out once
+  to activate the GNOME extension, and test an Xorg session.
 
 ## Warnings
 
-- Both Google endpoints are unofficial and can still throttle or change
-  together. The supported Google Cloud API remains a future opt-in design.
-- `npm audit --omit=dev` reports zero production-dependency vulnerabilities;
-  the full development/build tree reports 11 advisories (1 low, 10 high),
-  including Electron's downloader dependency and Vite-era tooling. This is
-  recorded in RISKS.md and was not auto-fixed in the focused patch.
-- Tauri packaging emits existing warnings about the `.app` bundle identifier
-  and missing `__TAURI_BUNDLE_TYPE`; the Debian bundle still completes.
-- This Ubuntu 20.04 host cannot run the Tauri build natively; its Rust release
-  compilation and Debian bundling were completed in the repository's Ubuntu
-  22.04 Docker builder.
+- Dev builds use their own dconf path (`…/custom-keybindings/lighttranslator-dev/`)
+  and their own entry name. The one written during this session's testing has
+  been removed again; the user's custom-shortcut list is empty.
+- The GNOME extension is enabled in the user's `org.gnome.shell
+  enabled-extensions` and a per-user copy sits in
+  `~/.local/share/gnome-shell/extensions/lighttranslator@lighttranslator.app/`.
+  The installed `.deb` also ships a system copy. Both are harmless; the README
+  documents how to remove them.
+- `cargo tauri dev` needs its own vite; do not leave a stray `npm run dev`
+  running, and quit the installed app first or the single-instance plugin will
+  forward to it and exit.
+- A private sysroot of downloaded -dev packages is in the scratchpad from before
+  the real packages were installed; it is no longer used and can be deleted.
