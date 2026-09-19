@@ -15,7 +15,7 @@
 //!
 //! PARITY: mirrored by `electron/gnomeShortcut.js`.
 
-use gio::prelude::SettingsExt;
+use gio::prelude::{SettingsExt, SettingsExtManual};
 use gio::{Settings, SettingsSchemaSource};
 
 const MEDIA_KEYS_SCHEMA: &str = "org.gnome.settings-daemon.plugins.media-keys";
@@ -190,7 +190,7 @@ fn list_without(list: &[String], path: &str) -> Option<Vec<String>> {
 fn write_paths(settings: &Settings, list: &[String]) -> Result<(), String> {
     let refs: Vec<&str> = list.iter().map(|path| path.as_str()).collect();
     settings
-        .set_strv(CUSTOM_KEYBINDINGS_KEY, &refs)
+        .set_strv(CUSTOM_KEYBINDINGS_KEY, refs.as_slice())
         .map_err(|e| format!("Failed to update GNOME custom shortcuts: {}", e))
 }
 

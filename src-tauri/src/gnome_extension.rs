@@ -14,7 +14,7 @@
 
 use std::path::{Path, PathBuf};
 
-use gio::prelude::SettingsExt;
+use gio::prelude::SettingsExtManual;
 use gio::{Settings, SettingsSchemaSource};
 use tauri::{AppHandle, Manager};
 
@@ -162,7 +162,7 @@ fn enable_in_settings() -> Result<(), String> {
         enabled.push(UUID.to_string());
         let refs: Vec<&str> = enabled.iter().map(|uuid| uuid.as_str()).collect();
         settings
-            .set_strv(ENABLED_KEY, &refs)
+            .set_strv(ENABLED_KEY, refs.as_slice())
             .map_err(|e| format!("Failed to enable the GNOME extension: {}", e))?;
         Settings::sync();
     }
