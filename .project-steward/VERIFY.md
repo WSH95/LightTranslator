@@ -19,7 +19,7 @@ Last verified: 2026-09-19T23:50Z — `npm run typecheck`, `npm run build`,
 (`node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js`),
 `cargo check --all-targets` and `cargo test` (4/4) all pass, and a release
 `.deb` builds (`LightTranslator_1.2.2_amd64.deb`, sha256
-ec576c91b2ec1d93b971918fe8753cd5bbc6169269e88b6502c57883f98ace42) carrying the
+b1aa9e949f97545ce740d304090fc54e214488e45dbe50f77adf1262bdd5fdd4) carrying the
 GNOME extension under `/usr/share/gnome-shell/extensions/`.
 
 Quick Translate was exercised on a real GNOME 46 machine, both session types:
@@ -39,6 +39,9 @@ Quick Translate was exercised on a real GNOME 46 machine, both session types:
 - UI at 480x680, at the 400x500 minimum and maximized, in both Chromium and
   WebKitGTK: the OCR dialog stays inside the window with a scrolling body, and
   corners are rounded when windowed, square when maximized.
+- Title-bar language labels centre inside their own dropdowns, and translated
+  text renders its target language's punctuation (Simplified Chinese full stop
+  on the baseline rather than a mid-height circle).
 
 Not yet done: the user pressing the hotkey in their own Wayland session after
 installing the package and logging back in (the extension needs that login), and
