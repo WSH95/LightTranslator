@@ -312,15 +312,22 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         </div>
       </div>
 
-      {/* Bottom: Output Area - Darker/Different Card */}
+      {/* Bottom: Output Area - Darker/Different Card.
+          The output carries lang={targetLang}: it drives the CJK glyph
+          variant, e.g. the ideographic full stop sits at the bottom-left in
+          Simplified Chinese and centred in Traditional. Without it the engine
+          picks whichever CJK font fontconfig offers an English document. */}
       <div className="flex-1 min-h-0 bg-white/30 border border-macos-cardBorder shadow-sm rounded-2xl p-4 relative group transition-colors flex flex-col">
         {errorMessage ? (
           <div className="h-full flex items-center justify-center text-red-500 text-sm font-medium animate-in fade-in">
             <span className="bg-red-50 px-4 py-2 rounded-lg border border-red-100 shadow-sm">{errorMessage}</span>
           </div>
         ) : (
-          <div className="w-full flex-1 min-h-0 text-lg text-gray-800 font-normal leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-macos-active/20">
-            {translatedText || <span className="text-gray-400 select-none italic">Translation will appear here...</span>}
+          <div
+            lang={targetLang}
+            className="w-full flex-1 min-h-0 text-lg text-gray-800 font-normal leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-macos-active/20"
+          >
+            {translatedText || <span lang="en" className="text-gray-400 select-none italic">Translation will appear here...</span>}
           </div>
         )}
 

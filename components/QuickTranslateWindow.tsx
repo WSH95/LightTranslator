@@ -275,9 +275,9 @@ export const QuickTranslateWindow: React.FC = () => {
               {error}
             </div>
           ) : (
-            <div className="text-sm text-gray-900 font-medium leading-relaxed break-words">
+            <div lang={quickTargetLang} className="text-sm text-gray-900 font-medium leading-relaxed break-words">
               {translated || (
-                <span className="text-gray-300 italic">
+                <span lang="en" className="text-gray-300 italic">
                   {loading ? 'Translating…' : 'Select text and press the shortcut'}
                 </span>
               )}

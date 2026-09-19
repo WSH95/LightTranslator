@@ -96,7 +96,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings }) => {
             <select 
               value={sourceLang}
               onChange={(e) => setSourceLang(e.target.value as any)}
-              className="appearance-none bg-transparent pl-3 pr-2 py-1 text-xs font-semibold text-macos-text hover:text-black focus:outline-none cursor-pointer text-center min-w-[60px]"
+              className="appearance-none bg-transparent pl-3 pr-2 py-1 text-xs font-semibold text-macos-text hover:text-black focus:outline-none cursor-pointer text-center [text-align-last:center] min-w-[60px]"
             >
               {LANGUAGES.map(lang => (
                 <option key={`src-${lang.code}`} value={lang.code}>{lang.name}</option>
@@ -116,7 +116,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings }) => {
             <select 
               value={targetLang}
               onChange={(e) => setTargetLang(e.target.value as any)}
-              className="appearance-none bg-transparent pl-2 pr-3 py-1 text-xs font-semibold text-macos-text hover:text-black focus:outline-none cursor-pointer text-center min-w-[60px]"
+              className="appearance-none bg-transparent pl-2 pr-3 py-1 text-xs font-semibold text-macos-text hover:text-black focus:outline-none cursor-pointer text-center [text-align-last:center] min-w-[60px]"
             >
               {LANGUAGES.filter(l => l.code !== 'auto').map(lang => (
                 <option key={`tgt-${lang.code}`} value={lang.code}>{lang.name}</option>
