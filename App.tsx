@@ -6,7 +6,7 @@ import { OcrModal } from './components/OcrModal';
 import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAppStore } from './store/useAppStore';
-import { PROVIDERS, DEFAULT_SETTINGS } from './constants';
+import { PROVIDERS } from './constants';
 import { platform } from './src/lib/platform';
 
 const App: React.FC = () => {
@@ -110,7 +110,9 @@ const App: React.FC = () => {
 
     const push = () => {
       const s = useAppStore.getState();
-      if (s.selectionShortcut && s.selectionShortcut !== DEFAULT_SETTINGS.selectionShortcut) {
+      // Always push, even when it is the default: under Wayland the accelerator
+      // lives in GNOME's own settings, so the app has to state its value.
+      if (s.selectionShortcut) {
         platform.updateShortcut(s.selectionShortcut)
           .catch((e) => console.error('Failed to restore shortcut:', e));
       }

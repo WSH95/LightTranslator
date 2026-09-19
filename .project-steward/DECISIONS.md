@@ -223,3 +223,73 @@ same-provider fallback if the primary changes. Both endpoints are unofficial
 and can still fail together; that limitation is described honestly in Settings
 and README. Private translation text and credential-bearing provider URLs no
 longer enter Electron's HTTP cache.
+
+## 0012 — 2026-09-19 — Quick Translate under Wayland: GNOME shortcut + PRIMARY selection
+
+**Context**: The hotkey popup worked in Xorg and did nothing in Wayland on the
+user's Ubuntu 24.04 / GNOME 46 machine. Root cause, confirmed by the app's own
+log (the one-time Wayland warning in `warn_if_wayland` never fired) and by
+upstream source: `tauri-plugin-global-shortcut` → `global-hotkey 0.7` uses X11
+`XGrabKey`, and Xwayland only receives key events while an X11 window has
+focus, so the shortcut never reached the app. `xdg-desktop-portal-gnome` 46 has
+no `GlobalShortcuts` interface (checked on the machine), so the portal route
+does not exist here. Three further steps were also Wayland-dead: synthetic
+Ctrl+C (Xwayland runs without `-enable-ei-portal`), `xdotool getmouselocation`
+(stale), and `set_position` (ignored for Wayland toplevels).
+
+**Decision**:
+1. Session decides the mechanism. X11 keeps the app's own key grab, unchanged
+   and fast (user's explicit choice). Wayland on GNOME registers a GNOME custom
+   keybinding at our own dconf path running `<exe> --quick-translate`; other
+   Wayland desktops show that command in Settings for manual binding.
+2. Switching session types reconciles itself: an X11 start removes the entry
+   before grabbing the key (with retries, because gnome-shell ungrabs
+   asynchronously), a Wayland start recreates it and refreshes the command path.
+3. The trigger reaches the running app through single instance
+   (`tauri-plugin-single-instance`, Electron's `requestSingleInstanceLock`),
+   which also resolves the long-standing duplicate-process issue (C4).
+4. Selection capture under Wayland reads the PRIMARY selection instead of
+   simulating Ctrl+C. Verified on the machine: text selected in a
+   Wayland-native GTK app is readable from an X11 client, because mutter
+   bridges the selection (`src/x11/meta-x11-selection.c`) regardless of focus.
+   The clipboard is never written on this path.
+5. The popup is hidden before being shown again. `present()` on an already
+   visible window goes through xdg-activation, and a background app has no
+   valid token, so it would never take focus; a fresh map does.
+6. `warn_if_wayland` and its dialog are gone, and with them the only use of
+   `tauri-plugin-dialog`. Settings now states where the shortcut is registered.
+7. Electron is pinned to `--ozone-platform=x11` on Linux (desktop entry,
+   autostart entry, GNOME command, dev script). Electron 38+ defaults to
+   Wayland-native, where it cannot read PRIMARY in the background, position a
+   window, or report the pointer; the platform is chosen before `main.js` runs,
+   so this cannot be set from code.
+
+**Alternatives rejected**: the GlobalShortcuts portal (absent on GNOME 46);
+running the Tauri app under Xwayland (does not restore the pointer position,
+and costs crispness on scaled displays); evdev (needs `input` group);
+RemoteDesktop key injection (a consent dialog per session).
+
+## 0013 — 2026-09-19 — A GNOME Shell extension places the popup, and installs itself
+
+**Context**: Wayland deliberately denies applications global pointer
+coordinates and window positioning, so "popup at the mouse pointer" — the X11
+behaviour the user wants to keep — is impossible from inside the app. Without
+help, mutter's placement puts a small window near the top-left (`find_first_fit`
+then cascade), not where the user is looking. A shell extension runs inside the
+compositor, which knows both the pointer and how to move windows. The user
+chose this over an in-app centering fallback.
+
+**Decision**: ship `lighttranslator@lighttranslator.app` (GNOME 45+, ~90 lines)
+with the app. It listens for the popup being mapped, moves it to the pointer
+clamped to that monitor's work area, and activates it; it is inert in X11
+sessions and does nothing else — no keybinding, no schema, no D-Bus, nothing in
+the panel — which is what should let it survive GNOME upgrades.
+
+Installation is automatic, as the user asked: the `.deb` puts it in
+`/usr/share/gnome-shell/extensions/`, and first run enables it for the user,
+writing a per-user copy only if no current one exists (AppImage, dev run,
+upgrade). Auto-enabling happens once, recorded by a marker file, so switching
+it off afterwards is respected. GNOME only discovers new extensions when the
+shell starts, so the first install needs one log out — confirmed on the machine,
+and reported in Settings rather than failing silently. Without the extension the
+popup still opens, wherever GNOME decides.

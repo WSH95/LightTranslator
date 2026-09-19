@@ -3,7 +3,7 @@
 LightTranslator is a high-performance, lightweight translation tool built with **Tauri**, **React**, and **Vite**. It supports multiple advanced translation engines (LLMs and traditional), OCR capabilities, and prioritizes user privacy with a minimal resource footprint.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Linux%20(X11)-lightgrey.svg)
+![Platform](https://img.shields.io/badge/platform-Linux%20(X11%20%7C%20Wayland)-lightgrey.svg)
 ![Framework](https://img.shields.io/badge/framework-Tauri%202-24C8DB.svg)
 
 ## Key Features
@@ -25,7 +25,7 @@ LightTranslator is a high-performance, lightweight translation tool built with *
     *   **Secret Scanning**: A pre-build check fails the build if key-shaped strings appear in the source.
     *   **Strict CSP** and a minimal Tauri permission set.
 
-> **Platform support**: Linux with X11 is the primary target (`.deb` and AppImage bundles). Two interchangeable builds share the same UI and features — **Tauri** for Ubuntu 22.04+/Debian 12+ and **Electron** for Ubuntu 18.04–20.04; see [Which build for which system](#which-build-for-which-system). Selected-text capture and screenshots use `xdotool` / `gnome-screenshot`, which do not work under Wayland (the app warns and falls back to translating the clipboard). Windows/macOS bundles are not currently configured or tested.
+> **Platform support**: Linux (`.deb` and AppImage bundles). Two interchangeable builds share the same UI and features — **Tauri** for Ubuntu 22.04+/Debian 12+ and **Electron** for Ubuntu 18.04–20.04; see [Which build for which system](#which-build-for-which-system). Quick Translate works in both X11 and Wayland sessions (see [Quick Translate Shortcut](#quick-translate-shortcut) for how Wayland differs). Screenshot OCR still uses `gnome-screenshot`. Windows/macOS bundles are not currently configured or tested.
 
 > **Google Translate availability**: the no-key option uses Google web
 > endpoints with an automatic same-provider fallback, not the supported Google
@@ -39,7 +39,7 @@ LightTranslator is a high-performance, lightweight translation tool built with *
 *   Rust & Cargo (for building the Tauri backend)
 *   Tauri CLI: `cargo install tauri-cli --version "^2"` (the `app:*` npm scripts call `cargo tauri`)
 *   System dependencies for Tauri on Linux: WebKitGTK 4.1 (`libwebkit2gtk-4.1-dev` on Ubuntu 22.04+/Debian 12+) and GTK3 dev packages. **On Ubuntu 20.04 or older these do not exist** — build the [Electron package](#building-the-electron-package-ubuntu-1804-2004) instead, which needs no system WebKit at all.
-*   Runtime (Linux): `xdotool` for the quick-translate hotkey (declared as a `.deb` dependency). Tesseract OCR and `gnome-screenshot` are optional — the app guides you through installing them when you first use OCR.
+*   Runtime (Linux): `xdotool` for selected-text capture in X11 sessions (a `.deb` dependency of both builds); the Electron build additionally depends on `libglib2.0-bin` for the `gsettings` command it uses to register the GNOME shortcut. Tesseract OCR and `gnome-screenshot` are optional — the app guides you through installing them when you first use OCR.
 
 ### Getting Started
 
@@ -154,7 +154,41 @@ There is no automated test suite yet.
 4.  Enter your **API Key**.
 
 ### Quick Translate Shortcut
-The default shortcut is `Ctrl+Shift+X`. You can customize this in Settings.
+The default shortcut is `Ctrl+Shift+X`; you can change it in Settings. Select
+text anywhere, press it, and the popup opens with the translation.
+
+How the key is registered depends on the session, which Settings shows under the
+shortcut:
+
+*   **X11**: the app grabs the key itself, and the popup opens at the mouse
+    pointer. Selected text is captured with `xdotool`.
+*   **Wayland on GNOME**: applications may not grab keys, so the app registers a
+    GNOME custom shortcut (visible under *Settings → Keyboard → View and
+    Customize Shortcuts → Custom Shortcuts*) that runs
+    `lighttranslator --quick-translate`. Selected text comes from the PRIMARY
+    selection, so nothing touches your clipboard. The shortcut does not fire on
+    the lock screen or while the Activities overview is open.
+*   **Wayland on other desktops**: Settings shows the command to bind in your own
+    keyboard settings.
+
+To place the popup at the mouse pointer under Wayland — which applications
+themselves are not allowed to do — the package ships a small GNOME Shell
+extension, `LightTranslator Quick Translate`. It is installed with the app and
+enabled on first run; **GNOME only picks up new extensions when the shell
+starts, so it becomes active after your next log in**. Without it the popup
+still opens, wherever GNOME decides to put it. Turning it off in the Extensions
+app is respected — the app will not switch it back on.
+
+To remove what the app registered on your system:
+
+```bash
+# the GNOME shortcut entry
+gsettings reset-recursively "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lighttranslator/"
+gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "[]"
+# the placement extension (if a per-user copy was written)
+gnome-extensions disable lighttranslator@lighttranslator.app
+rm -rf ~/.local/share/gnome-shell/extensions/lighttranslator@lighttranslator.app
+```
 
 ### OCR Components (installed on demand)
 OCR is not required at install time. The first time you use the screenshot/OCR feature, the app checks for Tesseract (and the language data for Chinese/English/Japanese/Korean) and `gnome-screenshot`; if anything is missing it shows a popup with the exact install command for your distribution (apt/dnf/pacman/zypper). Install, click **Re-check**, and continue. If only some language packs are installed, OCR simply runs with the available ones.

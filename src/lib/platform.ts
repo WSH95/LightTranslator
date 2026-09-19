@@ -11,6 +11,8 @@
  * parity is enforced separately by the checklist in .project-steward/VERIFY.md.
  */
 
+import { toGnomeAccelerator } from '../../utils/shortcutUtils';
+
 // Type definitions for the platform API
 export interface ProxyRequestOptions {
   method?: string;
@@ -52,6 +54,23 @@ export interface OcrResult {
   error?: string;
 }
 
+export interface ShortcutStatus {
+  /**
+   * 'x11-grab': the app grabs the key from the X server (X11 sessions).
+   * 'gnome': GNOME owns the key and runs `command` (Wayland on GNOME).
+   * 'manual': a Wayland desktop with no way to register — the user has to bind
+   * `command` in their own keyboard settings.
+   */
+  mechanism: 'x11-grab' | 'gnome' | 'manual';
+  sessionType: 'x11' | 'wayland';
+  /** The command that triggers a quick translate. */
+  command: string;
+  /** The accelerator GNOME currently holds, in GTK spelling. */
+  gnomeBinding?: string | null;
+  /** Placement extension state (Wayland on GNOME only). */
+  extension: 'active' | 'pending-restart' | 'disabled' | 'missing' | 'not-applicable';
+}
+
 export interface OcrInstallGuidance {
   os: string;
   packageManager?: string;
@@ -91,7 +110,9 @@ interface ElectronBridge {
   onOcrResult(cb: (text: string) => void): () => void;
   onOcrDepsMissing(cb: () => void): () => void;
   setProxy(settings: ProxySettings): Promise<{ success: boolean }>;
-  updateShortcut(shortcut: string): Promise<{ success: boolean; message?: string }>;
+  updateShortcut(shortcut: string, gnomeBinding: string | null): Promise<{ success: boolean; message?: string }>;
+  getShortcutStatus(): Promise<ShortcutStatus>;
+  reregisterShortcut(): Promise<{ success: boolean; message?: string; mechanism: string }>;
   setAutoLaunch(enabled: boolean): Promise<{ success: boolean }>;
   getAutoLaunch(): Promise<{ success: boolean; enabled: boolean }>;
   resizeQuickWindow(dimensions: WindowDimensions): Promise<unknown>;
@@ -392,14 +413,35 @@ const tauriBackend = {
   },
 
   /**
-   * Keyboard shortcut settings
+   * Keyboard shortcut settings. The GTK spelling goes along for the ride
+   * because under Wayland the shortcut is registered with GNOME, not with us.
    */
   async updateShortcut(shortcut: string): Promise<boolean> {
     await initTauri();
     if (tauriInvoke) {
-      return tauriInvoke('update_shortcut', { shortcut }) as Promise<boolean>;
+      return tauriInvoke('update_shortcut', {
+        shortcut,
+        gnomeBinding: toGnomeAccelerator(shortcut),
+      }) as Promise<boolean>;
     }
     return false;
+  },
+
+  /** Where this session's shortcut is registered, for the settings UI. */
+  async getShortcutStatus(): Promise<ShortcutStatus | null> {
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('get_shortcut_status') as Promise<ShortcutStatus>;
+    }
+    return null;
+  },
+
+  /** Re-apply the registration for this session. */
+  async reregisterShortcut(): Promise<void> {
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('reregister_shortcut');
+    }
   },
 
   /**
@@ -564,11 +606,22 @@ const electronBackend: PlatformBackend = {
   },
 
   async updateShortcut(shortcut: string): Promise<boolean> {
-    const result = await bridge().updateShortcut(shortcut);
+    const result = await bridge().updateShortcut(shortcut, toGnomeAccelerator(shortcut));
     if (!result?.success) {
       throw new Error(result?.message || `Failed to register '${shortcut}'`);
     }
     return true;
+  },
+
+  async getShortcutStatus(): Promise<ShortcutStatus | null> {
+    return bridge().getShortcutStatus();
+  },
+
+  async reregisterShortcut(): Promise<void> {
+    const result = await bridge().reregisterShortcut();
+    if (!result?.success) {
+      throw new Error(result?.message || 'Failed to register the shortcut');
+    }
   },
 
   async setAutoLaunch(enabled: boolean): Promise<void> {
@@ -622,6 +675,8 @@ export const platform = {
   onOcrDepsMissing: (cb: () => void) => activeBackend().onOcrDepsMissing(cb),
   setProxy: (settings: ProxySettings) => activeBackend().setProxy(settings),
   updateShortcut: (shortcut: string) => activeBackend().updateShortcut(shortcut),
+  getShortcutStatus: () => activeBackend().getShortcutStatus(),
+  reregisterShortcut: () => activeBackend().reregisterShortcut(),
   setAutoLaunch: (enabled: boolean) => activeBackend().setAutoLaunch(enabled),
   getAutoLaunch: () => activeBackend().getAutoLaunch(),
   checkOcrDependencies: () => activeBackend().checkOcrDependencies(),

@@ -2,6 +2,16 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-19T23:20:00Z — claude
+Quick Translate now works under Wayland. Both backends: GNOME custom shortcut
+(X11 keeps its own grab and removes the entry), `--quick-translate` delivered
+through single instance, PRIMARY selection instead of synthetic Ctrl+C,
+hide-before-show so the popup takes focus, plus a bundled GNOME Shell extension
+that places it at the pointer and installs itself. Proven end to end in the
+Electron build on this GNOME 46 Wayland session: text selected in a
+Wayland-native app came back translated in the popup. Tauri compile still
+blocked on the WebKitGTK dev packages.
+
 ### 2026-09-19T22:46:36Z — claude
 Diagnosed all three user-reported issues (Wayland hotkey dead, OCR dialog
 overflowing, square corners) and landed the two UI fixes: the OCR dialog now

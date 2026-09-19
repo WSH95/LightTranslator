@@ -1,0 +1,8 @@
+{
+  "uuid": "lighttranslator@lighttranslator.app",
+  "name": "LightTranslator Quick Translate",
+  "description": "Places LightTranslator's quick-translate popup at the mouse pointer. Wayland does not let an application position its own windows, so this extension does it for it. It touches nothing else, and is only active in a Wayland session.",
+  "shell-version": ["45", "46", "47", "48", "49"],
+  "version": 1,
+  "url": "https://github.com/WSH95/LightTranslator"
+}

@@ -9,7 +9,7 @@
  */
 import {
   app, BrowserWindow, ipcMain, net, shell, globalShortcut, clipboard,
-  screen, Tray, Menu, nativeImage, session, dialog,
+  screen, Tray, Menu, nativeImage, session,
 } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -19,6 +19,8 @@ import os from 'os';
 import {
   checkTesseract, checkScreenshotTool, installedTesseractLangs, OCR_DESIRED_LANGS,
 } from './dependencyChecker.js';
+import * as gnomeShortcut from './gnomeShortcut.js';
+import * as gnomeExtension from './gnomeExtension.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +36,26 @@ let proxySettings = null;
 let quickReady = false;
 /** Text captured by the hotkey before the quick webview was ready. */
 let pendingQuickText = null;
-let waylandWarned = false;
 /** Last time we dropped pooled sockets after a transport failure. */
 let lastHealAt = 0;
 
 const isDev = () => !app.isPackaged;
+
+const isWayland = () => gnomeShortcut.sessionKind() === 'wayland';
+
+/**
+ * Only one instance runs. A second one hands us its argv and exits — which is
+ * how GNOME's custom shortcut reaches the running app under Wayland, and it
+ * also stops autostart plus a manual launch from producing two tray icons.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    if (argv.includes(gnomeShortcut.TRIGGER_ARG)) triggerQuickTranslate();
+    else showMainWindow();
+  });
+}
 
 /**
  * Icons come from src-tauri/icons so both backends ship identical artwork —
@@ -48,6 +65,13 @@ function getResourcePath(relativePath) {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'icons', relativePath)
     : path.join(__dirname, '../src-tauri/icons', relativePath);
+}
+
+/** Where the copy of the GNOME placement extension we ship lives. */
+function extensionSourceDir() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'gnome-extension', gnomeExtension.UUID)
+    : path.join(__dirname, '../gnome-extension', gnomeExtension.UUID);
 }
 
 function rendererUrl(query = '') {
@@ -62,11 +86,30 @@ function getAutoLaunchExecPath() {
   return process.execPath;
 }
 
+/**
+ * Electron 38+ runs natively on Wayland, where it cannot read the PRIMARY
+ * selection in the background, position a window, or report the pointer — all
+ * of which quick translate needs. The ozone platform is chosen before this file
+ * runs, so it has to be on the command line of every way the app is started.
+ */
+const OZONE_X11_ARG = '--ozone-platform=x11';
+
 function getAutoLaunchArgs() {
   const args = [];
   if (!app.isPackaged) args.push(app.getAppPath());
+  if (process.platform === 'linux') args.push(OZONE_X11_ARG);
   args.push('--hidden');
   return args;
+}
+
+/** The command GNOME (or the user, on another desktop) should run. */
+function quickTranslateCommand() {
+  const exe = process.env.APPIMAGE || process.execPath;
+  const parts = [gnomeShortcut.shellQuote(exe)];
+  if (!app.isPackaged) parts.push(gnomeShortcut.shellQuote(app.getAppPath()));
+  if (process.platform === 'linux') parts.push(OZONE_X11_ARG);
+  parts.push(gnomeShortcut.TRIGGER_ARG);
+  return parts.join(' ');
 }
 
 function formatDesktopExec(execPath, args) {
@@ -122,28 +165,13 @@ function getAutoLaunch() {
 }
 
 function shouldStartHidden() {
+  if (process.argv.includes(gnomeShortcut.TRIGGER_ARG)) return true;
   if (process.argv.includes('--hidden') || process.argv.includes('--autostart')) return true;
   try {
     return Boolean(app.getLoginItemSettings()?.wasOpenedAsHidden);
   } catch {
     return false;
   }
-}
-
-/** Selection capture relies on X11 tools (xdotool); warn once per run on Wayland. */
-function warnIfWayland() {
-  if (waylandWarned) return;
-  if ((process.env.XDG_SESSION_TYPE || '').toLowerCase() !== 'wayland') return;
-  waylandWarned = true;
-  console.warn('Wayland session detected: xdotool-based selection capture may not work');
-  dialog.showMessageBox({
-    type: 'warning',
-    title: 'Wayland session detected',
-    message:
-      'Quick Translate captures the selected text with X11 tools (xdotool), which may not ' +
-      'work in a Wayland session. The current clipboard content will be translated instead.\n\n' +
-      'Tip: copy the text (Ctrl+C) before pressing the shortcut.',
-  });
 }
 
 // --- Windows ---
@@ -293,6 +321,22 @@ function cursorPosition() {
   });
 }
 
+/**
+ * The text the user has selected.
+ *
+ * Wayland: read the PRIMARY selection, which mutter bridges to X11 no matter
+ * who has focus — a synthetic Ctrl+C (XTEST) never reaches a Wayland-native
+ * application. Falls back to the clipboard when nothing is selected, the same
+ * end result the X11 path gives.
+ */
+async function readSelection() {
+  if (!isWayland()) return copySelection();
+
+  const primary = clipboard.readText('selection');
+  if (primary && primary.trim()) return primary.trim();
+  return clipboard.readText();
+}
+
 function copySelection() {
   return new Promise((resolve) => {
     // Save and clear first so an empty clipboard afterwards means "nothing was
@@ -312,21 +356,28 @@ function copySelection() {
 }
 
 async function triggerQuickTranslate() {
-  warnIfWayland();
-
-  const { x: cursorX, y: cursorY } = await cursorPosition();
-  const text = await copySelection();
+  const wayland = isWayland();
+  const text = await readSelection();
 
   if (!quickWindow || quickWindow.isDestroyed()) createQuickWindow();
 
-  // Clamp so the popup stays on the display under the cursor
-  const display = screen.getDisplayNearestPoint({ x: cursorX, y: cursorY });
-  const [winWidth, winHeight] = quickWindow.getSize();
-  const { x: dx, y: dy, width: dw, height: dh } = display.workArea;
-  const x = Math.min(Math.max(cursorX, dx), Math.max(dx, dx + dw - winWidth));
-  const y = Math.min(Math.max(cursorY, dy), Math.max(dy, dy + dh - winHeight));
+  if (wayland) {
+    // The pointer position is not ours to know under Wayland and a client
+    // cannot place its own window; the bundled GNOME extension moves the popup
+    // to the pointer. Re-mapping the window is what lets the compositor focus
+    // it again, and what the extension watches for.
+    if (quickWindow.isVisible()) quickWindow.hide();
+  } else {
+    // Clamp so the popup stays on the display under the cursor
+    const { x: cursorX, y: cursorY } = await cursorPosition();
+    const display = screen.getDisplayNearestPoint({ x: cursorX, y: cursorY });
+    const [winWidth, winHeight] = quickWindow.getSize();
+    const { x: dx, y: dy, width: dw, height: dh } = display.workArea;
+    const x = Math.min(Math.max(cursorX, dx), Math.max(dx, dx + dw - winWidth));
+    const y = Math.min(Math.max(cursorY, dy), Math.max(dy, dy + dh - winHeight));
+    quickWindow.setPosition(Math.floor(x), Math.floor(y));
+  }
 
-  quickWindow.setPosition(Math.floor(x), Math.floor(y));
   quickWindow.show();
   quickWindow.setAlwaysOnTop(true, 'floating');
   quickWindow.focus();
@@ -368,6 +419,56 @@ function registerShortcut(accelerator) {
   }
   currentShortcut = accelerator;
   return { success: true };
+}
+
+/**
+ * Register the hotkey the way this session allows.
+ *
+ * X11: the app grabs the key itself, as it always has. Wayland on GNOME: the
+ * key belongs to GNOME, which runs our command and lets the single-instance
+ * lock hand it to the running app.
+ *
+ * `gnomeBinding` is the same accelerator in GTK spelling, from the shared
+ * utils/shortcutUtils.ts; null keeps whatever GNOME already has.
+ * PARITY: src-tauri/src/lib.rs setup_hotkey / update_shortcut.
+ */
+async function applyShortcut(accelerator, gnomeBinding = null, { retry = false } = {}) {
+  const dev = isDev();
+
+  if ((await gnomeShortcut.mechanism(dev)) === 'gnome') {
+    try {
+      await gnomeShortcut.ensureEntry({
+        dev,
+        command: quickTranslateCommand(),
+        binding: gnomeBinding,
+      });
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+    // Nothing for us to hold on to in this session.
+    try { globalShortcut.unregisterAll(); } catch { /* best effort */ }
+    currentShortcut = accelerator;
+    return { success: true };
+  }
+
+  // An entry left behind by a Wayland session would make gnome-shell own the
+  // key and our own grab fail.
+  try {
+    await gnomeShortcut.removeEntry({ dev });
+  } catch (error) {
+    console.warn(`Could not check the GNOME shortcut entry: ${error.message}`);
+  }
+
+  // gnome-shell releases its grab asynchronously after that settings write, so
+  // the first attempt right after it can still lose the race.
+  const delays = retry ? [0, 300, 900, 2000] : [0];
+  let result = { success: false, message: `Failed to register '${accelerator}'` };
+  for (const delay of delays) {
+    if (delay) await new Promise((resolve) => { setTimeout(resolve, delay); });
+    result = registerShortcut(accelerator);
+    if (result.success) return result;
+  }
+  return result;
 }
 
 // --- Tray (labels and ids mirror setup_tray) ---
@@ -731,7 +832,23 @@ ipcMain.handle('check-ocr-dependencies', async () => {
 
 ipcMain.handle('get-ocr-install-guidance', () => getOcrInstallGuidance());
 
-ipcMain.handle('update-shortcut', (_event, shortcut) => registerShortcut(shortcut));
+ipcMain.handle('update-shortcut', (_event, shortcut, gnomeBinding) =>
+  applyShortcut(shortcut, gnomeBinding));
+
+/** What the settings UI needs to explain where the shortcut lives. */
+ipcMain.handle('get-shortcut-status', async () => ({
+  mechanism: await gnomeShortcut.mechanism(isDev()),
+  sessionType: gnomeShortcut.sessionKind(),
+  command: quickTranslateCommand(),
+  gnomeBinding: await gnomeShortcut.currentBinding({ dev: isDev() }),
+  extension: await gnomeExtension.status(),
+}));
+
+/** Re-apply the registration for this session (settings "Re-register"). */
+ipcMain.handle('reregister-shortcut', async () => {
+  const result = await applyShortcut(currentShortcut, null, { retry: true });
+  return { ...result, mechanism: await gnomeShortcut.mechanism(isDev()) };
+});
 
 ipcMain.handle('set-proxy', async (_event, settings) => {
   proxySettings = settings;
@@ -821,8 +938,31 @@ app.whenReady().then(async () => {
   createQuickWindow();
   createTray();
 
-  if (!globalShortcut.register(currentShortcut, triggerQuickTranslate)) {
-    console.error(`Failed to register global shortcut ${currentShortcut}`);
+  if (process.platform === 'linux' && isWayland()
+      && app.commandLine.getSwitchValue('ozone-platform') !== 'x11') {
+    console.warn(
+      'Running natively on Wayland: selection capture and popup placement need '
+      + `${OZONE_X11_ARG} on the command line.`
+    );
+  }
+
+  const registration = await applyShortcut(currentShortcut, null, { retry: true });
+  if (!registration.success) {
+    console.error(`Failed to register the quick-translate shortcut: ${registration.message}`);
+  }
+
+  // Placement extension (Wayland on GNOME only); off the critical path.
+  gnomeExtension
+    .ensure({
+      shippedDir: extensionSourceDir(),
+      markerPath: path.join(app.getPath('userData'), 'gnome-extension-auto-enabled'),
+    })
+    .then((status) => console.log(`GNOME placement extension: ${status}`))
+    .catch((error) => console.error(`GNOME placement extension: ${error.message}`));
+
+  // Started by the GNOME shortcut while the app was not running.
+  if (process.argv.includes(gnomeShortcut.TRIGGER_ARG)) {
+    setTimeout(triggerQuickTranslate, 150);
   }
 
   app.on('activate', () => {

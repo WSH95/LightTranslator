@@ -23,7 +23,12 @@
         "decorations": false,
         "transparent": true,
         "shadow": false,
-        "backgroundColor": [0, 0, 0, 0],
+        "backgroundColor": [
+          0,
+          0,
+          0,
+          0
+        ],
         "center": true,
         "visible": false
       },
@@ -84,8 +89,16 @@
           "tesseract-ocr-jpn",
           "tesseract-ocr-kor",
           "gnome-screenshot"
-        ]
+        ],
+        "files": {
+          "/usr/share/gnome-shell/extensions/lighttranslator@lighttranslator.app/metadata.json": "../gnome-extension/lighttranslator@lighttranslator.app/metadata.json",
+          "/usr/share/gnome-shell/extensions/lighttranslator@lighttranslator.app/extension.js": "../gnome-extension/lighttranslator@lighttranslator.app/extension.js"
+        }
       }
+    },
+    "resources": {
+      "../gnome-extension/lighttranslator@lighttranslator.app/metadata.json": "gnome-extension/lighttranslator@lighttranslator.app/metadata.json",
+      "../gnome-extension/lighttranslator@lighttranslator.app/extension.js": "gnome-extension/lighttranslator@lighttranslator.app/extension.js"
     }
   }
 }

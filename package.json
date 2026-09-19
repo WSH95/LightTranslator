@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.2.2",
   "type": "module",
-  "description": "轻量级翻译工具，支持划词翻译、截图OCR等功能",
+  "description": "\u8f7b\u91cf\u7ea7\u7ffb\u8bd1\u5de5\u5177\uff0c\u652f\u6301\u5212\u8bcd\u7ffb\u8bd1\u3001\u622a\u56feOCR\u7b49\u529f\u80fd",
   "author": "LightTranslator",
   "license": "MIT",
   "homepage": "https://github.com/user/lighttranslator",
@@ -44,7 +44,7 @@
     "app:docker:stop": "bash scripts/docker-run.sh stop",
     "app:docker:logs": "bash scripts/docker-run.sh logs",
     "app:docker:dev": "bash scripts/docker-dev.sh",
-    "electron": "wait-on tcp:5173 && electron .",
+    "electron": "wait-on tcp:5173 && electron . --ozone-platform=x11",
     "electron:dev": "concurrently -k \"npm run dev\" \"npm run electron\"",
     "electron:build": "npm run build && electron-builder --linux",
     "electron:build:deb": "npm run build && electron-builder --linux deb"
@@ -67,6 +67,10 @@
         "filter": [
           "*.png"
         ]
+      },
+      {
+        "from": "gnome-extension",
+        "to": "gnome-extension"
       }
     ],
     "linux": {
@@ -77,7 +81,10 @@
       "icon": "src-tauri/icons/icon.png",
       "category": "Utility",
       "maintainer": "LightTranslator",
-      "synopsis": "轻量级翻译工具"
+      "synopsis": "\u8f7b\u91cf\u7ea7\u7ffb\u8bd1\u5de5\u5177",
+      "executableArgs": [
+        "--ozone-platform=x11"
+      ]
     },
     "deb": {
       "fpm": [
@@ -85,7 +92,8 @@
         "light-translator"
       ],
       "depends": [
-        "xdotool"
+        "xdotool",
+        "libglib2.0-bin"
       ],
       "recommends": [
         "tesseract-ocr",
@@ -95,7 +103,9 @@
         "tesseract-ocr-jpn",
         "tesseract-ocr-kor",
         "gnome-screenshot"
-      ]
+      ],
+      "afterInstall": "build/deb-after-install.sh",
+      "afterRemove": "build/deb-after-remove.sh"
     }
   }
 }

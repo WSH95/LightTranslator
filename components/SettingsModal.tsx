@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2, Languages } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2, Languages, Copy, Check, RefreshCw, MonitorCog } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
-import { platform } from '../src/lib/platform';
+import { platform, type ShortcutStatus } from '../src/lib/platform';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -43,6 +43,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [tempShortcut, setTempShortcut] = useState('');
   const [shortcutError, setShortcutError] = useState<string | null>(null);
+  const [shortcutStatus, setShortcutStatus] = useState<ShortcutStatus | null>(null);
+  const [isReregistering, setIsReregistering] = useState(false);
+  const [commandCopied, setCommandCopied] = useState(false);
+
+  // Where the shortcut is registered depends on the session: the app grabs the
+  // key under X11, GNOME owns it under Wayland.
+  const refreshShortcutStatus = useCallback(() => {
+    if (!platform.isAvailable()) return;
+    platform.getShortcutStatus()
+      .then(setShortcutStatus)
+      .catch((e) => console.warn('Failed to read the shortcut status:', e));
+  }, []);
+
+  useEffect(() => {
+    refreshShortcutStatus();
+  }, [refreshShortcutStatus]);
+
+  const reregisterShortcut = async () => {
+    setIsReregistering(true);
+    setShortcutError(null);
+    try {
+      await platform.reregisterShortcut();
+      refreshShortcutStatus();
+    } catch (e: any) {
+      setShortcutError(String(e?.message ?? e) || 'Failed to register the shortcut');
+    } finally {
+      setIsReregistering(false);
+    }
+  };
+
+  const copyShortcutCommand = async () => {
+    if (!shortcutStatus) return;
+    try {
+      await navigator.clipboard.writeText(shortcutStatus.command);
+      setCommandCopied(true);
+      setTimeout(() => setCommandCopied(false), 2000);
+    } catch {
+      /* leave the command selectable for manual copy */
+    }
+  };
 
   const selectedProvider = PROVIDERS.find(p => p.id === provider);
   const isLlmProvider = selectedProvider?.category === 'llm';
@@ -114,6 +154,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           // so a broken accelerator is never saved to settings
           await platform.updateShortcut(tempShortcut);
           updateSettings({ selectionShortcut: tempShortcut });
+          refreshShortcutStatus();
         } catch (e: any) {
           setShortcutError(String(e?.message ?? e) || 'Failed to register shortcut');
           setIsRecordingShortcut(false);
@@ -570,6 +611,72 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                       <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-md px-2 py-1.5">
                         {shortcutError} — the previous shortcut is still active.
                       </p>
+                    )}
+
+                    {/* Where this session's shortcut actually lives. Under
+                        Wayland the app cannot grab a key, so GNOME holds it. */}
+                    {shortcutStatus && (
+                      <div className="pt-3 border-t border-black/5 flex items-start gap-2">
+                        <MonitorCog size={14} className="text-macos-muted mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0 text-xs text-macos-muted space-y-1.5">
+                          {shortcutStatus.mechanism === 'x11-grab' && (
+                            <p>Registered directly with the X server by the app.</p>
+                          )}
+                          {shortcutStatus.mechanism === 'gnome' && (
+                            <p>
+                              Wayland session: registered as a GNOME shortcut, listed under
+                              Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts.
+                            </p>
+                          )}
+                          {shortcutStatus.mechanism === 'manual' && (
+                            <>
+                              <p>
+                                This Wayland desktop does not let applications register a global
+                                shortcut. Add one in your system keyboard settings that runs:
+                              </p>
+                              <div className="flex items-stretch gap-1.5">
+                                <code className="flex-1 text-[11px] bg-black/5 rounded px-2 py-1.5 overflow-x-auto whitespace-pre font-mono select-text">
+                                  {shortcutStatus.command}
+                                </code>
+                                <button
+                                  onClick={copyShortcutCommand}
+                                  className="px-2 bg-black/5 hover:bg-black/10 rounded transition-colors flex items-center"
+                                  title="Copy command"
+                                >
+                                  {commandCopied ? <Check size={12} /> : <Copy size={12} />}
+                                </button>
+                              </div>
+                            </>
+                          )}
+
+                          {shortcutStatus.extension === 'active' && (
+                            <p>The popup opens at the mouse pointer (GNOME placement extension active).</p>
+                          )}
+                          {shortcutStatus.extension === 'pending-restart' && (
+                            <p>
+                              Popup placement extension installed and enabled — log out and back in to
+                              activate it. Until then GNOME decides where the popup opens.
+                            </p>
+                          )}
+                          {shortcutStatus.extension === 'disabled' && (
+                            <p>
+                              Popup placement is left to GNOME. Switch “LightTranslator Quick Translate”
+                              on in the Extensions app to have the popup follow the pointer.
+                            </p>
+                          )}
+                        </div>
+                        {shortcutStatus.mechanism !== 'manual' && (
+                          <button
+                            onClick={reregisterShortcut}
+                            disabled={isReregistering}
+                            className="px-2 py-1 text-[11px] font-medium text-macos-muted hover:text-macos-text bg-black/5 hover:bg-black/10 rounded transition-colors flex items-center gap-1 disabled:opacity-50 flex-shrink-0"
+                            title="Register the shortcut for this session again"
+                          >
+                            <RefreshCw size={11} className={isReregistering ? 'animate-spin' : ''} />
+                            Re-register
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

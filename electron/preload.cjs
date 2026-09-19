@@ -42,7 +42,12 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Settings
   setProxy: (settings) => ipcRenderer.invoke('set-proxy', settings),
-  updateShortcut: (shortcut) => ipcRenderer.invoke('update-shortcut', shortcut),
+  // gnomeBinding is the same accelerator in GTK spelling, used where GNOME
+  // owns the key (Wayland); see utils/shortcutUtils.ts
+  updateShortcut: (shortcut, gnomeBinding) =>
+    ipcRenderer.invoke('update-shortcut', shortcut, gnomeBinding),
+  getShortcutStatus: () => ipcRenderer.invoke('get-shortcut-status'),
+  reregisterShortcut: () => ipcRenderer.invoke('reregister-shortcut'),
   setAutoLaunch: (enabled) => ipcRenderer.invoke('set-auto-launch', enabled),
   getAutoLaunch: () => ipcRenderer.invoke('get-auto-launch'),
 

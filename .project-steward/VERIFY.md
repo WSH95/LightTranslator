@@ -8,6 +8,8 @@ How to check the project is healthy. Agents run these before claiming
 | Build | `npm run build` | exits 0 |
 | Tests | `TODO` | all pass |
 | Lint | `npm run typecheck` | clean (also proves backend surface parity) |
+| Unit | `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js` | all pass (pass files, not directories: `node --test <dir>` executes non-test files too) |
+| Rust unit | `cargo test` (in `src-tauri/`) | all pass |
 | Rust | `cargo check` (in `src-tauri/`) | clean |
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
@@ -36,13 +38,13 @@ mistyped Electron method fails `npm run typecheck`.
 | # | Behavior | Expected in both builds |
 | --- | --- | --- |
 | 1 | Launch | No translation fires on startup; nothing reads the clipboard until the hotkey |
-| 2 | Hotkey with text selected | Popup appears at the cursor, clamped to that monitor, showing the translation |
-| 3 | Hotkey with nothing selected | Previous clipboard content is restored, not silently translated as if fresh |
+| 2 | Hotkey with text selected | X11: popup at the cursor, clamped to that monitor, showing the translation. Wayland: same translation; the popup is at the pointer once the GNOME placement extension is active, otherwise wherever GNOME puts it |
+| 3 | Hotkey with nothing selected | X11: previous clipboard content is restored, not silently translated as if fresh. Wayland: the most recent selection (PRIMARY) is translated, and the clipboard is never written |
 | 4 | Hotkey within ~1s of launch | Text still arrives (pending-text handshake) |
 | 5 | Repeated hotkey presses (5×) | App stays alive; one popup, one translation each |
 | 6 | Quick-window language | Uses `quickSourceLang`/`quickTargetLang`, independent of the main panel |
 | 7 | Settings sync | Changing a language in the popup shows in main Settings, and vice versa |
-| 8 | Shortcut change | Invalid accelerator → error, old shortcut still works; valid → takes effect |
+| 8 | Shortcut change | Invalid accelerator → error, old shortcut still works; valid → takes effect. On Wayland the GNOME entry's `binding` follows, and a key GNOME cannot express is refused with the old one intact |
 | 9 | Restart | Custom shortcut and proxy settings are restored |
 | 10 | Tray | Exactly one icon; Show / Settings / OCR Screenshot / Quit all work; Quit exits cleanly |
 | 11 | OCR with tesseract absent | Guidance popup with the correct distro command; Re-check proceeds after install |
@@ -56,3 +58,9 @@ mistyped Electron method fails `npm run typecheck`.
 | 19 | Google endpoint recovery | No app restart needed. Both builds POST source text to the structured Chrome endpoint first, then try GTX once after any HTTP/transport/malformed-response failure; no text appears in request URLs |
 | 20 | Transport recovery | Electron heals/retries only idempotent GET/HEAD transport failures; HTTP statuses are returned to provider logic. POST transport failures heal without retry. Tauri uses a fresh reqwest client and returns every HTTP status directly |
 | 21 | Translation request count | Clipboard/tray OCR uses the debounced path when auto-translate is on and one immediate request when off; Ctrl+Enter cancels its pending debounce; pasted-image results do not trigger a second text translation |
+| 22 | Session switch | X11 start removes the GNOME entry and grabs the key itself (retried, since gnome-shell ungrabs asynchronously); Wayland start recreates the entry with the current executable path. Settings names the mechanism in use |
+| 23 | GNOME entry hygiene | Only our own dconf path (`…/custom-keybindings/lighttranslator/`, `-dev` for dev builds) is added or removed; entries the user created keep their order and values |
+| 24 | Single instance | A second launch focuses the running app instead of starting another tray icon; `--quick-translate` triggers the popup; with no instance running it starts hidden and still shows the popup once |
+| 25 | Placement extension | Installed by the package and enabled once on first run; Settings reports active / pending log-out. Disabling it by hand is respected across restarts |
+| 26 | Window chrome | Corners are rounded while windowed and square while maximized; neither modal paints square corners over them |
+| 27 | OCR dialog fit | At 480x680 with tesseract absent the dialog stays inside the window with a scrolling body; also at the 400x500 minimum |

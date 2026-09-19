@@ -6,10 +6,13 @@ Known risks and mitigations. Review at wrap-up when something changed.
 | --- | --- | --- | --- |
 | API keys + proxy credentials persist in plaintext localStorage (webview) | high | high | Backlog: OS keyring/stronghold; README no longer overclaims "secure storage" (S9) |
 | `proxy_request` remains a broad fetch primitive for the webview (any http/https URL) | medium | high | S1 scheme check + S6 strict CSP shrink the attack path; full allowlist deferred (breaks custom `openaiBaseUrl`/local LLMs) |
-| Selection capture silently dead on Wayland sessions | high | medium | S1 adds detection + one-time user warning; real support is backlog |
+| ~~Selection capture silently dead on Wayland sessions~~ (resolved 2026-09-19) | — | — | Wayland reads the PRIMARY selection through the compositor's X11 bridge, and the hotkey is registered with GNOME; verified end to end on GNOME 46 |
+| GNOME custom shortcut entry and the placement extension survive uninstalling the app | medium | low | The package removes the system copy of the extension; the dconf entry and any per-user copy stay. README carries the two cleanup commands |
+| Placement extension can break at a GNOME major upgrade | medium | low | It uses only long-lived APIs (window-manager `map`, `global.get_pointer`, `move_frame`); without it the popup still opens, just not at the pointer. `shell-version` lists 45–49 and needs a check each GNOME release |
+| Electron's second instance takes ~1.4s to forward `--quick-translate` (full Chromium start) | medium | low | Only affects the Electron backend under Wayland (Ubuntu 18.04–20.04, where Wayland is rare). Tauri's second instance is far cheaper; a FIFO trigger is the fallback if this ever matters |
 | Simulated Ctrl+C destroys user clipboard; stale clipboard translated when nothing selected | medium | medium | Backlog C12 (save/restore design) |
 | /tmp PNG TOCTOU + leak in screenshot/OCR path | low | medium | Backlog C13 (tempfile Builder suffix, cleanup on all paths) |
-| No single-instance guard while autostart is enabled | medium | low | Backlog C4 (tauri-plugin-single-instance) |
+| ~~No single-instance guard while autostart is enabled~~ (resolved 2026-09-19) | — | — | tauri-plugin-single-instance and Electron's requestSingleInstanceLock; a second launch focuses the running app |
 | Residual ms-scale cross-window settings write race after S3 sync | low | low | Accepted; event-driven rehydrate self-heals on next change |
 | Electron `closeAllConnections()` aborts every in-flight default-session request, so a concurrent POST can fail once when GET transport healing fires | low | low | HTTP statuses no longer heal; transport-only healing keeps the 10s cooldown. Documented in DECISIONS 0011 |
 | Both no-key Google web endpoints are unofficial and may throttle or change together | medium | medium | Structured Chrome endpoint is primary, GTX is one fallback; if both fail the UI names both results and recommends another configured engine. Official Cloud API remains an opt-in future feature |

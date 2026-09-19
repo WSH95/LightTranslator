@@ -10,6 +10,11 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, ShortcutState};
 
+mod gnome_extension;
+mod gnome_shortcut;
+
+use gnome_shortcut::{Mechanism, SessionKind};
+
 // --- Types ---
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,6 +71,23 @@ pub struct WindowDimensions {
     pub height: f64,
 }
 
+/// How the quick-translate hotkey is registered in this session, for the
+/// settings UI.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShortcutStatus {
+    /// "x11-grab" | "gnome" | "manual"
+    pub mechanism: String,
+    #[serde(rename = "sessionType")]
+    pub session_type: String,
+    /// The command a user would bind by hand on an unsupported desktop.
+    pub command: String,
+    #[serde(rename = "gnomeBinding")]
+    pub gnome_binding: Option<String>,
+    /// Placement extension: "active" | "pending-restart" | "disabled" |
+    /// "missing" | "not-applicable"
+    pub extension: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProxySettings {
     pub enabled: bool,
@@ -85,6 +107,9 @@ struct AppState {
     quick_ready: AtomicBool,
     /// Text captured by the hotkey before the quick webview was ready.
     pending_quick_text: Mutex<Option<String>>,
+    /// Kept open so the selection backend is initialised once instead of on
+    /// every hotkey press (arboard probes Wayland, then falls back to X11).
+    selection_clipboard: Mutex<Option<arboard::Clipboard>>,
 }
 
 impl Default for AppState {
@@ -94,6 +119,7 @@ impl Default for AppState {
             proxy_settings: Mutex::new(None),
             quick_ready: AtomicBool::new(false),
             pending_quick_text: Mutex::new(None),
+            selection_clipboard: Mutex::new(None),
         }
     }
 }
@@ -514,12 +540,32 @@ async fn get_ocr_install_guidance() -> Result<OcrInstallGuidance, String> {
     })
 }
 
+/// `gnome_binding` is the same accelerator in GTK spelling, computed by the
+/// shared `utils/shortcutUtils.ts`; it is only used where GNOME owns the key.
 #[tauri::command]
 async fn update_shortcut(
     app: AppHandle,
     shortcut: String,
+    gnome_binding: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<bool, String> {
+    if gnome_shortcut::mechanism() == Mechanism::Gnome {
+        let binding = gnome_binding
+            .as_deref()
+            .map(str::trim)
+            .filter(|binding| !binding.is_empty())
+            .ok_or_else(|| format!("'{}' cannot be used as a GNOME shortcut", shortcut))?;
+
+        gnome_shortcut::ensure_entry(Some(binding))?;
+
+        let mut current = state
+            .current_shortcut
+            .lock()
+            .map_err(|_| "shortcut state lock poisoned".to_string())?;
+        *current = shortcut;
+        return Ok(true);
+    }
+
     // Validate before touching the currently registered shortcut
     let new_shortcut: Shortcut = shortcut
         .parse()
@@ -549,6 +595,32 @@ async fn update_shortcut(
     *current = shortcut;
 
     Ok(true)
+}
+
+/// What the settings UI needs to explain where the shortcut lives.
+#[tauri::command]
+async fn get_shortcut_status() -> Result<ShortcutStatus, String> {
+    Ok(ShortcutStatus {
+        mechanism: gnome_shortcut::mechanism().as_str().to_string(),
+        session_type: gnome_shortcut::session_kind_str().to_string(),
+        command: gnome_shortcut::trigger_command(),
+        gnome_binding: gnome_shortcut::current_binding(),
+        extension: gnome_extension::status().as_str().to_string(),
+    })
+}
+
+/// Re-apply the registration for this session. The app does this at every
+/// start; the button exists for when a session switch or a hand-edit in GNOME
+/// Settings has left things inconsistent.
+#[tauri::command]
+async fn reregister_shortcut(app: AppHandle, state: State<'_, AppState>) -> Result<String, String> {
+    let shortcut = state
+        .current_shortcut
+        .lock()
+        .map_err(|_| "shortcut state lock poisoned".to_string())?
+        .clone();
+    setup_hotkey(&app, &shortcut);
+    Ok(gnome_shortcut::mechanism().as_str().to_string())
 }
 
 #[tauri::command]
@@ -630,7 +702,15 @@ async fn close_quick_window(app: AppHandle) -> Result<(), String> {
 // --- Helper Functions ---
 
 fn should_start_hidden() -> bool {
-    std::env::args().any(|arg| arg == "--hidden" || arg == "--autostart")
+    std::env::args().any(|arg| {
+        arg == "--hidden" || arg == "--autostart" || arg == gnome_shortcut::TRIGGER_ARG
+    })
+}
+
+/// True when this process was started only to trigger a quick translate
+/// (GNOME runs the command when no instance is up yet).
+fn started_for_quick_translate() -> bool {
+    std::env::args().any(|arg| arg == gnome_shortcut::TRIGGER_ARG)
 }
 
 fn on_quick_shortcut(app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent) {
@@ -639,35 +719,45 @@ fn on_quick_shortcut(app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent
     }
 }
 
-/// Selection capture relies on X11 tools (xdotool); warn once per run on Wayland.
-fn warn_if_wayland(app: &AppHandle) {
-    static WARNED: AtomicBool = AtomicBool::new(false);
+/// The text the user has selected, read from the PRIMARY selection without
+/// touching their clipboard.
+///
+/// This is what makes Wayland work: synthetic Ctrl+C (XTEST) never reaches a
+/// Wayland-native application, but mutter bridges the Wayland primary selection
+/// to X11 regardless of who has focus (`src/x11/meta-x11-selection.c`), so
+/// arboard can read it from the background.
+fn read_primary_selection(state: &AppState) -> Option<String> {
+    use arboard::{GetExtLinux, LinuxClipboardKind};
 
-    let is_wayland = std::env::var("XDG_SESSION_TYPE")
-        .map(|v| v.eq_ignore_ascii_case("wayland"))
-        .unwrap_or(false);
-    if !is_wayland || WARNED.swap(true, Ordering::SeqCst) {
-        return;
+    let mut guard = state.selection_clipboard.lock().ok()?;
+    if guard.is_none() {
+        match arboard::Clipboard::new() {
+            Ok(clipboard) => *guard = Some(clipboard),
+            Err(e) => {
+                log::warn!("Selection clipboard unavailable: {}", e);
+                return None;
+            }
+        }
     }
 
-    log::warn!("Wayland session detected: xdotool-based selection capture may not work");
-    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
-    app.dialog()
-        .message(
-            "Quick Translate captures the selected text with X11 tools (xdotool), \
-             which may not work in a Wayland session. The current clipboard content \
-             will be translated instead.\n\n\
-             Tip: copy the text (Ctrl+C) before pressing the shortcut.",
-        )
-        .title("Wayland session detected")
-        .kind(MessageDialogKind::Warning)
-        .show(|_| {});
+    match guard
+        .as_mut()?
+        .get()
+        .clipboard(LinuxClipboardKind::Primary)
+        .text()
+    {
+        Ok(text) => Some(text),
+        Err(e) => {
+            log::debug!("No primary selection to read: {}", e);
+            None
+        }
+    }
 }
 
-fn trigger_quick_translate(app: &AppHandle) {
+/// X11 only: copy the selection with a synthetic Ctrl+C, restoring whatever
+/// was on the clipboard when nothing was selected.
+fn copy_selection_via_xdotool(app: &AppHandle) -> String {
     use tauri_plugin_clipboard_manager::ClipboardExt;
-
-    warn_if_wayland(app);
 
     // Save and clear the clipboard first, so an empty clipboard afterwards
     // means "nothing was selected" — then the user's previous content is
@@ -683,17 +773,19 @@ fn trigger_quick_translate(app: &AppHandle) {
     std::thread::sleep(Duration::from_millis(150));
 
     let copied = app.clipboard().read_text().unwrap_or_default();
-    let clipboard_text = if copied.trim().is_empty() {
+    if copied.trim().is_empty() {
         if !previous.is_empty() {
             let _ = app.clipboard().write_text(previous.clone());
         }
         previous
     } else {
         copied
-    };
+    }
+}
 
-    // Cursor position in PHYSICAL pixels (xdotool's unit; wrapping these in a
-    // LogicalPosition lands the window at scale× the cursor on HiDPI displays)
+/// Cursor position in PHYSICAL pixels (xdotool's unit; wrapping these in a
+/// LogicalPosition lands the window at scale× the cursor on HiDPI displays).
+fn cursor_position() -> (i32, i32) {
     let mut cursor = (100_i32, 100_i32);
     if let Ok(output) = Command::new("xdotool").arg("getmouselocation").output() {
         let location = String::from_utf8_lossy(&output.stdout);
@@ -706,6 +798,29 @@ fn trigger_quick_translate(app: &AppHandle) {
             }
         }
     }
+    cursor
+}
+
+fn trigger_quick_translate(app: &AppHandle) {
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+
+    let wayland = gnome_shortcut::session_kind() == SessionKind::Wayland;
+
+    let clipboard_text = if wayland {
+        let state = app.state::<AppState>();
+        read_primary_selection(&state)
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty())
+            // Nothing selected: fall back to the clipboard, same as X11 does.
+            .unwrap_or_else(|| app.clipboard().read_text().unwrap_or_default())
+    } else {
+        copy_selection_via_xdotool(app)
+    };
+
+    // Under Wayland the pointer position is not ours to know (Xwayland reports
+    // a stale one) and a client cannot place its own window, so the bundled
+    // GNOME extension moves the popup to the pointer instead.
+    let cursor = if wayland { None } else { Some(cursor_position()) };
 
     // Window/monitor calls touch GTK, which is main-thread-only: this runs on
     // the global-shortcut callback thread, so hop to the main thread or the
@@ -715,35 +830,43 @@ fn trigger_quick_translate(app: &AppHandle) {
         let Some(window) = app_for_window.get_webview_window("quick") else {
             return;
         };
-        let (mut x, mut y) = cursor;
 
-        // Clamp so the popup stays on the monitor under the cursor
-        if let (Ok(win_size), Ok(Some(monitor))) = (
-            window.outer_size(),
-            app_for_window.monitor_from_point(x as f64, y as f64),
-        ) {
-            let mp = monitor.position();
-            let ms = monitor.size();
-            let max_x = mp.x + ms.width as i32 - win_size.width as i32;
-            let max_y = mp.y + ms.height as i32 - win_size.height as i32;
-            x = x.clamp(mp.x, max_x.max(mp.x));
-            y = y.clamp(mp.y, max_y.max(mp.y));
+        if let Some((mut x, mut y)) = cursor {
+            // Clamp so the popup stays on the monitor under the cursor
+            if let (Ok(win_size), Ok(Some(monitor))) = (
+                window.outer_size(),
+                app_for_window.monitor_from_point(x as f64, y as f64),
+            ) {
+                let mp = monitor.position();
+                let ms = monitor.size();
+                let max_x = mp.x + ms.width as i32 - win_size.width as i32;
+                let max_y = mp.y + ms.height as i32 - win_size.height as i32;
+                x = x.clamp(mp.x, max_x.max(mp.x));
+                y = y.clamp(mp.y, max_y.max(mp.y));
+            }
+            let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
+        } else {
+            // Presenting an already-visible window goes through xdg-activation,
+            // and a background app has no activation token, so it would never
+            // take focus. Unmapping first makes the next show a fresh map,
+            // which mutter does focus — and which the placement extension sees.
+            let _ = window.hide();
         }
 
-        let _ = window.set_position(tauri::PhysicalPosition::new(x, y));
         let _ = window.show();
         let _ = window.set_focus();
     });
 
-    // On Linux, use xdotool to forcefully activate the window for proper focus
-    // This ensures the blur event will fire when clicking outside
-    std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(50));
-        // Search for the window by name and activate it
-        let _ = Command::new("xdotool")
-            .args(["search", "--name", "Quick Translate", "windowactivate"])
-            .output();
-    });
+    if !wayland {
+        // On X11, forcefully activate the window for proper focus so the blur
+        // event fires when clicking outside. xdotool cannot see Wayland windows.
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            let _ = Command::new("xdotool")
+                .args(["search", "--name", "Quick Translate", "windowactivate"])
+                .output();
+        });
+    }
 
     if !clipboard_text.is_empty() {
         let state = app.state::<AppState>();
@@ -853,17 +976,79 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn setup_global_shortcut(app: &AppHandle, state: &AppState) -> Result<(), Box<dyn std::error::Error>> {
-    let shortcut_str = state
-        .current_shortcut
-        .lock()
-        .map_err(|_| String::from("shortcut state lock poisoned"))?
-        .clone();
-    let shortcut: Shortcut = shortcut_str.parse()?;
+/// Register the hotkey the way this session allows.
+///
+/// X11: the app grabs the key itself, as it always has. Wayland on GNOME: the
+/// key belongs to GNOME, which runs `<exe> --quick-translate` and lets the
+/// single-instance plugin hand it to the running app.
+fn setup_hotkey(app: &AppHandle, shortcut_str: &str) {
+    match gnome_shortcut::mechanism() {
+        Mechanism::Gnome => {
+            // Keeps the command path current (a reinstall or a moved AppImage
+            // changes it) without overwriting the accelerator; the frontend
+            // pushes the user's own accelerator right after startup.
+            match gnome_shortcut::ensure_entry(None) {
+                Ok(()) => log::info!(
+                    "Quick translate is registered as a GNOME custom shortcut ({})",
+                    gnome_shortcut::current_binding().unwrap_or_else(|| "unset".into())
+                ),
+                Err(e) => log::error!("Failed to register the GNOME shortcut: {}", e),
+            }
+        }
+        Mechanism::X11Grab | Mechanism::Manual => {
+            // An entry left behind by a Wayland session would make gnome-shell
+            // own the key, and our own grab would fail with BadAccess.
+            match gnome_shortcut::remove_entry() {
+                Ok(true) => log::info!(
+                    "Removed the GNOME shortcut entry; this session grabs the key directly"
+                ),
+                Ok(false) => {}
+                Err(e) => log::warn!("Could not check the GNOME shortcut entry: {}", e),
+            }
+            register_global_shortcut(app, shortcut_str.to_string());
+        }
+    }
+}
 
-    app.global_shortcut().on_shortcut(shortcut, on_quick_shortcut)?;
+/// gnome-shell releases its own grab asynchronously after the settings write,
+/// so the first attempt right after removing the entry can still lose the race.
+fn register_global_shortcut(app: &AppHandle, shortcut_str: String) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let shortcut: Shortcut = match shortcut_str.parse() {
+            Ok(shortcut) => shortcut,
+            Err(e) => {
+                log::error!("Invalid shortcut '{}': {:?}", shortcut_str, e);
+                return;
+            }
+        };
 
-    Ok(())
+        if app.global_shortcut().is_registered(shortcut) {
+            return;
+        }
+
+        for (attempt, delay) in [0_u64, 300, 900, 2000].iter().enumerate() {
+            if *delay > 0 {
+                std::thread::sleep(Duration::from_millis(*delay));
+            }
+            match app.global_shortcut().on_shortcut(shortcut, on_quick_shortcut) {
+                Ok(()) => {
+                    log::info!("Global shortcut '{}' registered", shortcut_str);
+                    return;
+                }
+                Err(e) => log::warn!(
+                    "Could not register '{}' (attempt {}): {}",
+                    shortcut_str,
+                    attempt + 1,
+                    e
+                ),
+            }
+        }
+        log::error!(
+            "Giving up on the global shortcut '{}'; another application may hold it",
+            shortcut_str
+        );
+    });
 }
 
 // --- Main Entry Point ---
@@ -874,10 +1059,24 @@ pub fn run() {
 
     tauri::Builder::default()
         .manage(state)
+        // Must come first: a second process exits inside this plugin's setup,
+        // before any window or tray icon is created. It is also how the GNOME
+        // shortcut reaches the running app under Wayland.
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            let handle = app.clone();
+            let trigger = argv.iter().any(|arg| arg == gnome_shortcut::TRIGGER_ARG);
+            // This runs on the plugin's D-Bus thread; the capture below blocks.
+            std::thread::spawn(move || {
+                if trigger {
+                    trigger_quick_translate(&handle);
+                } else {
+                    show_main_window(&handle);
+                }
+            });
+        }))
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
@@ -889,6 +1088,8 @@ pub fn run() {
             check_ocr_dependencies,
             get_ocr_install_guidance,
             update_shortcut,
+            get_shortcut_status,
+            reregister_shortcut,
             set_proxy,
             set_auto_launch,
             get_auto_launch,
@@ -905,10 +1106,33 @@ pub fn run() {
                 log::error!("Failed to setup tray: {}", e);
             }
 
-            // Setup global shortcut
-            let state = app.state::<AppState>();
-            if let Err(e) = setup_global_shortcut(app.handle(), &state) {
-                log::error!("Failed to setup global shortcut: {}", e);
+            // Register the hotkey the way this session allows (X11 grab, or a
+            // GNOME custom shortcut under Wayland)
+            let shortcut = app
+                .state::<AppState>()
+                .current_shortcut
+                .lock()
+                .map(|shortcut| shortcut.clone())
+                .unwrap_or_else(|_| "CommandOrControl+Shift+X".to_string());
+            setup_hotkey(app.handle(), &shortcut);
+
+            // Install and enable the placement extension (Wayland on GNOME
+            // only). Runs off the main thread: it reads files and asks
+            // gnome-shell for its version.
+            let handle_for_extension = app.handle().clone();
+            std::thread::spawn(move || {
+                let status = gnome_extension::ensure(&handle_for_extension);
+                log::info!("GNOME placement extension: {}", status.as_str());
+            });
+
+            // Started by the GNOME shortcut while the app was not running:
+            // do the capture once the app is up.
+            if started_for_quick_translate() {
+                let handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(100));
+                    trigger_quick_translate(&handle);
+                });
             }
 
             // Hide quick window on startup (it starts hidden anyway)

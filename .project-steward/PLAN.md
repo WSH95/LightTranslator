@@ -95,17 +95,20 @@ Shell extension that installs itself).
       `tailwind.config.js`, so its card had no background at all
 - [x] W2 `feat(ui)`: rounded main-window corners via `--window-radius`, squared
       while maximized through a new `platform.onMaximizedChange` in both backends
-- [ ] W3 `feat(quick-translate)`: Wayland hotkey — GNOME custom shortcut written
+- [x] W3 `feat(quick-translate)`: Wayland hotkey — GNOME custom shortcut written
       to our own dconf path, `--quick-translate` delivered through single
       instance, PRIMARY selection capture, hide-before-show so the popup is
       focused; X11 path untouched and its GNOME entry removed automatically
-- [ ] W4 GNOME Shell extension `lighttranslator@lighttranslator.app`: places the
+- [x] W4 GNOME Shell extension `lighttranslator@lighttranslator.app`: places the
       popup at the pointer and activates it; shipped by the package and enabled
       once on first run
-- [ ] W5 Settings: shortcut mechanism status + re-register + extension state;
+- [x] W5 Settings: shortcut mechanism status + re-register + extension state;
       README and steward records
-- [ ] W6 Verification on this host (Wayland now, Xorg by the user) for both
-      backends, plus a local Tauri `.deb` to install
+- [ ] W6 Verification. Done on this host in the Electron backend under
+      Wayland: GNOME entry written, extension auto-installed (pending a
+      log-out), PRIMARY selection read from a Wayland-native app, popup
+      shown with the translation. Left: the Tauri build (blocked on the
+      WebKitGTK dev packages), the real key press, and an Xorg session
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
