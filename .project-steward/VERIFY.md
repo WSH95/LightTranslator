@@ -14,15 +14,36 @@ How to check the project is healthy. Agents run these before claiming
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
 
-Last verified: 2026-08-26T04:30Z — `npm ci`, `npm run typecheck`, production
-build, secret scan, and Electron syntax all pass. Five deterministic Google
-probes cover primary structured parsing, exactly-one fallback after 429 or a
-malformed body, long UTF-8 text in a POST body (not a URL), and truthful dual
-failure. An isolated dev Electron instance completed 10/10 live translations
-through the configured proxy without restart or provider error. Final Electron
-and Docker/Tauri release builds produced and inspected both 1.2.2 amd64 Debian
-packages; the Docker release build also compiled the changed Rust backend. No
-committed automated test suite yet.
+Last verified: 2026-09-19T23:50Z — `npm run typecheck`, `npm run build`,
+`node --check electron/main.js`, 15 JS/TS unit tests
+(`node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js`),
+`cargo check --all-targets` and `cargo test` (4/4) all pass, and a release
+`.deb` builds (`LightTranslator_1.2.2_amd64.deb`, sha256
+ec576c91b2ec1d93b971918fe8753cd5bbc6169269e88b6502c57883f98ace42) carrying the
+GNOME extension under `/usr/share/gnome-shell/extensions/`.
+
+Quick Translate was exercised on a real GNOME 46 machine, both session types:
+
+- Wayland (Electron and Tauri): text selected in a Wayland-native GTK app came
+  back translated in the popup; the GNOME custom shortcut entry was written with
+  the right name, command and binding; a second instance delivered
+  `--quick-translate` in 0.18s (Tauri) and ~1.4s (Electron, full Chromium
+  start); a plain second launch focused the running app instead of duplicating
+  it; the placement extension installed and enabled itself and was correctly
+  reported as pending until the next login.
+- X11 (forced via `XDG_SESSION_TYPE=x11`, release build): the app grabbed the
+  key itself, wrote no GNOME entry, and a real Ctrl+Shift+X press with text
+  selected opened the popup **at the pointer** showing 早上好，我的朋友。
+- Independent check of the premise: a selection made in a Wayland-native app is
+  readable from an X11 client, i.e. mutter bridges PRIMARY regardless of focus.
+- UI at 480x680, at the 400x500 minimum and maximized, in both Chromium and
+  WebKitGTK: the OCR dialog stays inside the window with a scrolling body, and
+  corners are rounded when windowed, square when maximized.
+
+Not yet done: the user pressing the hotkey in their own Wayland session after
+installing the package and logging back in (the extension needs that login), and
+a full pass in a real "Ubuntu on Xorg" session. No committed automated test
+suite beyond the unit tests named above.
 
 ## Backend parity checklist
 
