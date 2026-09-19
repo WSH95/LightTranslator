@@ -157,33 +157,35 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-surface border border-surfaceHighlight rounded-xl w-full max-w-md shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-surfaceHighlight">
-          <h3 className="text-text font-medium flex items-center gap-2">
-            <ImageIcon size={18} className="text-primary" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 rounded-[var(--window-radius)]">
+      {/* max-h-full + a scrolling body keep the dialog inside the window at any
+          size; without it the install-guidance block overflows a 680px window */}
+      <div className="bg-white/80 backdrop-blur-3xl border border-white/40 rounded-2xl w-full max-w-md max-h-full shadow-macos-window text-macos-text flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-black/5">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <ImageIcon size={18} className="text-macos-active" />
             OCR Screenshot/Image
           </h3>
-          <button onClick={onClose} className="text-muted hover:text-white transition-colors">
+          <button onClick={onClose} className="text-macos-muted hover:text-macos-text transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5">
           {/* Install guidance: OCR components are installed on demand */}
           {!isOcrAvailable && ocrStatus.checked && (
-            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">
-                <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-400">OCR Components Missing</p>
+                  <p className="text-sm font-medium text-amber-700">OCR Components Missing</p>
                   {guidance && guidance.missing.length > 0 ? (
-                    <p className="text-xs text-amber-400/70 mt-1">
+                    <p className="text-xs text-amber-700/80 mt-1">
                       Missing: {guidance.missing.join(' · ')}
                       {guidance.packageManager ? ` — detected ${guidance.os} (${guidance.packageManager})` : ''}
                     </p>
                   ) : (
-                    <p className="text-xs text-amber-400/70 mt-1">
+                    <p className="text-xs text-amber-700/80 mt-1">
                       {ocrStatus.message || 'Required OCR components are not installed.'}
                     </p>
                   )}
@@ -192,19 +194,19 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
                     <div className="mt-2 space-y-1.5">
                       {guidance.commands.map((command, index) => (
                         <div key={index} className="flex items-stretch gap-1.5">
-                          <code className="flex-1 text-[11px] leading-relaxed bg-black/40 text-amber-200 rounded px-2 py-1.5 overflow-x-auto whitespace-pre font-mono select-text">
+                          <code className="flex-1 text-[11px] leading-relaxed bg-amber-100/60 text-amber-900 rounded px-2 py-1.5 overflow-x-auto whitespace-pre font-mono select-text">
                             {command}
                           </code>
                           <button
                             onClick={() => copyCommand(command, index)}
-                            className="px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 rounded transition-colors flex items-center"
+                            className="px-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded transition-colors flex items-center"
                             title="Copy command"
                           >
                             {copiedCommand === index ? <Check size={12} /> : <Copy size={12} />}
                           </button>
                         </div>
                       ))}
-                      <p className="text-[11px] text-amber-400/60">
+                      <p className="text-[11px] text-amber-700/70">
                         Run this in a terminal, then click Re-check.
                       </p>
                     </div>
@@ -213,7 +215,7 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
                   <button
                     onClick={recheck}
                     disabled={isChecking}
-                    className="mt-2 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-xs font-medium rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    className="mt-2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-medium rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {isChecking ? (
                       <>
@@ -234,8 +236,8 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
 
           {/* OCR works, but some language packs are absent */}
           {isOcrAvailable && guidance && guidance.missing.length > 0 && (
-            <div className="mb-4 px-3 py-2 bg-surfaceHighlight/40 border border-surfaceHighlight rounded-lg">
-              <p className="text-[11px] text-muted">
+            <div className="mb-4 px-3 py-2 bg-black/[0.04] border border-black/10 rounded-lg">
+              <p className="text-[11px] text-macos-muted">
                 Note: {guidance.missing.join(' · ')} not installed — OCR runs with the available languages.
                 {guidance.commands[0] ? ` To add them: ${guidance.commands[0]}` : ''}
               </p>
@@ -248,44 +250,44 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
               <button
                 onClick={handleScreenCapture}
                 disabled={isCapturing || !isOcrAvailable}
-                className="w-full border-2 border-primary/50 bg-primary/10 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-primary/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full border-2 border-macos-active/50 bg-macos-active/10 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-macos-active hover:bg-macos-active/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="w-12 h-12 rounded-full bg-primary/20 group-hover:bg-primary/30 flex items-center justify-center mb-3 transition-colors">
+                <div className="w-12 h-12 rounded-full bg-macos-active/20 group-hover:bg-macos-active/30 flex items-center justify-center mb-3 transition-colors">
                   {isCapturing ? (
-                    <Loader2 size={24} className="text-primary animate-spin" />
+                    <Loader2 size={24} className="text-macos-active animate-spin" />
                   ) : (
-                    <Scissors size={24} className="text-primary" />
+                    <Scissors size={24} className="text-macos-active" />
                   )}
                 </div>
-                <p className="text-sm text-text font-medium">
+                <p className="text-sm text-macos-text font-medium">
                   {isCapturing ? 'Select area to capture...' : 'Screenshot Area'}
                 </p>
-                <p className="text-xs text-muted mt-1">Click and drag to select region</p>
+                <p className="text-xs text-macos-muted mt-1">Click and drag to select region</p>
               </button>
 
               {/* Divider */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-surfaceHighlight"></div>
-                <span className="text-xs text-muted">or</span>
-                <div className="flex-1 h-px bg-surfaceHighlight"></div>
+                <div className="flex-1 h-px bg-black/5"></div>
+                <span className="text-xs text-macos-muted">or</span>
+                <div className="flex-1 h-px bg-black/5"></div>
               </div>
 
               {/* Upload Area */}
               <div 
-                className="border-2 border-dashed border-surfaceHighlight rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 hover:bg-surfaceHighlight/30 transition-all group"
+                className="border-2 border-dashed border-black/10 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-macos-active/50 hover:bg-black/[0.03] transition-all group"
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
               >
-                <div className="w-10 h-10 rounded-full bg-surfaceHighlight group-hover:bg-primary/20 flex items-center justify-center mb-3 transition-colors">
-                  <Upload size={20} className="text-muted group-hover:text-primary" />
+                <div className="w-10 h-10 rounded-full bg-black/5 group-hover:bg-macos-active/20 flex items-center justify-center mb-3 transition-colors">
+                  <Upload size={20} className="text-macos-muted group-hover:text-macos-active" />
                 </div>
-                <p className="text-sm text-text font-medium">Upload image</p>
-                <p className="text-xs text-muted mt-1">PNG, JPG, WebP</p>
+                <p className="text-sm text-macos-text font-medium">Upload image</p>
+                <p className="text-xs text-macos-muted mt-1">PNG, JPG, WebP</p>
               </div>
             </div>
           ) : (
-            <div className="relative rounded-lg overflow-hidden border border-surfaceHighlight bg-black/50">
+            <div className="relative rounded-lg overflow-hidden border border-black/10 bg-black/5">
                <img src={preview} alt="Preview" className="w-full h-48 object-contain" />
                <button 
                 onClick={() => setPreview(null)}
@@ -304,20 +306,20 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
             accept="image/*"
           />
 
-          {error && <div className="mt-4 text-xs text-red-400 bg-red-500/10 p-2 rounded">{error}</div>}
+          {error && <div className="mt-4 text-xs text-red-600 bg-red-50 border border-red-100 p-2 rounded">{error}</div>}
         </div>
 
-        <div className="p-4 bg-surfaceHighlight/30 border-t border-surfaceHighlight flex justify-end gap-2">
+        <div className="shrink-0 px-5 py-4 bg-black/[0.03] border-t border-black/5 flex justify-end gap-2">
           <button 
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-muted hover:text-text transition-colors"
+            className="px-4 py-2 text-xs font-medium text-macos-muted hover:text-macos-text transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleAnalyze}
             disabled={!preview || isProcessing || !isOcrAvailable}
-            className="px-4 py-2 bg-primary hover:bg-indigo-500 text-white text-xs font-medium rounded-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-macos-active hover:bg-macos-active/90 text-white text-xs font-medium rounded-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isProcessing && <Loader2 size={14} className="animate-spin" />}
             {!isOcrAvailable ? 'OCR Unavailable' : isProcessing ? 'Processing...' : 'Analyze & Translate'}

@@ -150,12 +150,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/10 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/10 backdrop-blur-sm transition-opacity rounded-[var(--window-radius)]"
         onClick={onClose}
       />
 
-      {/* Modal Container: BetterDisplay Style */}
-      <div className="w-full max-w-3xl h-[550px] bg-white/80 backdrop-blur-3xl rounded-2xl shadow-macos-window border border-white/40 flex overflow-hidden animate-in zoom-in-95 duration-200 z-10 text-macos-text">
+      {/* Modal Container: BetterDisplay Style. max-h-full keeps it inside the
+          window if the window is smaller than the fixed height. */}
+      <div className="w-full max-w-3xl h-[550px] max-h-full bg-white/80 backdrop-blur-3xl rounded-2xl shadow-macos-window border border-white/40 flex overflow-hidden animate-in zoom-in-95 duration-200 z-10 text-macos-text">
 
         {/* Sidebar */}
         <div className="w-56 bg-macos-sidebar border-r border-white/20 flex flex-col p-4 pt-8">
