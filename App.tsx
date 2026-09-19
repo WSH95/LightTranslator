@@ -30,6 +30,22 @@ const App: React.FC = () => {
     };
   }, [isQuickMode]);
 
+  // Rounded corners must square off while the window is maximized. The real
+  // state comes from the backend: comparing sizes against screen.avail* is
+  // wrong under Wayland, where the workarea is not exposed to the page.
+  useEffect(() => {
+    if (isQuickMode || !platform.isAvailable()) return;
+    const root = document.documentElement;
+    const unsubscribe = platform.onMaximizedChange((maximized) => {
+      if (maximized) root.dataset.windowMaximized = '';
+      else delete root.dataset.windowMaximized;
+    });
+    return () => {
+      unsubscribe();
+      delete root.dataset.windowMaximized;
+    };
+  }, [isQuickMode]);
+
   // Listen for open-settings event from tray menu
   useEffect(() => {
     if (platform.isAvailable()) {

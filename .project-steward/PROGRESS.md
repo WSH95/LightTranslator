@@ -2,6 +2,13 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-19T22:46:36Z — claude
+Diagnosed all three user-reported issues (Wayland hotkey dead, OCR dialog
+overflowing, square corners) and landed the two UI fixes: the OCR dialog now
+stays inside the window and uses the real palette, and the main window has 12px
+corners that square off when maximized. Verified on screen in the Electron build
+at 480x680, at the 400x500 minimum and maximized. Wayland hotkey work is next.
+
 ### 2026-08-26T06:57:19Z — cli
 PR #4 opened from commit 8daafd0 with a concise humanized description; branch pushed. Release publication and local main fast-forward are gated on the user's manual merge.
 

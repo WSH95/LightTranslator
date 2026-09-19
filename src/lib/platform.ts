@@ -78,6 +78,8 @@ interface ElectronBridge {
   minimize(): void;
   maximize(): void;
   close(): void;
+  isMaximized(): Promise<boolean>;
+  onMaximizedChanged(cb: (maximized: boolean) => void): () => void;
   onQuickTranslate(cb: (text: string) => void): () => void;
   sendQuickReady(): void;
   closeQuickWindow(): void;
@@ -102,7 +104,7 @@ const bridge = (): ElectronBridge => (window as unknown as { electron: ElectronB
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
-let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void> } } | null = null;
+let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; isMaximized: () => Promise<boolean>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void>; onResized: (handler: () => void) => Promise<() => void> } } | null = null;
 let tauriEvent: { listen: (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>; emitTo: (target: string, event: string, payload?: unknown) => Promise<void> } | null = null;
 
 // Initialize Tauri APIs if available
@@ -216,6 +218,34 @@ const tauriBackend = {
       // Hide to tray instead of closing
       await tauriWindow.getCurrentWindow().hide();
     }
+  },
+
+  /**
+   * Maximized state of the main window, for the rounded-corner styling.
+   * Reports the current state immediately, then every change.
+   */
+  onMaximizedChange(callback: (maximized: boolean) => void): () => void {
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriWindow) return null;
+      const win = tauriWindow.getCurrentWindow();
+      const push = () => {
+        win.isMaximized().then(callback).catch(() => { /* window gone */ });
+      };
+      push();
+      // GTK delivers the new size and the maximized flag in separate events,
+      // so re-read once the resize has settled.
+      const unlisten = await win.onResized(() => {
+        push();
+        if (settle) clearTimeout(settle);
+        settle = setTimeout(push, 150);
+      });
+      return () => {
+        if (settle) clearTimeout(settle);
+        unlisten();
+      };
+    });
   },
 
   /**
@@ -464,6 +494,13 @@ const electronBackend: PlatformBackend = {
     bridge().close();
   },
 
+  onMaximizedChange(callback: (maximized: boolean) => void): () => void {
+    return makeDisposableListener(async () => {
+      bridge().isMaximized().then(callback).catch(() => { /* window gone */ });
+      return bridge().onMaximizedChanged(callback);
+    });
+  },
+
   onQuickTranslate(callback: (text: string) => void, onRegistered?: () => void): () => void {
     return makeDisposableListener(
       async () => bridge().onQuickTranslate(callback),
@@ -568,6 +605,7 @@ export const platform = {
   minimize: () => activeBackend().minimize(),
   maximize: () => activeBackend().maximize(),
   close: () => activeBackend().close(),
+  onMaximizedChange: (cb: (maximized: boolean) => void) => activeBackend().onMaximizedChange(cb),
   onQuickTranslate: (cb: (text: string) => void, onRegistered?: () => void) =>
     activeBackend().onQuickTranslate(cb, onRegistered),
   sendQuickReady: () => activeBackend().sendQuickReady(),

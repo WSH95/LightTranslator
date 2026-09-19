@@ -87,12 +87,24 @@ html, body {
   width: 100%;
 }
 
+/* The main window is frameless and transparent, so its corners are whatever
+   #root paints. Modal overlays read the same variable to follow the shape. */
+html[data-window-mode="main"] {
+  --window-radius: 12px;
+}
+/* Maximized (and tiled) windows sit flush with the screen edges */
+html[data-window-mode="main"][data-window-maximized] {
+  --window-radius: 0px;
+}
+
 html[data-window-mode="main"] #root {
   background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(255,255,255,0.4) inset;
-  border-radius: 0;
+  /* Inset only: an outer shadow would paint into the transparent corner
+     pixels that the border-radius cuts away. */
+  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.4) inset, 0 0 0 1px rgba(0,0,0,0.07) inset;
+  border-radius: var(--window-radius);
   overflow: hidden;
 }
 

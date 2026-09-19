@@ -214,6 +214,15 @@ function createMainWindow({ startHidden = false } = {}) {
     }
   });
 
+  // The renderer squares off the window's rounded corners while maximized
+  const sendMaximized = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window-maximized-changed', mainWindow.isMaximized());
+    }
+  };
+  mainWindow.on('maximize', sendMaximized);
+  mainWindow.on('unmaximize', sendMaximized);
+
   mainWindow.once('ready-to-show', () => {
     if (!startHidden) {
       mainWindow.show();
@@ -781,6 +790,8 @@ ipcMain.on('window-maximize', () => {
   else mainWindow.maximize();
 });
 ipcMain.on('window-close', () => mainWindow?.hide());
+ipcMain.handle('is-maximized', () =>
+  Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isMaximized()));
 
 // Cross-window settings sync: forward to the OTHER window only, so a sender
 // never reacts to its own change (Tauri gets this from emitTo).

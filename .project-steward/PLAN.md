@@ -79,6 +79,34 @@ recovery policy with provider-level failover.
 - [x] F6 Bump all five version locations to 1.2.2
 - [x] F7 Build and inspect both local 1.2.2 `.deb` artifacts; do not publish
 
+## Wayland Quick Translate + UI fixes (2026-09-19)
+
+User report on Ubuntu 24.04 / GNOME 46 / Wayland: the hotkey popup works in an
+Xorg session but does nothing under Wayland; the OCR dialog overflows the window
+unless it is maximized; rounded window corners wanted. Plan of record:
+`~/.claude/plans/pasted-content-id-d703-i-have-noble-eclipse.md` (approved
+in-session, including the user's choices: X11 keeps the app's own key grab,
+Wayland uses a GNOME custom shortcut, popup placement comes from a bundled GNOME
+Shell extension that installs itself).
+
+- [x] W1 `fix(ocr)`: OCR dialog stays inside the window (`max-h-full` + scrolling
+      body, pinned header/footer) and is restyled onto the `macos` palette — it
+      was the only file using Tailwind color names that never existed in
+      `tailwind.config.js`, so its card had no background at all
+- [x] W2 `feat(ui)`: rounded main-window corners via `--window-radius`, squared
+      while maximized through a new `platform.onMaximizedChange` in both backends
+- [ ] W3 `feat(quick-translate)`: Wayland hotkey — GNOME custom shortcut written
+      to our own dconf path, `--quick-translate` delivered through single
+      instance, PRIMARY selection capture, hide-before-show so the popup is
+      focused; X11 path untouched and its GNOME entry removed automatically
+- [ ] W4 GNOME Shell extension `lighttranslator@lighttranslator.app`: places the
+      popup at the pointer and activates it; shipped by the package and enabled
+      once on first run
+- [ ] W5 Settings: shortcut mechanism status + re-register + extension state;
+      README and steward records
+- [ ] W6 Verification on this host (Wayland now, Xorg by the user) for both
+      backends, plus a local Tauri `.deb` to install
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

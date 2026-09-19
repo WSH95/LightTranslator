@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electron', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  isMaximized: () => ipcRenderer.invoke('is-maximized'),
+  onMaximizedChanged: (callback) =>
+    subscribe('window-maximized-changed', (_event, maximized) => callback(maximized)),
 
   // Quick Translate
   onQuickTranslate: (callback) =>
