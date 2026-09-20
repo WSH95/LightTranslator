@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('electron', {
   updateShortcut: (shortcut, gnomeBinding) =>
     ipcRenderer.invoke('update-shortcut', shortcut, gnomeBinding),
   getShortcutStatus: () => ipcRenderer.invoke('get-shortcut-status'),
+  getSystemAppearance: () => ipcRenderer.invoke('get-system-appearance'),
   reregisterShortcut: () => ipcRenderer.invoke('reregister-shortcut'),
   setAutoLaunch: (enabled) => ipcRenderer.invoke('set-auto-launch', enabled),
   getAutoLaunch: () => ipcRenderer.invoke('get-auto-launch'),

@@ -71,6 +71,20 @@ export interface ShortcutStatus {
   extension: 'active' | 'pending-restart' | 'disabled' | 'missing' | 'not-applicable';
 }
 
+/**
+ * Raw `org.gnome.desktop.interface` values. Kept raw on purpose: mapping a
+ * theme name to an accent hex is UI policy and lives in src/lib/theme.ts, so
+ * both backends stay identical and trivial.
+ */
+export interface SystemAppearance {
+  /** 'default' | 'prefer-light' | 'prefer-dark', or null off GNOME. */
+  colorScheme: string | null;
+  /** GNOME 47+ only; null on GNOME 46 and earlier. */
+  accentColor: string | null;
+  /** e.g. 'Yaru', 'Yaru-viridian', 'Yaru-bark-dark'. */
+  gtkTheme: string | null;
+}
+
 export interface OcrInstallGuidance {
   os: string;
   packageManager?: string;
@@ -112,6 +126,7 @@ interface ElectronBridge {
   setProxy(settings: ProxySettings): Promise<{ success: boolean }>;
   updateShortcut(shortcut: string, gnomeBinding: string | null): Promise<{ success: boolean; message?: string }>;
   getShortcutStatus(): Promise<ShortcutStatus>;
+  getSystemAppearance(): Promise<SystemAppearance>;
   reregisterShortcut(): Promise<{ success: boolean; message?: string; mechanism: string }>;
   setAutoLaunch(enabled: boolean): Promise<{ success: boolean }>;
   getAutoLaunch(): Promise<{ success: boolean; enabled: boolean }>;
@@ -436,6 +451,18 @@ const tauriBackend = {
     return null;
   },
 
+  /**
+   * GNOME's own appearance settings. Null everywhere it cannot be read, so
+   * callers always fall back to prefers-color-scheme and the stored accent.
+   */
+  async getSystemAppearance(): Promise<SystemAppearance | null> {
+    await initTauri();
+    if (tauriInvoke) {
+      return tauriInvoke('get_system_appearance') as Promise<SystemAppearance>;
+    }
+    return null;
+  },
+
   /** Re-apply the registration for this session. */
   async reregisterShortcut(): Promise<void> {
     await initTauri();
@@ -613,6 +640,10 @@ const electronBackend: PlatformBackend = {
     return true;
   },
 
+  async getSystemAppearance(): Promise<SystemAppearance | null> {
+    return bridge().getSystemAppearance();
+  },
+
   async getShortcutStatus(): Promise<ShortcutStatus | null> {
     return bridge().getShortcutStatus();
   },
@@ -676,6 +707,7 @@ export const platform = {
   setProxy: (settings: ProxySettings) => activeBackend().setProxy(settings),
   updateShortcut: (shortcut: string) => activeBackend().updateShortcut(shortcut),
   getShortcutStatus: () => activeBackend().getShortcutStatus(),
+  getSystemAppearance: () => activeBackend().getSystemAppearance(),
   reregisterShortcut: () => activeBackend().reregisterShortcut(),
   setAutoLaunch: (enabled: boolean) => activeBackend().setAutoLaunch(enabled),
   getAutoLaunch: () => activeBackend().getAutoLaunch(),

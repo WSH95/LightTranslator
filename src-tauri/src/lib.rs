@@ -597,6 +597,59 @@ async fn update_shortcut(
     Ok(true)
 }
 
+/// Raw GNOME appearance settings. Deliberately raw strings: the mapping from
+/// a theme name to an accent hex is UI policy, and keeping it in the frontend
+/// means both backends stay identical and trivial.
+///
+/// PARITY: mirrored by `electron/main.js`.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SystemAppearance {
+    #[serde(rename = "colorScheme")]
+    pub color_scheme: Option<String>,
+    #[serde(rename = "accentColor")]
+    pub accent_color: Option<String>,
+    #[serde(rename = "gtkTheme")]
+    pub gtk_theme: Option<String>,
+}
+
+/// Reads `org.gnome.desktop.interface`.
+///
+/// `accent-color` only exists from GNOME 47; on Ubuntu 24.04 (GNOME 46) the
+/// accent is carried by `gtk-theme` as `Yaru-<name>`, which maps one-to-one
+/// onto the ten accents the Appearance tab offers. Both are returned so the
+/// frontend can prefer the explicit key where it exists.
+#[tauri::command]
+async fn get_system_appearance() -> Result<SystemAppearance, String> {
+    use gio::prelude::SettingsExt;
+
+    const SCHEMA: &str = "org.gnome.desktop.interface";
+
+    // Settings::new aborts the process on a missing schema, and reading a key
+    // the schema does not declare aborts too — hence both guards.
+    if !gnome_shortcut::schema_installed(SCHEMA) {
+        return Ok(SystemAppearance {
+            color_scheme: None,
+            accent_color: None,
+            gtk_theme: None,
+        });
+    }
+
+    let settings = gio::Settings::new(SCHEMA);
+    let read = |key: &str| -> Option<String> {
+        let schema = settings.settings_schema()?;
+        schema
+            .has_key(key)
+            .then(|| settings.string(key).to_string())
+            .filter(|value| !value.is_empty())
+    };
+
+    Ok(SystemAppearance {
+        color_scheme: read("color-scheme"),
+        accent_color: read("accent-color"),
+        gtk_theme: read("gtk-theme"),
+    })
+}
+
 /// What the settings UI needs to explain where the shortcut lives.
 #[tauri::command]
 async fn get_shortcut_status() -> Result<ShortcutStatus, String> {
@@ -1089,6 +1142,7 @@ pub fn run() {
             get_ocr_install_guidance,
             update_shortcut,
             get_shortcut_status,
+            get_system_appearance,
             reregister_shortcut,
             set_proxy,
             set_auto_launch,

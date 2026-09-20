@@ -11,8 +11,12 @@
  * desktop-level signal can override prefers-color-scheme without CSS churn.
  */
 import { useAppStore } from '../../store/useAppStore';
-import { ACCENTS, DEFAULT_ACCENT, type Accent } from '../../constants';
+import type { Accent } from '../../constants';
 import type { AppearanceTheme } from '../../types';
+import { accentFor, accentFromSystem } from './accents';
+import { platform } from './platform';
+
+export { accentFor, accentFromSystem } from './accents';
 
 export type ResolvedTheme = 'light' | 'dark';
 
@@ -23,8 +27,12 @@ const darkQuery = (): MediaQueryList | null =>
 
 const prefersDark = (): boolean => darkQuery()?.matches ?? false;
 
-export const resolveTheme = (preference: AppearanceTheme): ResolvedTheme =>
-  preference === 'system' ? (prefersDark() ? 'dark' : 'light') : preference;
+export const resolveTheme = (preference: AppearanceTheme): ResolvedTheme => {
+  if (preference !== 'system') return preference;
+  // gsettings is the actual desktop setting, so it wins when it has an
+  // opinion; the media query covers 'default' and every non-GNOME host.
+  return systemColorScheme ?? (prefersDark() ? 'dark' : 'light');
+};
 
 /** '#03875B' -> '3 135 91', the form `rgb(... / <alpha>)` needs. */
 const channels = (hex: string): string => {
@@ -32,12 +40,36 @@ const channels = (hex: string): string => {
   return `${(value >> 16) & 255} ${(value >> 8) & 255} ${value & 255}`;
 };
 
+// Cached desktop signals. Null means "unknown, defer to prefers-color-scheme
+// and the stored accent".
+let systemColorScheme: ResolvedTheme | null = null;
+let systemAccent: Accent | null = null;
+
+export const getSystemAccent = (): Accent | null => systemAccent;
+
 /**
- * An unrecognised hex falls back to the default rather than propagating into
- * CSS — the same defensive shape the store's `merge()` uses for `provider`.
+ * Re-read GNOME's appearance settings.
+ *
+ * There is no change signal without a gsettings monitor, so this is called at
+ * startup, whenever prefers-color-scheme fires, and from the Appearance tab.
+ * The media query stays the live authority — it is invalidated first on every
+ * change, so a desktop dark/light switch is never held back by a stale read.
  */
-export const accentFor = (hex: string): Accent =>
-  ACCENTS.find((accent) => accent.light.toLowerCase() === hex.toLowerCase()) ?? DEFAULT_ACCENT;
+export async function refreshSystemAppearance(): Promise<void> {
+  if (!platform.isAvailable()) return;
+  try {
+    const appearance = await platform.getSystemAppearance();
+    if (!appearance) return;
+    systemColorScheme =
+      appearance.colorScheme === 'prefer-dark' ? 'dark'
+        : appearance.colorScheme === 'prefer-light' ? 'light'
+          : null; // 'default' means "no preference"; fall back to the media query
+    systemAccent = accentFromSystem(appearance) ?? null;
+    apply();
+  } catch (error) {
+    console.warn('Failed to read desktop appearance settings:', error);
+  }
+}
 
 // zustand notifies on every set(), including each keystroke in inputText.
 // Comparing a signature keeps this to real appearance changes.
@@ -45,13 +77,18 @@ let signature = '';
 
 function apply(): void {
   const state = useAppStore.getState();
+  const accent = state.followSystemAccent && systemAccent
+    ? systemAccent
+    : accentFor(state.accentColor);
+
   const next = [
     state.appearanceTheme,
-    state.accentColor,
+    accent.light,
     state.translationTextSize,
     state.quickWindowOpacity,
     state.quickWindowBorderOpacity,
     prefersDark(),
+    systemColorScheme,
   ].join('|');
   if (next === signature) return;
   signature = next;
@@ -59,8 +96,6 @@ function apply(): void {
   const root = document.documentElement;
   root.dataset.theme = resolveTheme(state.appearanceTheme);
   root.dataset.textSize = state.translationTextSize;
-
-  const accent = accentFor(state.accentColor);
   root.style.setProperty('--accent-light', accent.light);
   root.style.setProperty('--accent-light-rgb', channels(accent.light));
   root.style.setProperty('--accent-dark', accent.dark);
@@ -90,6 +125,13 @@ export function initTheme(): void {
   // theme change in Settings retints the pop-up with no new IPC.
   useAppStore.subscribe(apply);
 
-  // Only matters while appearanceTheme is 'system'; apply() no-ops otherwise.
-  darkQuery()?.addEventListener('change', apply);
+  // The media query is the fresher signal, so drop the cached desktop value
+  // before re-applying, then re-confirm from gsettings.
+  darkQuery()?.addEventListener('change', () => {
+    systemColorScheme = null;
+    apply();
+    void refreshSystemAppearance();
+  });
+
+  void refreshSystemAppearance();
 }

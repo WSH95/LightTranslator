@@ -13,7 +13,7 @@ import {
 } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import {
@@ -836,6 +836,36 @@ ipcMain.handle('get-ocr-install-guidance', () => getOcrInstallGuidance());
 
 ipcMain.handle('update-shortcut', (_event, shortcut, gnomeBinding) =>
   applyShortcut(shortcut, gnomeBinding));
+
+/**
+ * Raw GNOME appearance settings, read from org.gnome.desktop.interface.
+ *
+ * `accent-color` only exists from GNOME 47; on Ubuntu 24.04 (GNOME 46) the
+ * accent is carried by `gtk-theme` as `Yaru-<name>`, which maps one-to-one
+ * onto the ten accents the Appearance tab offers. Both are returned so the
+ * frontend can prefer the explicit key where it exists. Strings stay raw: the
+ * name-to-hex mapping is UI policy and lives in src/lib/theme.ts.
+ *
+ * PARITY: mirrors get_system_appearance in src-tauri/src/lib.rs.
+ */
+ipcMain.handle('get-system-appearance', async () => {
+  const read = (key) =>
+    new Promise((resolve) => {
+      execFile('gsettings', ['get', 'org.gnome.desktop.interface', key],
+        { timeout: 5000 },
+        (error, stdout) => {
+          if (error) return resolve(null); // no schema, or no such key
+          // gsettings quotes strings: 'prefer-dark' -> prefer-dark
+          const value = (stdout || '').trim().replace(/^'(.*)'$/, '$1');
+          resolve(value === '' ? null : value);
+        });
+    });
+
+  const [colorScheme, accentColor, gtkTheme] = await Promise.all([
+    read('color-scheme'), read('accent-color'), read('gtk-theme'),
+  ]);
+  return { colorScheme, accentColor, gtkTheme };
+});
 
 /** What the settings UI needs to explain where the shortcut lives. */
 ipcMain.handle('get-shortcut-status', async () => ({

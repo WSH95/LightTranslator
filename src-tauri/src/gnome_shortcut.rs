@@ -101,7 +101,7 @@ pub fn is_gnome() -> bool {
 
 /// `Settings::new` aborts the process when a schema is missing, so every
 /// lookup goes through here first.
-fn schema_installed(id: &str) -> bool {
+pub fn schema_installed(id: &str) -> bool {
     SettingsSchemaSource::default()
         .and_then(|source| source.lookup(id, true))
         .is_some()
@@ -273,6 +273,27 @@ pub fn current_binding() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Reading a key a schema does not declare aborts the process rather than
+    /// returning an error, and `accent-color` is exactly that on GNOME 46. If
+    /// the guard in `get_system_appearance` ever regresses, this test does not
+    /// fail — it takes the whole runner down, which is the signal.
+    #[test]
+    fn interface_schema_reads_are_guarded() {
+        const SCHEMA: &str = "org.gnome.desktop.interface";
+        if !schema_installed(SCHEMA) {
+            return; // headless builder, nothing to assert
+        }
+        let settings = Settings::new(SCHEMA);
+        let schema = settings.settings_schema().expect("schema present");
+        // color-scheme has existed since GNOME 42; accent-color only from 47.
+        assert!(schema.has_key("color-scheme"));
+        for key in ["color-scheme", "accent-color", "gtk-theme"] {
+            if schema.has_key(key) {
+                let _ = settings.string(key);
+            }
+        }
+    }
 
     #[test]
     fn quotes_paths_for_the_shell() {

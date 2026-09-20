@@ -1,4 +1,4 @@
-import { Language, LlmPreset, TranslationProvider, TranslationProviderId } from './types';
+import type { Language, LlmPreset, TranslationProvider, TranslationProviderId } from './types';
 
 export const DEFAULT_SYSTEM_PROMPT = "Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.";
 
