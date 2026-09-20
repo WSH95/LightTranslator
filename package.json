@@ -1,9 +1,9 @@
 {
   "name": "lighttranslator",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
-  "description": "\u8f7b\u91cf\u7ea7\u7ffb\u8bd1\u5de5\u5177\uff0c\u652f\u6301\u5212\u8bcd\u7ffb\u8bd1\u3001\u622a\u56feOCR\u7b49\u529f\u80fd",
+  "description": "轻量级翻译工具，支持划词翻译、截图OCR等功能",
   "author": "LightTranslator",
   "license": "MIT",
   "homepage": "https://github.com/user/lighttranslator",
@@ -81,7 +81,7 @@
       "icon": "src-tauri/icons/icon.png",
       "category": "Utility",
       "maintainer": "LightTranslator",
-      "synopsis": "\u8f7b\u91cf\u7ea7\u7ffb\u8bd1\u5de5\u5177",
+      "synopsis": "轻量级翻译工具",
       "executableArgs": [
         "--ozone-platform=x11"
       ]
