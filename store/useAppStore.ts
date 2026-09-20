@@ -195,6 +195,11 @@ export const useAppStore = create<AppState>()(
         // Quick Window Language
         quickSourceLang: state.quickSourceLang,
         quickTargetLang: state.quickTargetLang,
+        // Appearance
+        appearanceTheme: state.appearanceTheme,
+        accentColor: state.accentColor,
+        followSystemAccent: state.followSystemAccent,
+        translationTextSize: state.translationTextSize,
       }),
     }
   )

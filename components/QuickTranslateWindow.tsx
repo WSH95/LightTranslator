@@ -22,11 +22,6 @@ const DROPDOWN_MIN_HEIGHT = 280; // Minimum window height when dropdown is open
 const TARGET_LANGUAGES = LANGUAGES.filter((lang) => lang.code !== 'auto');
 
 export const QuickTranslateWindow: React.FC = () => {
-  useEffect(() => {
-    document.body.style.background = 'transparent';
-    return () => { document.body.style.background = ''; };
-  }, []);
-
   const [sourceText, setSourceText] = useState('');
   const [translated, setTranslated] = useState('');
   const [loading, setLoading] = useState(false);

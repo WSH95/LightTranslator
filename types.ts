@@ -22,6 +22,9 @@ export interface LlmPreset {
   vision: boolean;
 }
 
+export type AppearanceTheme = 'system' | 'light' | 'dark';
+export type TranslationTextSize = 'small' | 'medium' | 'large';
+
 export interface AppSettings {
   autoTranslate: boolean;
   debounceMs: number;
@@ -65,6 +68,13 @@ export interface AppSettings {
   // Quick Window Language Settings (independent from main panel)
   quickSourceLang: LanguageCode;
   quickTargetLang: LanguageCode;
+
+  // Appearance
+  appearanceTheme: AppearanceTheme;
+  /** Light-mode hex of the chosen Yaru accent; see ACCENTS in constants.ts. */
+  accentColor: string;
+  followSystemAccent: boolean;
+  translationTextSize: TranslationTextSize;
 }
 
 export interface ProxySettings {

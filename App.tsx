@@ -22,14 +22,6 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('mode') === 'quick';
   });
-  useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.windowMode = isQuickMode ? 'quick' : 'main';
-    return () => {
-      delete root.dataset.windowMode;
-    };
-  }, [isQuickMode]);
-
   // Rounded corners must square off while the window is maximized. The real
   // state comes from the backend: comparing sizes against screen.avail* is
   // wrong under Wayland, where the workarea is not exposed to the page.

@@ -2,10 +2,130 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Design tokens — Ubuntu 24.04 / Yaru
+   --------------------------------------------------------------------------
+   `data-theme` on <html> is always a RESOLVED 'light' | 'dark'; src/lib/theme.ts
+   turns the user's 'system' preference into one of those. That keeps the dark
+   block declared exactly once and lets a backend gsettings read override
+   prefers-color-scheme without any CSS churn.
+
+   Only --bg-rgb and --accent-rgb are channel triplets, because only those two
+   are ever used at a non-1 alpha (the pop-up window opacity, and accent tints
+   and rings). Every other token is a finished colour with its alpha baked in.
+   ========================================================================== */
+:root {
+  color-scheme: light dark; /* narrowed once theme.ts writes data-theme */
+
+  --bg-rgb: 250 250 250;
+  --bg: rgb(var(--bg-rgb));
+  --card: #ffffff;
+  --card-border: rgba(0, 0, 0, .10);
+  --row-sep: rgba(0, 0, 0, .08);
+  --text: #2e2e2e;
+  --muted: #6f6f6f;
+  --placeholder: #8c8c8c;
+  --ctrl-bg: rgba(0, 0, 0, .08);
+  --ctrl-bg-hover: rgba(0, 0, 0, .14);
+  --pill-bg: rgba(0, 0, 0, .06);
+  --pill-bg-active: rgba(0, 0, 0, .12);
+  --hover-bg: rgba(0, 0, 0, .06);
+  --switcher-active: rgba(0, 0, 0, .10);
+  --seg-active: rgba(0, 0, 0, .10);
+  --seg-border: rgba(0, 0, 0, .12);
+  --switch-off: rgba(0, 0, 0, .15);
+  --knob: #ffffff;
+  --knob-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+  --radio-border: #9a9a9a;
+  --window-ring: rgba(0, 0, 0, .25);
+  --scroll-thumb: rgba(0, 0, 0, .20);
+  --scroll-thumb-hover: rgba(0, 0, 0, .35);
+  --danger: #DA3450;
+
+  /* theme.ts writes these four from the ACCENTS table in constants.ts */
+  --accent-light: #03875B;
+  --accent-light-rgb: 3 135 91;
+  --accent-dark: #3dc78f;
+  --accent-dark-rgb: 61 199 143;
+
+  /* ...and CSS picks the pair, the tint alpha and the on-accent foreground */
+  --accent: var(--accent-light);
+  --accent-rgb: var(--accent-light-rgb);
+  --accent-a: .12;
+  --accent-fg: #ffffff;
+  --accent-tint: rgb(var(--accent-rgb) / var(--accent-a));
+
+  /* quick-translate window chrome, written by theme.ts from the store */
+  --quick-bg-a: .95;
+  --quick-ring-a: .2;
+  --quick-ring-scale: 1;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-rgb: 36 36 36;
+  --card: #303030;
+  --card-border: rgba(255, 255, 255, .06);
+  --row-sep: rgba(255, 255, 255, .08);
+  --text: #ffffff;
+  --muted: #b8b8b8;
+  --ctrl-bg: rgba(255, 255, 255, .12);
+  --ctrl-bg-hover: rgba(255, 255, 255, .18);
+  --pill-bg: rgba(255, 255, 255, .10);
+  --pill-bg-active: rgba(255, 255, 255, .16);
+  --hover-bg: rgba(255, 255, 255, .08);
+  --switcher-active: rgba(255, 255, 255, .12);
+  --seg-active: rgba(255, 255, 255, .14);
+  --seg-border: rgba(255, 255, 255, .12);
+  --switch-off: rgba(255, 255, 255, .18);
+  --knob: #e0e0e0;
+  --knob-shadow: none;
+  --radio-border: #8a8a8a;
+  --window-ring: rgba(0, 0, 0, .6);
+  --scroll-thumb: rgba(255, 255, 255, .20);
+  --scroll-thumb-hover: rgba(255, 255, 255, .35);
+  --danger: #ff7b8a;
+
+  --accent: var(--accent-dark);
+  --accent-rgb: var(--accent-dark-rgb);
+  --accent-a: .16;
+  /* White on a lightened accent measures ~2.2:1. See DECISIONS. */
+  --accent-fg: #242424;
+
+  --quick-ring-scale: 3;
+}
+
+/* First-paint safety net. Applies only between the stylesheet loading and
+   theme.ts writing data-theme, so the dark block above stays the single
+   source. Tauri's CSP forbids an inline <head> script, so this is the
+   earliest a dark window can know it is dark. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --bg-rgb: 36 36 36;
+    --card: #303030;
+    --text: #ffffff;
+    --window-ring: rgba(0, 0, 0, .6);
+  }
+}
+
+/* Translation body text. The quick window runs a notch smaller than the main
+   window at every step; the design pins only the medium sizes (16 / 15). */
+html { --translation-size: 16px; }
+html[data-text-size="small"] { --translation-size: 14px; }
+html[data-text-size="large"] { --translation-size: 19px; }
+html[data-window-mode="quick"] { --translation-size: 15px; }
+html[data-window-mode="quick"][data-text-size="small"] { --translation-size: 13px; }
+html[data-window-mode="quick"][data-text-size="large"] { --translation-size: 18px; }
+
 html, body {
   background: transparent;
-  color: #1d1d1f;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: var(--text);
+  font-family: Ubuntu, Cantarell, 'Segoe UI', sans-serif;
   overflow: hidden;
   height: 100%;
   width: 100%;
@@ -20,7 +140,152 @@ html, body {
   -webkit-app-region: no-drag;
 }
 
-/* iOS/macOS Style Toggle Switch */
+/* ==========================================================================
+   Component classes
+   --------------------------------------------------------------------------
+   Written as plain CSS rather than @apply: once every colour is a var, the
+   direct declarations are shorter than the utility chains they replace, and
+   they stay readable next to the design spec.
+   ========================================================================== */
+@layer components {
+  /* --- buttons --- */
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: var(--text);
+    background: transparent;
+    transition: background-color 150ms ease;
+  }
+  .icon-btn:hover:not(:disabled) { background: var(--hover-bg); }
+  .icon-btn:disabled { opacity: .5; background: transparent; }
+
+  .icon-btn-sm { width: 32px; height: 32px; }
+  .icon-btn-xs { width: 30px; height: 30px; }
+
+  .btn {
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--ctrl-bg);
+    transition: background-color 150ms ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--ctrl-bg-hover); }
+  .btn-suggested { background: var(--accent); color: var(--accent-fg); }
+  .btn-suggested:hover:not(:disabled) { background: var(--accent); filter: brightness(1.08); }
+  .btn:disabled { opacity: .5; }
+
+  .pill {
+    height: 30px;
+    padding: 0 8px 0 12px;
+    border-radius: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--pill-bg);
+    transition: background-color 150ms ease;
+  }
+  .pill:hover:not(:disabled) { background: var(--pill-bg-active); }
+  .pill[data-open="true"] { background: var(--pill-bg-active); }
+  .pill:disabled { opacity: .5; }
+
+  .win-ctrl {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    color: var(--text);
+    background: var(--ctrl-bg);
+    transition: background-color 150ms ease;
+  }
+  .win-ctrl:hover { background: var(--ctrl-bg-hover); }
+
+  /* --- surfaces --- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+  }
+
+  /* Separators live between rows, so no row needs to know it is last. */
+  .list > * + * { border-top: 1px solid var(--row-sep); }
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 16px;
+  }
+
+  .field {
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+  .field::placeholder { color: var(--placeholder); }
+
+  /* --- popover --- */
+  .menu {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .12), 0 8px 24px rgba(0, 0, 0, .18);
+    transition: opacity 120ms ease;
+  }
+
+  .menu-item {
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    transition: background-color 150ms ease;
+  }
+  .menu-item:hover { background: var(--hover-bg); }
+  .menu-item[aria-selected="true"] { background: var(--pill-bg); font-weight: 500; }
+
+  /* --- typography --- */
+  .translation-text {
+    font-size: var(--translation-size);
+    line-height: 1.5;
+  }
+  html[data-window-mode="quick"] .translation-text { line-height: 1.6; }
+}
+
+/* One rule beats a focus-visible utility on forty elements. */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* iOS/macOS Style Toggle Switch — legacy, removed with the macOS skin */
 .toggle-checkbox:checked {
   right: 0;
   border-color: #34C759;
@@ -55,7 +320,7 @@ html, body {
   transition: transform 0.2s ease-in-out;
 }
 
-/* Traffic Light Hover Effects */
+/* Traffic Light Hover Effects — legacy, removed with the macOS skin */
 .traffic-light-group:hover .traffic-icon {
   opacity: 1;
 }
@@ -74,11 +339,11 @@ html, body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--scroll-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--scroll-thumb-hover);
 }
 
 /* App Window Glass */
@@ -126,7 +391,7 @@ input[type="range"] {
 
 /* Slider Track */
 input[type="range"]::-webkit-slider-runnable-track {
-  background: #C7C7CC;
+  background: var(--ctrl-bg);
   height: 4px;
   border-radius: 2px;
   transition: background-color 0.2s;
@@ -137,7 +402,7 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   margin-top: -8px;
-  background-color: #ffffff;
+  background-color: var(--knob);
   border: 0.5px solid rgba(0,0,0,0.04);
   box-shadow: 0 2px 4px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1);
   height: 20px;
@@ -148,7 +413,6 @@ input[type="range"]::-webkit-slider-thumb {
 
 input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.1);
-  background-color: #f5f5f5;
 }
 
 input[type="range"]:focus {

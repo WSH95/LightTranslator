@@ -56,6 +56,36 @@ export const LLM_PRESETS: LlmPreset[] = [
   { label: 'Ollama', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5vl:7b', vision: true },
 ];
 
+/**
+ * The ten Yaru accents offered in Settings > Appearance.
+ *
+ * `dark` is the light hex re-rendered at OKLCH L~=0.742 with chroma x1.19 and
+ * the hue held, then gamut-mapped back into sRGB (Orange, Blue, Purple and Red
+ * land near x0.7-0.8 because x1.19 leaves the gamut). That rule reproduces the
+ * approved #03875B -> #3dc78f pair, and every row clears 6:1 against --bg and
+ * 5:1 against --card in dark mode. Hand-edit a row rather than reaching for
+ * runtime colour maths.
+ *
+ * Swatch fills stay the canonical light hex in both themes; only the selection
+ * ring and the resolved --accent lighten.
+ */
+export const ACCENTS = [
+  { name: 'Orange', light: '#E95420', dark: '#ff835c' },
+  { name: 'Bark', light: '#787859', dark: '#aeae87' },
+  { name: 'Sage', light: '#657B69', dark: '#98b49d' },
+  { name: 'Olive', light: '#4B8501', dark: '#79c334' },
+  { name: 'Viridian', light: '#03875B', dark: '#3dc78f' },
+  { name: 'Prussian Green', light: '#308280', dark: '#5bbebb' },
+  { name: 'Blue', light: '#0073E5', dark: '#70aeff' },
+  { name: 'Purple', light: '#7764D8', dark: '#a79cff' },
+  { name: 'Magenta', light: '#B34CB3', dark: '#f070f0' },
+  { name: 'Red', light: '#DA3450', dark: '#ff7d87' },
+] as const;
+
+export type Accent = (typeof ACCENTS)[number];
+
+export const DEFAULT_ACCENT: Accent = ACCENTS[4]; // Viridian
+
 export const DEFAULT_SETTINGS = {
   autoTranslate: true,
   debounceMs: 500,
@@ -99,4 +129,10 @@ export const DEFAULT_SETTINGS = {
   // Quick Window Language Defaults
   quickSourceLang: 'auto' as const,
   quickTargetLang: 'zh-CN' as const,
+
+  // Appearance Defaults
+  appearanceTheme: 'system' as const,
+  accentColor: DEFAULT_ACCENT.light,
+  followSystemAccent: false,
+  translationTextSize: 'medium' as const,
 };
