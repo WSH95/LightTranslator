@@ -3,6 +3,12 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
+Last verified on merged `main` at `58dedc7` on 2026-09-20T14:35:23Z:
+`npm run typecheck`, `npm run build`, the five-file Node test command, both
+Electron syntax checks, `cargo check --all-targets` and `cargo test` all exited
+0. Rust ran 5 tests with no failures. The dconf read-only warning in the Rust
+test sandbox did not fail the guarded schema test.
+
 | Check | Command | Expected |
 | --- | --- | --- |
 | Build | `npm run build` | exits 0 |

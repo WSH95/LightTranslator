@@ -1,25 +1,24 @@
 ---
-updated_at: 2026-09-20T14:20:28Z
+updated_at: 2026-09-20T14:35:23Z
 updated_by: codex
 session_status: active
-branch: codex/auto-popup-sizing
-last_commit: 8db274b docs(steward): record the pop-up grab fix and 1.6.1
+branch: main
+last_commit: 58dedc7 fix: auto-size the translation pop-up without window gestures
 ---
 # Handoff
 
 ## Now
 
-The user-approved automatic pop-up sizing implementation is source-complete.
-GPT-5.6-sol max implemented it as explicitly requested. Independent task and
-whole-branch review passed after fixing legacy storage canonicalization and
-visible keyboard focus. Do not reimplement this work.
+The automatic pop-up sizing implementation is merged locally into `main` as
+commit `58dedc7`. GPT-5.6-sol max implemented it as requested. Independent task
+and whole-branch review passed after fixes for legacy storage canonicalization
+and visible keyboard focus. Do not reimplement this work.
 
-All source and records are uncommitted in
-`/tmp/lighttranslator-auto-popup-sizing`, branch `codex/auto-popup-sizing`,
-based on `main` at `8db274b`. The original checkout's tracked files remain
-unchanged. Await the user's integration choice; commit policy is ask. Suggested
-semantic commit: `fix: auto-size the translation pop-up without window gestures`.
-No commit, tag, push, installation or publication has been made.
+Fresh checks passed before the feature commit and again on merged `main`. The
+external worktree `/tmp/lighttranslator-auto-popup-sizing` remains registered
+on branch `codex/auto-popup-sizing`; the finishing workflow leaves worktrees
+outside the repository's standard worktree directories in place. Nothing was
+pushed, installed, tagged or published.
 
 The final test package is available in both checkouts at
 `src-tauri/target/release/bundle/deb/LightTranslator_1.6.2_amd64.deb`.
@@ -45,7 +44,8 @@ Electron retains programmatic `setSize` with user resizing disabled.
 ## Verification and limits
 
 Typecheck, production builds, all five Node test files (focused sizing 7/7 and
-persistence 7/7), Electron syntax, Cargo check and Rust 5/5 pass. Browser QA
+persistence 7/7), Electron syntax, Cargo check and Rust 5/5 pass. The same
+automated checks passed again after the fast-forward merge. Browser QA
 covers settings/reset, menu expansion/restoration, font sizes, real legacy
 storage/restart, and keyboard focus/arrow/reset operation. Native GTK/WebKit
 layout probes passed Wayland, X11 and 200% scaling. GTK/Electron screen-edge
@@ -65,12 +65,10 @@ in VERIFY.md and did not prevent the Debian build.
 
 ## Next steps
 
-1. Follow the user's integration choice: local commit/merge, approved push/PR,
-   or preserve the worktree. Do not commit or publish implicitly.
-2. Install/test the final package when authorized. Check actual Tauri Wayland,
+1. Install/test the final package when authorized. Check actual Tauri Wayland,
    Tauri X11 and Electron interior/edge clicks, selection/copy, scrolling,
    menu, repeated opening, dismissal, scaling and screen-edge placement.
-3. Update PLAN A7 only with actual native evidence. Browser/toolkit fixtures
+2. Update PLAN A7 only with actual native evidence. Browser/toolkit fixtures
    must not be treated as proof of packaged focus behavior.
 
 ## Warnings and retained local fixtures

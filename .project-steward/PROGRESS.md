@@ -2,6 +2,14 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T14:35:23Z — codex
+Committed the reviewed automatic pop-up sizing change as `58dedc7` and
+fast-forwarded local `main` from `8db274b`. Fresh checks passed before the
+commit and on merged `main`: typecheck, production build, five Node test files,
+both Electron entry syntax checks, Cargo all-target check and Rust 5/5. Nothing
+was pushed, installed, tagged or published. Packaged physical-input acceptance
+remains PLAN A7.
+
 ### 2026-09-20T14:20:28Z — codex
 Source implementation by GPT-5.6-sol max is complete on
 `codex/auto-popup-sizing`. Independent task and whole-branch review now have no
