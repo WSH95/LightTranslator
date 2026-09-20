@@ -49,8 +49,8 @@ export const WindowControls: React.FC = () => (
 /* Window resize handles                                               */
 /* ------------------------------------------------------------------ */
 
-const EDGE = 6;
-const CORNER = 12;
+const EDGE = 8;
+const CORNER = 16;
 
 /**
  * Edges are inset by CORNER so the eight regions never overlap and no
