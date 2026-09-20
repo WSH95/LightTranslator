@@ -2,6 +2,18 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T11:45:00Z — claude
+Native verification of the refresh on both backends. Tauri under GDK_BACKEND=x11
+(a native Wayland surface is not capturable and GNOME's screenshot D-Bus is
+locked down), Electron with --no-sandbox (this host's chrome-sandbox is not
+setuid). Confirmed: 760x520 -> 760x600 on Settings, maximize squares the 12px
+corners, `get_system_appearance` repaints the UI in Yaru Orange in BOTH
+backends, the pop-up opens at the pinned 360 width through the real command
+path and translates, and open-in-main-window transfers the text. Diagnosed a
+WebKitGTK-only antialiasing artifact (text outside a card reads heavier) as a
+transparent-window subpixel-AA fallback, not a CSS bug; recorded in RISKS.md
+with the evidence. Design handoff folder is now tracked.
+
 ### 2026-09-20T11:00:00Z — claude
 Ubuntu/Yaru UI refresh code-complete (cf59398..7dec432): theme tokens and four
 appearance settings, two-pane main window, `get_system_appearance` in both

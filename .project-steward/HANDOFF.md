@@ -3,7 +3,7 @@ updated_at: 2026-09-20T11:00:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: 7dec432 docs(steward): refresh decisions + the Orange contrast question
+last_commit: native verification of both backends (Ubuntu/Yaru refresh)
 ---
 # Handoff
 
@@ -12,7 +12,8 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**The Ubuntu 24.04 / Yaru UI refresh is code-complete.** All eight steps of the
+**The Ubuntu 24.04 / Yaru UI refresh is code-complete and natively verified
+on both backends.** All eight steps of the
 plan landed as six feature commits plus two steward commits, all on `main`,
 **unpushed**. Design source: `design_handoff_ubuntu_refresh/` (options 2a + 3a
 + 3b). Rationale: DECISIONS 0018-0020. Task list: PLAN.md "Ubuntu / Yaru UI
@@ -72,16 +73,11 @@ confirmation after installing.
 
 ## Next steps
 
-1. **Run it natively — nothing has been checked in a packaged app.**
-   `npm run app:dev`, then `npm run electron:dev`. Look at: the 12px window
-   radius and its squaring when maximised; **both drag regions** (Tauri reads
-   `data-tauri-drag-region` off the event target itself, so the header title and
-   the spacers carry it — dragging by the title is the thing to try); the live
-   gsettings read with the Appearance tab's "Follow system accent" on (this host
-   reports `color-scheme='default'`, `gtk-theme='Yaru'` → Orange); the pop-up at
-   its opacity; and the new tray/launcher artwork.
-   **Quit the installed app first**, or the single-instance plugin forwards to
-   it (see Warnings).
+1. **Three checks a machine could not do.** (a) Drag the window by its title —
+   a synthetic xdotool pointer cannot start a compositor-side interactive move,
+   so only the markup was verified. (b) Look at the tray icon in the GNOME
+   panel — the panel is not capturable here. (c) Decide on the WebKitGTK text
+   antialiasing finding in RISKS.md; the one-line fix is a typography call.
 2. Behaviour regression pass — none of this changed, but none of it has been
    exercised end to end: auto-translate debounce, Ctrl+Enter, paste-image OCR,
    clipboard translate, tray OCR result **while Settings is open**, shortcut

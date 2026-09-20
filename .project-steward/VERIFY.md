@@ -38,13 +38,39 @@ its pill, OCR dialog clamped to 488 in a 520px window, pop-up 360x111. Checked
 in both themes, all ten accents, all three text sizes, all four settings tabs,
 and the pop-up. No console errors.
 
-**Not covered**: nothing has been run in the packaged apps. The window radius
-and its squaring when maximised, the two drag regions (Tauri reads
-`data-tauri-drag-region` off the event target itself, so the header title and
-spacers carry it), the live gsettings read, and the tray/launcher artwork have
-only been exercised in a browser. `npm run app:dev` and `npm run electron:dev`
-are the next checks. Note the standing warning about quitting the installed app
-first.
+**Native verification, 2026-09-20 (both backends, real windows).** Tauri via
+`npm run app:dev` (note: `cargo` is not on PATH for npm scripts — export
+`~/.cargo/bin` first). The window is a native Wayland surface, so nothing
+X-based can see it and GNOME's screenshot D-Bus is locked down; a second run
+under `GDK_BACKEND=x11` makes it capturable with `import -window <id>` and
+drivable with `xdotool`. Confirmed:
+
+- Main window opens at **760x520**; opening Settings resizes it to **760x600**
+  and Back restores 760x520.
+- **Maximize squares the corners.** At 760x520 the diagonal reads
+  (0,0)-(2,2) transparent, (3,3) antialiased edge, (4,4) window background —
+  a 12px radius. Maximized to 1920x1048, only (0,0) is the 1px ring and
+  (1,1) onward is background.
+- **`get_system_appearance` works end to end in BOTH backends.** The host
+  reports `gtk-theme='Yaru'` and no `accent-color` key; turning on "Follow
+  system accent" repaints the UI in exactly `rgb(233,84,32)` = Yaru Orange,
+  in Tauri and in Electron.
+- Quick pop-up opens through the real command path
+  (`lighttranslator --quick-translate`, forwarded by single-instance) at the
+  pinned **360** width with a content-measured height, translates, and shows
+  the provider/source caption.
+- **"Open in main window"** hands the text to the main window and hides the
+  pop-up. (Capturing the pop-up first blur-closes it — click before capturing.)
+- Drag-region markup is correct: 3 elements carry `data-tauri-drag-region`
+  (header, title, spacer) and the 3 that do not all carry `no-drag`. The drag
+  itself could NOT be exercised — a synthetic xdotool pointer cannot start a
+  compositor-side interactive move. **Needs a human: drag the window by its
+  title.**
+- Electron needed `--no-sandbox` to start on this host (`chrome-sandbox` is not
+  root-owned setuid); see RISKS.md. The committed script is unchanged.
+
+**Still not covered**: the tray icon in the GNOME panel (not capturable), the
+behaviour regression pass, and anything in a packaged `.deb`.
 
 Behavior checked live in the dev server against a mock OpenAI-compatible server
 and, for the native `platform.request` transport, through a stub bridge that

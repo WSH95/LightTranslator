@@ -135,9 +135,13 @@ options 2a + 3a + 3b, approved by the user. Decisions 0018-0020.
       in both backends, macOS skin removed behind two grep gates (ada8631)
 - [x] U6 `feat(icons)`: SVG masters under `src-tauri/icons/source/`, full set
       regenerated via `cargo-tauri icon` (60a73b6)
-- [ ] U7 Hands-on verification in the packaged apps: window radius and its
-      squaring when maximised, both drag regions, the live gsettings read, tray
-      and launcher artwork, on both backends. Not run this session.
+- [x] U7 Native verification of both backends (see VERIFY.md): geometry,
+      maximize-squaring, the live gsettings accent read, the quick pop-up
+      through the real command path, and open-in-main-window. Two findings
+      recorded in RISKS.md
+- [ ] U8 Remaining human checks: drag the window by its title (synthetic input
+      cannot start a compositor move), the tray icon in the GNOME panel, and
+      the behaviour regression pass in a packaged build
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
