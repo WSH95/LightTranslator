@@ -210,10 +210,10 @@ function createMainWindow({ startHidden = false } = {}) {
     // Titles match tauri.conf.json: window managers and the xdotool
     // activation below identify the windows by name.
     title: 'LightTranslator',
-    width: 480,
-    height: 680,
-    minWidth: 400,
-    minHeight: 500,
+    width: 760,
+    height: 520,
+    minWidth: 600,
+    minHeight: 420,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -266,12 +266,14 @@ function createQuickWindow() {
   // Sizes mirror tauri.conf.json's "quick" window
   quickWindow = new BrowserWindow({
     title: 'Quick Translate',
-    width: 500,
-    height: 350,
-    minWidth: 300,
+    width: 360,
+    height: 200,
+    // Width is pinned: the pop-up is a fixed 360 column and only its height
+    // tracks the content. maxHeight matches MAX_HEIGHT in the renderer.
+    minWidth: 360,
     minHeight: 80,
-    maxWidth: 600,
-    maxHeight: 600,
+    maxWidth: 360,
+    maxHeight: 500,
     frame: false,
     transparent: true,
     alwaysOnTop: true,

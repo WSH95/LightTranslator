@@ -1,10 +1,15 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { X, Copy, Check, ScanText, Loader2, ClipboardList } from 'lucide-react';
+import {
+  ArrowRightLeft, Check, ClipboardList, Copy, LoaderCircle, ScanText, X,
+} from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText, translateImage } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
-import { PROVIDERS } from '../constants';
+import { LANGUAGES, PROVIDERS } from '../constants';
 import { platform } from '../src/lib/platform';
+import { LanguagePill } from './ui';
+
+const TARGET_LANGUAGES = LANGUAGES.filter((language) => language.code !== 'auto');
 
 interface TranslatorViewProps {
   onOpenOCR: () => void;
@@ -16,6 +21,8 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     translatedText,
     sourceLang,
     targetLang,
+    setSourceLang,
+    setTargetLang,
     autoTranslate,
     debounceMs,
     isTranslating,
@@ -180,6 +187,14 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     clearModelVerification();
   }, [provider, openaiModel, clearModelVerification]);
 
+  // Moved here from the title bar: the language choosers now live in the
+  // panes, and the swap control sits in the gap between them.
+  const handleSwap = () => {
+    if (sourceLang === 'auto') return;
+    setSourceLang(targetLang);
+    setTargetLang(sourceLang);
+  };
+
   const handleCopy = async () => {
     if (translatedText) {
       try {
@@ -249,14 +264,66 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     reader.readAsDataURL(file);
   };
 
-  return (
-    <div className="flex flex-col h-full overflow-hidden relative font-sans px-4 pb-4 gap-3">
+  const providerName = PROVIDERS.find((entry) => entry.id === provider)?.name ?? 'Unknown';
+  const busy = isTranslating || isProcessingImage;
+  const status = isProcessingImage
+    ? 'Scanning image\u2026'
+    : isTranslating
+      ? 'Translating\u2026'
+      : `Ready \u00b7 ${providerName}`;
 
-      {/* Top: Input Area - Glass Card */}
-      <div className="flex-1 min-h-0 bg-macos-card border border-macos-cardBorder shadow-macos-card rounded-2xl p-4 relative group flex flex-col transition-all focus-within:ring-2 focus-within:ring-macos-active/20 focus-within:border-macos-active/50">
+  return (
+    <div className="flex-1 min-h-0 grid grid-cols-2 gap-3 pt-1 px-3 pb-3 relative">
+
+      {/* ---------------- source ---------------- */}
+      <div className="card overflow-hidden flex flex-col min-h-0">
+        <div className="h-12 shrink-0 flex items-center justify-between pl-[10px] pr-2">
+          <LanguagePill
+            value={sourceLang}
+            options={LANGUAGES}
+            onChange={setSourceLang}
+            title="Source language"
+          />
+          <div className="flex gap-[2px]">
+            <button
+              type="button"
+              onClick={onOpenOCR}
+              className="icon-btn icon-btn-sm"
+              title={ocrStatus.available ? 'OCR screenshot or image' : 'OCR unavailable \u2014 click to install dependencies'}
+              aria-label="OCR screenshot or image"
+            >
+              <ScanText size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={handleClipboardTranslate}
+              className="icon-btn icon-btn-sm"
+              title="Paste and translate"
+              aria-label="Paste and translate"
+            >
+              <ClipboardList size={15} />
+            </button>
+            {inputText && (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputText('');
+                  setTranslatedText('');
+                  textareaRef.current?.focus();
+                }}
+                className="icon-btn icon-btn-sm"
+                title="Clear"
+                aria-label="Clear"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+        </div>
+
         <textarea
           ref={textareaRef}
-          className="w-full flex-1 min-h-0 bg-transparent resize-none focus:outline-none text-lg text-gray-800 placeholder-gray-400 font-normal leading-relaxed tracking-normal overflow-y-auto"
+          className="translation-text flex-1 min-h-0 w-full bg-transparent resize-none overflow-y-auto focus:outline-none text-text placeholder:text-placeholder pt-1.5 px-4 pb-4 selection:bg-accent/20"
           placeholder="Enter text..."
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -269,83 +336,68 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
           onPaste={handlePaste}
           spellCheck="false"
         />
+      </div>
 
-        {isProcessingImage && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl z-10">
-            <Loader2 size={32} className="text-macos-active animate-spin mb-3" />
-            <span className="text-sm font-semibold text-macos-text tracking-wide">Scanning Image...</span>
-          </div>
-        )}
+      {/* ---------------- target ---------------- */}
+      <div className="card overflow-hidden flex flex-col min-h-0">
+        <div className="h-12 shrink-0 flex items-center justify-between pl-[10px] pr-2">
+          <LanguagePill
+            value={targetLang}
+            options={TARGET_LANGUAGES}
+            onChange={setTargetLang}
+            align="left"
+            title="Target language"
+          />
+          <button
+            type="button"
+            onClick={handleCopy}
+            disabled={!translatedText}
+            className="icon-btn icon-btn-sm"
+            title="Copy translation"
+            aria-label="Copy translation"
+          >
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+          </button>
+        </div>
 
-        {/* Floating Controls for Input */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-          <button
-            onClick={onOpenOCR}
-            className={`p-1.5 bg-white shadow-sm border rounded-lg transition-colors hover:scale-105 relative ${ocrStatus.available
-                ? 'border-black/5 text-macos-muted hover:text-macos-active'
-                : 'border-amber-500/30 text-amber-500 hover:text-amber-600'
-              }`}
-            title={ocrStatus.available ? 'Upload Image for OCR' : 'OCR Unavailable - Click to install dependencies'}
-          >
-            <ScanText size={16} />
-            {!ocrStatus.available && ocrStatus.checked && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-500 rounded-full" />
-            )}
-          </button>
-          <button
-            onClick={handleClipboardTranslate}
-            className="p-1.5 bg-white shadow-sm border border-black/5 rounded-lg text-macos-muted hover:text-macos-active transition-colors hover:scale-105"
-            title="Paste & Translate"
-          >
-            <ClipboardList size={16} />
-          </button>
-          {inputText && (
-            <button
-              onClick={() => { setInputText(''); setTranslatedText(''); textareaRef.current?.focus(); }}
-              className="p-1.5 bg-white shadow-sm border border-black/5 rounded-lg text-macos-muted hover:text-red-500 transition-colors hover:scale-105"
-            >
-              <X size={16} />
-            </button>
+        {/* lang={targetLang} drives the CJK glyph variant: the ideographic
+            full stop sits bottom-left in Simplified Chinese and centred in
+            Traditional. Without it the engine picks whichever CJK font
+            fontconfig offers an English document. */}
+        <div
+          lang={targetLang}
+          className="translation-text flex-1 min-h-0 overflow-y-auto whitespace-pre-wrap pt-1.5 px-4 pb-4 text-text selection:bg-accent/20"
+        >
+          {errorMessage ? (
+            <span lang="en" className="text-sm text-danger">{errorMessage}</span>
+          ) : (
+            translatedText || (
+              <span lang="en" className="text-placeholder select-none">Translation will appear here...</span>
+            )
           )}
+        </div>
+
+        <div className="shrink-0 flex items-center gap-2 px-4 pb-3 text-xs text-muted">
+          {busy
+            ? <LoaderCircle size={16} className="shrink-0 text-accent animate-spin" />
+            : <span className="shrink-0 w-[7px] h-[7px] rounded-full bg-accent" />}
+          <span className="truncate">{status}</span>
         </div>
       </div>
 
-      {/* Bottom: Output Area - Darker/Different Card.
-          The output carries lang={targetLang}: it drives the CJK glyph
-          variant, e.g. the ideographic full stop sits at the bottom-left in
-          Simplified Chinese and centred in Traditional. Without it the engine
-          picks whichever CJK font fontconfig offers an English document. */}
-      <div className="flex-1 min-h-0 bg-white/30 border border-macos-cardBorder shadow-sm rounded-2xl p-4 relative group transition-colors flex flex-col">
-        {errorMessage ? (
-          <div className="h-full flex items-center justify-center text-red-500 text-sm font-medium animate-in fade-in">
-            <span className="bg-red-50 px-4 py-2 rounded-lg border border-red-100 shadow-sm">{errorMessage}</span>
-          </div>
-        ) : (
-          <div
-            lang={targetLang}
-            className="w-full flex-1 min-h-0 text-lg text-gray-800 font-normal leading-relaxed overflow-y-auto whitespace-pre-wrap selection:bg-macos-active/20"
-          >
-            {translatedText || <span lang="en" className="text-gray-400 select-none italic">Translation will appear here...</span>}
-          </div>
-        )}
-
-        {isTranslating && (
-          <div className="absolute top-4 right-4 bg-white/80 backdrop-blur px-2 py-1 rounded-md shadow-sm border border-black/5">
-            <Loader2 size={16} className="text-macos-active animate-spin" />
-          </div>
-        )}
-
-        {/* Floating Controls for Output */}
-        {translatedText && !isTranslating && (
-          <button
-            onClick={handleCopy}
-            className="absolute top-4 right-4 p-2 bg-white hover:bg-macos-active hover:text-white rounded-xl text-macos-muted transition-all opacity-0 group-hover:opacity-100 shadow-md border border-black/5 scale-90 hover:scale-100 active:scale-95"
-            title="Copy"
-          >
-            {copied ? <Check size={18} /> : <Copy size={18} />}
-          </button>
-        )}
-      </div>
+      {/* Deliberately off-centre: the spec places this 32px below the grid's
+          padding box, so it straddles the bottom edge of the pane top rows
+          rather than centring on them. */}
+      <button
+        type="button"
+        onClick={handleSwap}
+        disabled={sourceLang === 'auto'}
+        className="swap-btn absolute left-1/2 -translate-x-1/2 top-[32px]"
+        title={sourceLang === 'auto' ? 'Pick a source language to swap' : 'Swap languages'}
+        aria-label="Swap languages"
+      >
+        <ArrowRightLeft size={13} />
+      </button>
     </div>
   );
 };
