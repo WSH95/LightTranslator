@@ -640,3 +640,21 @@ as a deferred diagnostics-only issue: an explicit cause remains in the log and
 the repeated hide is idempotent. No new blur delay or dismissal-state machinery
 is justified by that Minor finding. Source integration is ready; packaged
 physical-input acceptance remains open.
+
+## 0024 — 2026-09-20 — Publish 1.6.2 from the accepted Wayland build
+
+**Context**: v1.4.0 is the latest public release. Versions 1.5.0 through 1.6.1
+were local acceptance builds. The user installed the final 1.6.2 Tauri package
+in the original Wayland problem environment, tested it without problems and
+requested a direct push and latest release. The existing release format carries
+separate packages for Ubuntu 22.04+ and Ubuntu 18.04–20.04.
+
+**Decision**: Publish v1.6.2 with the jammy-built Tauri package and a new
+Electron package from the same source. Release notes cover the full v1.4.0 to
+v1.6.2 range. The user's Tauri Wayland test closes acceptance of the reported
+click-to-dismiss issue. Manual Tauri X11 and Electron installation remain
+compatibility coverage, not a claim attached to this acceptance result.
+
+**Consequences**: v1.6.2 becomes the first public release of the Ubuntu UI
+refresh and the automatic pop-up sizing work. Both uploaded assets must be
+downloaded after publication and compared with their local SHA-256 values.

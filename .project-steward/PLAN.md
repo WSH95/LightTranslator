@@ -214,8 +214,9 @@ Decision: DECISIONS 0023.
       typecheck, production build, Electron syntax, Cargo check and Rust tests
 - [x] A6 Bump the five established project version locations to 1.6.2 for an
       unambiguous local acceptance package
-- [ ] A7 Complete packaged native acceptance on Tauri Wayland, Tauri X11 and
-      Electron (interaction, dismissal, menu, scrolling, scaling and placement)
+- [x] A7 Complete packaged acceptance in the original Tauri Wayland problem
+      environment; the user installed the final package, tested it and reported
+      no problems
 - [x] A8 Build the local 1.6.2 Tauri `.deb` in the jammy container; do not tag,
       push or publish
 - [x] A9 Inspect the 1.6.2 package metadata, contents and GLIBC floor
@@ -226,6 +227,10 @@ Decision: DECISIONS 0023.
 
 - [x] A12 Complete independent task and whole-branch review; close both
       blocking findings and verify keyboard interaction in the browser
+- [x] A13 Build and inspect the 1.6.2 Electron `.deb` for Ubuntu 18.04–20.04;
+      keep manual Tauri X11 and Electron installation coverage explicit
+- [ ] A14 Push `main`, tag v1.6.2 and publish both Debian assets as the latest
+      GitHub release with notes covering all changes since v1.4.0
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 

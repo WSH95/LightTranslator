@@ -1,24 +1,23 @@
 ---
-updated_at: 2026-09-20T14:35:23Z
+updated_at: 2026-09-20T14:51:16Z
 updated_by: codex
 session_status: active
 branch: main
-last_commit: 58dedc7 fix: auto-size the translation pop-up without window gestures
+last_commit: "b6bee54 docs(steward): record popup sizing merge"
 ---
 # Handoff
 
 ## Now
 
 The automatic pop-up sizing implementation is merged locally into `main` as
-commit `58dedc7`. GPT-5.6-sol max implemented it as requested. Independent task
-and whole-branch review passed after fixes for legacy storage canonicalization
-and visible keyboard focus. Do not reimplement this work.
+commit `58dedc7`. The user installed the final 1.6.2 Tauri package in the
+original Wayland problem environment, tested it and reported no problems. This
+closes acceptance of the reported click-to-dismiss issue.
 
 Fresh checks passed before the feature commit and again on merged `main`. The
-external worktree `/tmp/lighttranslator-auto-popup-sizing` remains registered
-on branch `codex/auto-popup-sizing`; the finishing workflow leaves worktrees
-outside the repository's standard worktree directories in place. Nothing was
-pushed, installed, tagged or published.
+user requested a direct push and a latest v1.6.2 GitHub release whose notes
+cover all changes since v1.4.0. The release has not been pushed or published
+yet.
 
 The final test package is available in both checkouts at
 `src-tauri/target/release/bundle/deb/LightTranslator_1.6.2_amd64.deb`.
@@ -26,6 +25,12 @@ It is 6,041,218 bytes, SHA-256
 `8097cd8d1537b3dea779cae16f76252aa141dbc7170fae46098f8257508fcc31`,
 package `light-translator` 1.6.2 amd64, GLIBC floor 2.34. The jammy rebuild
 includes both review fixes. This supersedes earlier 1.6.2 candidates.
+
+The Electron release package is `dist-electron/LightTranslator_1.6.2_amd64.deb`,
+92,682,104 bytes, SHA-256
+`9fc30a64487b4b0f6d28e2891a1f5dcd9bbcfeb4d3871628c9b430e37a7ccd19`,
+package `lighttranslator` 1.6.2 amd64. It contains the app archive, desktop
+entry, icons and GNOME placement extension.
 
 ## Behavior
 
@@ -51,25 +56,24 @@ storage/restart, and keyboard focus/arrow/reset operation. Native GTK/WebKit
 layout probes passed Wayland, X11 and 200% scaling. GTK/Electron screen-edge
 probes passed under Mutter. See VERIFY.md for the evidence boundary.
 
-**Packaged physical-input acceptance remains open (PLAN A7).** The original
-click-to-disappear report is not yet proven fixed on native Wayland. Earlier
-1.6.1 checks used `GDK_BACKEND=x11`; do not repeat the old handoff's broader
-success claim or unproven grab-timestamp explanation. Enable reason-only
-focus/show/hide logs with `LIGHTTRANSLATOR_QUICK_DEBUG=1` for native acceptance.
-A Minor remains: an explicit hide can be followed by a duplicate blur/hide log;
-the original reason remains present and repeated hide is idempotent.
+The user completed packaged acceptance in the original Tauri Wayland problem
+environment and reported no problems. Packaged Tauri X11 and Electron were not
+manually installed in this round; source, renderer, toolkit and package checks
+cover those paths. A Minor remains: an explicit hide can be followed by a
+duplicate blur/hide log; the original reason remains present and repeated hide
+is idempotent.
 
-No Electron package was built. Whole-tree rustfmt still reports old formatting
-drift; it was not mass-reformatted. Existing packaging notices are documented
-in VERIFY.md and did not prevent the Debian build.
+Whole-tree rustfmt still reports old formatting drift; it was not
+mass-reformatted. Existing packaging notices are documented in VERIFY.md and
+did not prevent either Debian build.
 
 ## Next steps
 
-1. Install/test the final package when authorized. Check actual Tauri Wayland,
-   Tauri X11 and Electron interior/edge clicks, selection/copy, scrolling,
-   menu, repeated opening, dismissal, scaling and screen-edge placement.
-2. Update PLAN A7 only with actual native evidence. Browser/toolkit fixtures
-   must not be treated as proof of packaged focus behavior.
+1. Commit and push the acceptance/frontmatter records on `main`.
+2. Tag and publish v1.6.2 as the latest GitHub release with both Debian assets
+   and notes covering v1.4.0 through v1.6.2.
+3. Download both published assets and compare their SHA-256 values with the
+   local release packages, then record the release URL.
 
 ## Warnings and retained local fixtures
 

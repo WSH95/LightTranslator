@@ -3,11 +3,22 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
-Last verified on merged `main` at `58dedc7` on 2026-09-20T14:35:23Z:
+Last verified on merged `main` at `b6bee54` on 2026-09-20T14:51:16Z:
 `npm run typecheck`, `npm run build`, the five-file Node test command, both
 Electron syntax checks, `cargo check --all-targets` and `cargo test` all exited
 0. Rust ran 5 tests with no failures. The dconf read-only warning in the Rust
 test sandbox did not fail the guarded schema test.
+
+The release-preparation rerun also passed the HANDOFF.md PyYAML parse,
+typecheck, the five-file Node test command, both Electron syntax checks,
+`cargo check --all-targets`, Rust 5/5 and byte-for-byte comparison of both
+renamed upload assets with their source packages. `npm run electron:build:deb`
+included a fresh production build.
+
+The user installed and tested the final 1.6.2 Tauri package in the original
+Wayland problem environment and reported no problems. This is the packaged
+physical-input acceptance for the reported issue. Tauri X11 and Electron did
+not receive a manual installation pass in this round.
 
 | Check | Command | Expected |
 | --- | --- | --- |
@@ -100,16 +111,22 @@ GLIBC_2.34; the desktop entry, icons and GNOME placement extension are included.
 The identical artifact is in the original checkout's release bundle directory.
 It has not been installed, tagged or published.
 
+`npm run electron:build:deb` produced
+`dist-electron/LightTranslator_1.6.2_amd64.deb`, 92,682,104 bytes, SHA-256
+`9fc30a64487b4b0f6d28e2891a1f5dcd9bbcfeb4d3871628c9b430e37a7ccd19`.
+Package metadata is `lighttranslator` 1.6.2 amd64, with conflicts against the
+Tauri package. The archive contains `app.asar`, the desktop entry, icons and the
+GNOME placement extension. The build completed after the packager downloaded
+its Electron runtime in the authorized network environment.
+
 The build has pre-existing notices about old Browserslist data, the `.app`
 bundle identifier suffix, and an unavailable `__TAURI_BUNDLE_TYPE` marker.
 These did not prevent the Debian bundle; automatic updater behavior is not
 covered by this task.
 
-**Not yet established**: packaged Tauri Wayland/X11 and Electron acceptance of
-interior/edge clicks, selection/copy, scrolling, the language menu, repeated
-opening, external-focus/Escape/Close/Open-main dismissal, scaling and
-screen-edge placement. Do not describe the click-to-disappear report as fixed
-until that native acceptance passes.
+**Not yet established**: manual packaged Tauri X11 and Electron acceptance of
+the complete interaction matrix. The accepted Tauri Wayland package covers the
+original click-to-disappear report.
 
 **Release artifact 1.6.1** — `LightTranslator_1.6.1_amd64.deb`, 6048522 bytes,
 sha256 `7a582783e313ed1355b2dd72e219817552e468bbe65ed2fbbaf8accd3ab6b62e`.

@@ -2,6 +2,16 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T14:48:14Z — codex
+The user installed the final 1.6.2 Tauri package in the original Wayland
+problem environment and reported no problems, closing acceptance of the
+reported pop-up issue. Reproduced the HANDOFF.md frontmatter failure: the
+unquoted `fix:` in `last_commit` starts a YAML mapping. Quoted the value and
+verified it with PyYAML. Built and inspected the Electron 1.6.2 Debian package.
+Fresh typecheck, Node tests, Electron syntax, Cargo check, Rust 5/5 and upload
+asset comparisons pass. Publication will carry both packages and release notes
+since v1.4.0.
+
 ### 2026-09-20T14:35:23Z — codex
 Committed the reviewed automatic pop-up sizing change as `58dedc7` and
 fast-forwarded local `main` from `8db274b`. Fresh checks passed before the
