@@ -3,7 +3,7 @@ updated_at: 2026-09-20T11:00:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: ab9cc78 chore(release): 1.6.0
+last_commit: 090bdfc chore(release): 1.6.1
 ---
 # Handoff
 
@@ -12,37 +12,38 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**v1.6.0 is cut and its `.deb` is built, awaiting the user's test.** It answers
-the three things that came back from their 1.5.0 test: the quick pop-up's
-missing scroll container and unresizable window, the translator panes' missing
-hover/focus feedback, and a request for a frosted-glass theme. Rationale:
-DECISIONS 0021. Tasks: PLAN.md "Post-1.5.0 fixes + resize + glass".
+**v1.6.1 is cut and its `.deb` is built, awaiting the user's test.** It fixes
+the quick pop-up regressions 1.6.0 introduced: the pop-up dismissed itself when
+clicked, dragged or resized. Rationale: DECISIONS 0022.
 
-Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.6.0_amd64.deb`,
-sha256 `3593bcdf21c197d0f323aaeed082b0bd08113c3ccc55b1df611dc09fade1c440`,
+Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.6.1_amd64.deb`,
+sha256 `7a582783e313ed1355b2dd72e219817552e468bbe65ed2fbbaf8accd3ab6b62e`,
 GLIBC floor 2.34. Not tagged, not published.
 
-What a successor should not re-derive, on top of the 1.5.0 list:
+What a successor should not re-derive:
 
-- **Two of the three reports were regressions the refresh caused**, checked
-  against `7dc5f6b` rather than assumed. Edge resize, by contrast, never
-  existed in this app — it is a new feature, not a fix.
-- **Frameless windows get no resize border**, and both engines claim the
-  outermost pixels for their own hit test (~6px Chromium, ~5px tao). The app
-  draws 8px handles behind that. Do not shrink them without re-measuring.
-- **Tauri and Electron resize differently on purpose.** Wayland forbids a
-  client moving its own window, so only a compositor-side grab can work there;
-  Electron has no such API and drags bounds by hand, which is fine because it
-  targets X11 sessions.
-- **The pop-up cannot be driven by UI automation** — it blur-closes, so any
-  focus change hides it. Its resize needs a human.
-- **`surfaceStyle` is the glass field**, not `theme`; `appearanceTheme` already
-  means light/dark. The Settings group is titled "Theme".
+- **A compositor grab looks exactly like a click-away.** On GNOME Wayland
+  `startDragging`/`startResizeDragging` make mutter clear the client's keyboard
+  focus; tao reports a plain `Focused(false)`. Any hide-on-blur has to be
+  suppressed around a grab.
+- **The backend is the sole owner of the pop-up's hide-on-blur.** Do not add a
+  renderer-side hider back — two independent hiders are what made the
+  suppression unhonourable in the first place.
+- **WebKitGTK dispatches `pointerdown` but not `pointermove` for mouse**, and
+  delivers no motion once the pointer leaves the window. Hand-rolled drag or
+  resize is unreliable there; hand grabs to the compositor. Electron is fine
+  (Chromium has pointer capture).
+- **`start_resize_dragging` is behind Tauri's `unstable` feature** (it lives on
+  `Window`, and `WebviewWindow` only re-exposes `start_dragging`). That is why
+  resizes go through a flag command plus the JS window API.
+- **The pop-up cannot be verified by automation**: it hides on any focus change,
+  WebKitGTK throttles its hidden webview so HMR does not reach it, and
+  synthetic pointers cannot start a grab. Restart the app; verify by hand.
 
 ## In flight
 
-Tree clean. Sixteen commits on `main`, **none pushed**, ending at `ab9cc78`.
-1.6.0 is built but not tagged and not published.
+Tree clean. Nineteen commits on `main`, **none pushed**, ending at `090bdfc`.
+1.6.1 is built but not tagged and not published.
 
 ## Validation completed
 
@@ -54,16 +55,18 @@ confirmation after installing.
 
 ## Next steps
 
-1. **The user is testing the installed 1.6.0 package.** Wait for their report.
-2. Two checks only a human can do: drag the **pop-up's** edges (it blur-closes,
-   so automation cannot hold focus), and Tauri edge resize on the main window
-   (a synthetic pointer cannot start a compositor-side grab; the handler itself
-   was confirmed to fire). Also worth a glance: the tray icon in the panel.
-3. Decide the WebKitGTK antialiasing item in RISKS.md. Glass mode incidentally
-   removes the inconsistency, which may change the answer.
-4. Decide the Yaru Orange contrast question in QUESTIONS.md before publishing.
-5. Electron `.deb` still not built this session (`npm run electron:build:deb`).
-6. Then tag and publish.
+1. **The user is testing 1.6.1.** The specific question automation could not
+   answer: does the pop-up now actually **move** when dragged by its header and
+   **widen** when dragged by its right edge? The "no longer vanishes" half is
+   verified; the "actually moves/resizes" half is not.
+2. If it still will not move, the next suspect is the grab serial: tao calls
+   `begin_move_drag`/`begin_resize_drag` with `GDK_CURRENT_TIME` across a
+   five-hop async dispatch, and mutter silently drops a grab with a stale
+   serial. That would need the request to carry the originating event's
+   timestamp.
+3. Still open from earlier rounds: the WebKitGTK antialiasing item in RISKS.md,
+   the Yaru Orange contrast question in QUESTIONS.md, and the Electron `.deb`.
+4. Then tag and publish.
 
 ## Blockers
 

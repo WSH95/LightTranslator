@@ -553,3 +553,35 @@ so Settings > Pop-up > Window carries a Reset. Glass also makes every surface
 non-opaque, which incidentally removes the WebKitGTK antialiasing
 inconsistency recorded in RISKS.md — at the cost of uniformly heavier text.
 
+## 0022 — 2026-09-20 — The backend owns the pop-up's hide-on-blur
+
+**Context**: The quick pop-up vanished on click and would neither move nor
+resize. On GNOME Wayland both `startDragging` and `startResizeDragging` hand
+the window to the compositor; mutter clears the client's keyboard focus for the
+grab, which arrives as a plain `Focused(false)`. Nothing in tao or Tauri
+separates that from a genuine click-away, and **two** independent handlers hid
+the window — one in Rust, one in the renderer.
+**Decision**: The backend is the sole owner of hide-on-blur; the renderer's
+listener is deleted. `start_quick_drag` sets a suppression flag and starts the
+move in one command so the blur cannot arrive unguarded; resizes `await`
+`set_quick_drag_active` first, because `start_resize_dragging` is only on
+`Window`, which sits behind Tauri's `unstable` feature. The flag clears on the
+next focus-in and after 1s regardless. Electron brackets the same state with
+`will-move`/`moved`. Escape now closes the pop-up.
+**Consequences**: Suppression is only honourable with one hider, which is why
+consolidation came first. A hand-rolled resize was tried and rejected on
+evidence: WebKitGTK dispatches `pointerdown` but not `pointermove` for mouse
+input, and delivers no motion once the pointer passes the window edge, so the
+drag stalls the moment the pointer outruns the edge. The 1s watchdog bounds the
+damage if a grab never starts. The pop-up shows only an East grip, which also
+removes the dead perimeter ring that made ordinary clicks land on a handle, and
+the NE-grip/close-button overlap. Height always follows the content, so
+`quickWindowHeight` is gone.
+
+**Testing note worth keeping**: the pop-up cannot be verified by automation —
+it hides on any focus change, WebKitGTK throttles its hidden webview so HMR does
+not reach it reliably, and synthetic pointers cannot start a compositor grab.
+The 1.6.0 round proved the resize on Electron and inferred Tauri was fine; that
+test could not have failed, so it proved nothing. Verify pop-up behaviour on
+Tauri, with a real mouse.
+

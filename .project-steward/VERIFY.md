@@ -25,6 +25,26 @@ unguarded read aborts. Electron: `electron/main.js` via `execFile('gsettings')`,
 exposed in `electron/preload.cjs`. `npm run typecheck` proves the Electron side
 implements it, because `PlatformBackend` is derived from the Tauri object.
 
+**Release artifact 1.6.1** — `LightTranslator_1.6.1_amd64.deb`, 6048522 bytes,
+sha256 `7a582783e313ed1355b2dd72e219817552e468bbe65ed2fbbaf8accd3ab6b62e`.
+Jammy container; GLIBC floor **2.34**.
+
+Verified natively on **Tauri** (`GDK_BACKEND=x11`), which is the backend that
+can actually exhibit the bug:
+
+- Pressing the header, pressing the right edge, and clicking the body all leave
+  the pop-up **visible** — the dismiss-on-click bug is fixed.
+- A real focus change (`xdotool windowactivate` on another window) still
+  dismisses it, so the suppression does not leak. Note a synthetic *click* on
+  another window does not transfer focus here and is not a valid test of this.
+- **Escape** closes the pop-up.
+
+**Cannot be verified by automation, and was not**: whether the grabs actually
+move and resize the window. Synthetic pointers cannot start a compositor grab.
+Two further traps found while testing — the pop-up hides on any focus change
+(so a screenshot kills it), and WebKitGTK throttles its hidden webview so HMR
+does not reach it reliably. Restart the app rather than trusting HMR there.
+
 **Release artifact 1.6.0** — `LightTranslator_1.6.0_amd64.deb`, 6033208 bytes,
 sha256 `3593bcdf21c197d0f323aaeed082b0bd08113c3ccc55b1df611dc09fade1c440`.
 Built in the jammy container; GLIBC floor **2.34**, so it starts on Ubuntu

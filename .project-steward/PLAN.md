@@ -178,6 +178,18 @@ From the user's test of 1.5.0. Decisions 0021.
       automation cannot hold focus on it), and Tauri edge resize (a synthetic
       pointer cannot start a compositor-side grab)
 
+## Quick pop-up: dismiss/drag/resize fix (2026-09-20)
+
+From the user's test of 1.6.0. Decisions 0022.
+
+- [x] W1 Backend becomes the sole owner of hide-on-blur (b41297d)
+- [x] W2 Drag/resize suppression flag in both backends; Escape closes (b41297d)
+- [x] W3 Pop-up shows an East grip only; handles portalled out of `#root` (b41297d)
+- [x] W4 Height always auto-fits; `quickWindowHeight` removed (b41297d)
+- [x] W5 Release 1.6.1 + jammy `.deb`, GLIBC floor 2.34 (090bdfc)
+- [ ] W6 User acceptance test of 1.6.1 — specifically that the pop-up now
+      **moves** and **resizes**, which synthetic input cannot exercise
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

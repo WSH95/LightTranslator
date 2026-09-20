@@ -5,6 +5,18 @@ Newest first. One short entry per semantic checkpoint — not per edit.
 ### 2026-09-20T12:10:00Z — claude
 [auto-checkpoint] Cut 1.5.0 (05a0656) and built the release .deb in the jammy container. GLIBC floor 2.34 so it starts on Ubuntu 22.04; packaged icons byte-identical to the rebuilt artwork. Had to reclaim a container-owned Cargo.lock via `podman unshare chown` first. Awaiting the user's acceptance test; not tagged, not published.
 
+### 2026-09-20T14:40:00Z — claude
+Fixed the quick pop-up dismissing itself on click/drag/resize and shipped 1.6.1
+(b41297d, 090bdfc). One cause for all three symptoms: a compositor grab clears
+the window's focus on Wayland and two independent handlers hid the window on
+blur. Consolidated hide-on-blur into the backend, added a suppression flag
+around grabs in both backends, cut the pop-up to a single East grip, made
+Escape close it, and dropped the never-usable quickWindowHeight. Rejected a
+hand-rolled resize after measuring that WebKitGTK delivers no pointermove for
+mouse and no motion past the window edge. Verified natively that the vanishing
+is gone and that dismissal and Escape still work; whether the grabs actually
+move/resize needs a real mouse.
+
 ### 2026-09-20T13:10:00Z — claude
 Answered the 1.5.0 test feedback and shipped 1.6.0 (041dc36..ab9cc78). Checked
 each report against the pre-refresh tree first: the pop-up's missing scrollbar
