@@ -25,6 +25,19 @@ unguarded read aborts. Electron: `electron/main.js` via `execFile('gsettings')`,
 exposed in `electron/preload.cjs`. `npm run typecheck` proves the Electron side
 implements it, because `PlatformBackend` is derived from the Tauri object.
 
+**Release artifact 1.5.0** — `LightTranslator_1.5.0_amd64.deb`, 6030312 bytes,
+sha256 `85a195b2c9e514d39d2de452323258fb3dee1d199ed477811c1b2908ac045215`.
+Built in the jammy container (`npm run app:docker:build`), never natively.
+GLIBC floor reads **2.34**, so it starts on Ubuntu 22.04; a native 24.04 build
+would have required 2.39 and silently shipped a package that cannot start under
+an asset name promising 22.04 (DECISIONS 0017).
+
+Note for whoever builds next: `src-tauri/Cargo.lock` and `src-tauri/gen/` were
+left owned by the container's subuid (100999) by an earlier build, so the
+version bump could not write the lockfile. Reclaim them without sudo with
+`podman unshare chown -R 0:0 <path>` — inside the rootless user namespace the
+host user maps to 0.
+
 Last verified: 2026-09-20T11:00Z — Ubuntu/Yaru UI refresh (DECISIONS 0018-0020).
 `npm run typecheck`, `npm run build`, `node --check` on both Electron entries,
 22 JS/TS unit tests, `cargo check --all-targets`, `cargo test` (5/5) and

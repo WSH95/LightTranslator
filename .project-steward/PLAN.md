@@ -143,6 +143,21 @@ options 2a + 3a + 3b, approved by the user. Decisions 0018-0020.
       cannot start a compositor move), the tray icon in the GNOME panel, and
       the behaviour regression pass in a packaged build
 
+## Release 1.5.0 (2026-09-20)
+
+- [x] R1 Version bumped to 1.5.0 in package.json, package-lock.json,
+      tauri.conf.json, Cargo.toml and Cargo.lock (05a0656)
+- [x] R2 Tauri `.deb` built in the jammy container via `npm run app:docker:build`
+      → `LightTranslator_1.5.0_amd64.deb`, 6030312 bytes,
+      sha256 `85a195b2c9e514d39d2de452323258fb3dee1d199ed477811c1b2908ac045215`
+- [x] R3 Artifact verified: GLIBC floor **2.34** (Ubuntu 22.04 ships 2.35, so it
+      starts there); Depends/Recommends unchanged; the desktop entry and the
+      GNOME placement extension are present; all three packaged hicolor icons
+      are byte-identical to the rebuilt artwork
+- [ ] R4 User acceptance test of the installed package
+- [ ] R5 Electron `.deb` (`npm run electron:build:deb`) — not built this session
+- [ ] R6 Tag and publish, with release notes covering the refresh
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)
