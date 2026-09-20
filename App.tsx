@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { TranslatorView } from './components/TranslatorView';
-import { SettingsModal } from './components/SettingsModal';
+import { SettingsView } from './components/SettingsView';
 import { OcrModal } from './components/OcrModal';
 import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -49,6 +49,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (isQuickMode || !platform.isAvailable()) return;
     return platform.onOcrDepsMissing(() => {
+      // The tray asked for OCR and the dependencies are missing; the guidance
+      // lives in the OCR dialog, so step out of settings to show it.
+      setShowSettings(false);
       setShowOCR(true);
     });
   }, [isQuickMode]);
@@ -138,17 +141,22 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <div className="w-screen h-screen overflow-hidden">
-        {/* Fills the frameless, transparent window; #root paints the surface */}
-        <div className="w-full h-full flex flex-col overflow-hidden relative">
+        {/* Fills the frameless, transparent window; #root paints the surface.
+            Settings replaces this view visually, but the translator stays
+            MOUNTED behind it: unmounting would drop TranslatorView's
+            platform.onOcrResult listener, so a tray OCR result arriving while
+            settings is open would be emitted to nobody, and remounting would
+            re-fire auto-translate against the surviving store text. */}
+        <div className={`w-full h-full flex-col overflow-hidden relative ${showSettings ? 'hidden' : 'flex'}`}>
 
           <TitleBar onOpenSettings={() => setShowSettings(true)} />
 
           <TranslatorView onOpenOCR={() => setShowOCR(true)} />
 
-          {/* Modals */}
-          {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
           {showOCR && <OcrModal onClose={() => setShowOCR(false)} />}
         </div>
+
+        {showSettings && <SettingsView onBack={() => setShowSettings(false)} />}
       </div>
     </ErrorBoundary>
   );

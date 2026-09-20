@@ -41,6 +41,7 @@
   --swap-bg: #ffffff;
   --swap-border: rgba(0, 0, 0, .12);
   --swap-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+  --preview-border: rgba(0, 0, 0, .15);
   --scroll-thumb: rgba(0, 0, 0, .20);
   --scroll-thumb-hover: rgba(0, 0, 0, .35);
   --danger: #DA3450;
@@ -94,6 +95,7 @@ html[data-theme="dark"] {
   --swap-bg: #3a3a3a;
   --swap-border: rgba(255, 255, 255, .1);
   --swap-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  --preview-border: rgba(255, 255, 255, .15);
   --scroll-thumb: rgba(255, 255, 255, .20);
   --scroll-thumb-hover: rgba(255, 255, 255, .35);
   --danger: #ff7b8a;

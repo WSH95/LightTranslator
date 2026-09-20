@@ -259,3 +259,99 @@ export const LanguagePill: React.FC<LanguagePillProps> = ({
     </>
   );
 };
+
+/* ------------------------------------------------------------------ */
+/* Settings building blocks                                            */
+/* ------------------------------------------------------------------ */
+
+interface SwitchProps {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  'aria-label'?: string;
+}
+
+/** 44x26 track, 20px knob. Replaces the hand-rolled .toggle-label pair. */
+export const Switch: React.FC<SwitchProps> = ({ checked, onChange, disabled, ...rest }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={rest['aria-label']}
+    disabled={disabled}
+    onClick={() => onChange(!checked)}
+    className="relative shrink-0 w-11 h-[26px] rounded-[13px] transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+    style={{ background: checked ? 'var(--accent)' : 'var(--switch-off)' }}
+  >
+    <span
+      className="absolute top-[3px] w-5 h-5 rounded-full transition-[left] duration-150"
+      style={{ left: checked ? 21 : 3, background: 'var(--knob)', boxShadow: 'var(--knob-shadow)' }}
+    />
+  </button>
+);
+
+interface RadioProps {
+  checked: boolean;
+  onChange: () => void;
+  /** 20 in the settings lists, 18 under the Appearance style previews. */
+  size?: 20 | 18;
+  disabled?: boolean;
+  'aria-label'?: string;
+}
+
+export const Radio: React.FC<RadioProps> = ({ checked, onChange, size = 20, disabled, ...rest }) => (
+  <button
+    type="button"
+    role="radio"
+    aria-checked={checked}
+    aria-label={rest['aria-label']}
+    disabled={disabled}
+    onClick={onChange}
+    className="shrink-0 rounded-full grid place-items-center box-border transition-colors duration-150 disabled:opacity-50"
+    style={{
+      width: size,
+      height: size,
+      background: checked ? 'var(--accent)' : 'transparent',
+      border: checked ? 'none' : '2px solid var(--radio-border)',
+    }}
+  >
+    {checked && <Check size={size === 20 ? 13 : 12} style={{ color: 'var(--accent-fg)' }} />}
+  </button>
+);
+
+/** Title + boxed list + optional caption, the repeating shape of every tab. */
+export const SettingsGroup: React.FC<{
+  title: string;
+  description?: React.ReactNode;
+  dimmed?: boolean;
+  children: React.ReactNode;
+}> = ({ title, description, dimmed, children }) => (
+  <section className={`flex flex-col gap-2.5 ${dimmed ? 'opacity-50' : ''}`}>
+    <h2 className="text-[15px] font-bold text-text">{title}</h2>
+    {children}
+    {description && <p className="text-xs leading-normal text-muted px-1">{description}</p>}
+  </section>
+);
+
+/** Separators come from `.list > * + *`, so no row has to know it is last. */
+export const List: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="card list overflow-hidden">{children}</div>
+);
+
+export const Row: React.FC<{
+  label?: React.ReactNode;
+  description?: React.ReactNode;
+  children?: React.ReactNode;
+  /** The Accent Color row is taller than the standard 12px. */
+  tall?: boolean;
+}> = ({ label, description, children, tall }) => (
+  <div className={`list-row ${tall ? 'py-3.5' : ''}`}>
+    {(label || description) && (
+      <div className="min-w-0">
+        {label && <div className="text-sm text-text">{label}</div>}
+        {description && <div className="text-xs text-muted mt-0.5">{description}</div>}
+      </div>
+    )}
+    {children}
+  </div>
+);
