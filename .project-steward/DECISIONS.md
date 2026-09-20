@@ -443,3 +443,89 @@ dependency and upgraded the installed 1.3.0 cleanly — so one jammy artifact
 genuinely serves 22.04 through 24.04+, as the asset name claims. glibc is
 backward compatible, so building low and running high is always the safe
 direction.
+
+## 0018 — 2026-09-20 — Ubuntu/Yaru refresh: resolved theme in JS, tokens in CSS
+
+**Context**: The refresh needs light + dark themes and a user-chosen accent
+across three windows (main, settings-as-view, quick pop-up) that all render
+from one bundle. The brief specifies `data-theme` on `<html>` plus an
+`--accent` variable but not how `'system'` is resolved.
+**Decision**: `data-theme` is always a RESOLVED `light`/`dark`; `'system'` is
+collapsed in JS (`src/lib/theme.ts`), never in CSS. Theme state lives in a
+module singleton called from `index.tsx` before `createRoot`, not in a hook or
+provider — `App.tsx` early-returns for the pop-up, so anything inside the React
+tree would need installing twice, and the theme must be on `<html>` for the
+first painted frame. Only `--bg` and `--accent` are channel triplets (they are
+the only tokens used at a non-1 alpha); the rest bake their alpha in and are
+terminal.
+**Consequences**: The dark token block is declared once, and a desktop-level
+signal can override `prefers-color-scheme` with no CSS churn. Cross-window
+propagation is free: `updateSettings` → `emitSettingsChanged` →
+`persist.rehydrate()` → `useAppStore.subscribe(apply)`, with no new IPC.
+`bg-ctrl/50` compiles and silently renders at full alpha — Tailwind drops the
+modifier on a colour that already has one. That is documented in the config; if
+a second alpha is needed, add a token.
+
+## 0019 — 2026-09-20 — `accent-color` does not exist before GNOME 47; `gtk-theme` is the fallback
+
+**Context**: The brief says "Follow system accent" should read
+`org.gnome.desktop.interface accent-color`. That key landed in GNOME 47.
+Ubuntu 24.04 — the primary target — ships GNOME 46 and returns
+`No such key "accent-color"`.
+**Decision**: `get_system_appearance` returns `color-scheme`, `accent-color`
+and `gtk-theme` as raw strings from both backends; the frontend maps them
+(`src/lib/accents.ts`). `accent-color` wins where it exists; otherwise the Yaru
+GTK theme name does, and `/usr/share/themes` carries exactly `Yaru` plus nine
+`Yaru-<name>` variants that map one-to-one onto the ten swatches (plain `Yaru`
+is Orange). Theme precedence: `prefers-color-scheme` is the live authority and
+is invalidated first on every change; gsettings is re-read on startup and on
+each change and wins on disagreement, because it is the actual desktop setting.
+**Consequences**: A cached one-shot read must never win, or a live GNOME
+dark/light switch would be ignored until restart — worse than no read at all.
+Reading a key a schema does not declare **aborts the process** rather than
+erroring, so both the `schema_installed()` and `has_key()` guards are
+load-bearing; `interface_schema_reads_are_guarded` in `gnome_shortcut.rs` is
+the canary, and a regression takes the test runner down rather than failing an
+assertion. GNOME 47's nine names do not line up with Yaru's ten, so
+teal/yellow/pink/slate map to their nearest sibling.
+
+## 0020 — 2026-09-20 — Deviations from the design brief, and why
+
+**Context**: The brief is marked "pixel-perfect, values final", but parts of it
+are unreachable as written or unsafe.
+**Decision**, each shipped deliberately:
+1. **`--accent-fg`**. The brief says suggested-action buttons are accent bg with
+   white text. White on the lightened dark accents measures 2.15–2.54:1, so
+   dark mode uses `#242424` (6.1–7.2:1). The mock's own dark radio check is
+   `#1a1a1a`, which corroborates it.
+2. **No pop-up drop shadow**. `#root` fills the window, so the brief's outer
+   `0 14px 36px` composites outside a transparent window and never renders.
+   Shipping the inset ring, which is what `quickWindowBorderOpacity` maps to,
+   theme-scaled so it lands on the mock's `.2` light / `.6` dark. The default
+   moves 0.05 → 0.1 to suit; persisted values are untouched.
+3. **View switcher centred on the window**, not 33px left as the mock draws it.
+   That offset is an artifact of the mock's `flex:1` slot; the brief says
+   "centered" and libadwaita centres on the window.
+4. **Menu-open pop-up height 362, not 300**. The mock drew seven languages;
+   there are nine, and 300 cut off Spanish and Russian.
+5. **`TranslatorView` stays mounted** behind Settings (hidden, not unmounted).
+   It owns `platform.onOcrResult`, so unmounting loses tray OCR results, and
+   remounting re-fires auto-translate against the surviving store text.
+6. **The language pill portals its popover** to `<body>`. Every container it
+   would otherwise sit in clips it — the panes and boxed lists are
+   `overflow:hidden` and the settings column scrolls.
+7. **OCR pickers become modes**. Capability unchanged, affordance changed, per
+   the approved design. The preview area is the capture trigger; selecting a
+   segment must not start `gnome-screenshot`, since screenshot is the default
+   mode and the dialog would fire one on open.
+8. **No webfont**. The CSP is `font-src 'self'` and `style-src 'self'
+   'unsafe-inline'`, so the mock's Google Fonts link is blocked twice over.
+   Ubuntu and Ubuntu Mono are installed on the target.
+9. **Symbolic tray not wired**. GNOME cannot recolour a pixel icon, and both
+   tray APIs take pixels; a real symbolic tray needs a themed icon name
+   installed into hicolor. `lighttranslator-symbolic.svg` ships as an asset.
+   `tray-24x24.png` and `tray-icon.png` remain unreferenced orphans.
+**Consequences**: Small/large translation text sizes (14/19 main, 13/18 quick),
+the dark OCR stripes and the dark popover are extrapolated — the brief pins only
+the medium sizes and drew no dark variants of those screens. See QUESTIONS.md
+for the Yaru Orange contrast issue.
