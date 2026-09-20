@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-09-20T01:45:00Z
+updated_at: 2026-09-20T10:30:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: 4af6f79 refactor(providers): … (tagged v1.4.0, released)
+last_commit: 5025af9 feat(settings): Settings as a full-window view + Appearance
 ---
 # Handoff
 
@@ -12,37 +12,40 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**v1.4.0 is released**: https://github.com/WSH95/LightTranslator/releases/tag/v1.4.0
-Both `.deb` packages attached, checksums verified by download round-trip. This
-release carries two things — the provider collapse, and the Wayland work that
-was merged as 1.3.0 but never published (so 1.3.0 has a tag on nothing; the
-previous public release was 1.2.2).
+**Mid-flight: the Ubuntu 24.04 / Yaru UI refresh**, from
+`design_handoff_ubuntu_refresh/` (options 2a + 3a + 3b, approved).
+Plan: `~/.claude/plans/pasted-content-id-ab1d-read-design-hand-linear-nova.md`.
 
-The generative-AI providers are now one **OpenAI Compatible** entry reachable at
-any `/chat/completions` base URL, with five presets and keyless local servers
-supported. DeepL/Google/Microsoft unchanged. Decisions: DECISIONS 0014-0017.
+Steps 1-4 of 8 are committed and green (typecheck, build, 22 JS/TS tests,
+`cargo check`, 5 Rust tests). Steps 5-8 remain: OCR dialog, quick-translate
+pop-up, macOS-skin removal, app icons.
 
-Three things a successor should not re-derive:
+Four things a successor should not re-derive:
 
-- **Release `.deb`s must be built in the jammy container, never natively.** A
-  native build on this 24.04 host hard-requires GLIBC_2.39 (Rust std picks up
-  `pidfd_spawnp`/`pidfd_getpid` from the build host) and will not start on
-  Ubuntu 22.04, which ships 2.35 — under an asset name that promises 22.04.
-  Docker is no longer needed for this: `podman` + `podman-docker` give a
-  rootless `docker` shim and `scripts/docker-build-deb.sh` runs through it
-  unchanged (~5.5 min cold). See DECISIONS 0017.
-- **No backend code changed in the provider work.** Both backends are
-  provider-agnostic (one `proxy_request` primitive), so the AGENTS.md parity
-  rule did not apply. AGENTS.md now says so, and also records that the React app
-  lives at the **repo root**, not under `src/`.
-- **The stale-provider guard is in zustand `merge`, not `migrate`.** zustand v5
-  only calls `migrate` when the stored blob carries a *numeric* version, and
-  pre-upgrade blobs have none. Do not "fix" it back. See DECISIONS 0015.
+- **`org.gnome.desktop.interface accent-color` does not exist on this host.**
+  The key landed in GNOME 47; Ubuntu 24.04 ships 46. The accent is `gtk-theme`,
+  and `/usr/share/themes` carries `Yaru` plus nine `Yaru-<name>` variants that
+  map 1:1 onto the ten swatches. `get_system_appearance` returns both keys raw;
+  `src/lib/accents.ts` owns the mapping and is unit tested.
+- **Reading a gsettings key a schema does not declare aborts the process**, it
+  does not return an error. Both `schema_installed()` and `has_key()` guards are
+  load-bearing. `interface_schema_reads_are_guarded` in `gnome_shortcut.rs` is
+  the canary: a regression takes the test runner down rather than failing.
+- **`TranslatorView` must stay mounted while Settings is shown** (it is hidden,
+  not unmounted). It owns `platform.onOcrResult`, so unmounting loses tray OCR
+  results, and remounting re-fires auto-translate against the surviving store
+  text.
+- **The old macOS skin is still in the tree on purpose.** `colors.macos`,
+  `.toggle-*` and `.traffic-*` stay until step 7, because OcrModal and
+  QuickTranslateWindow still use them. Tailwind drops unknown classes silently,
+  so step 7 is gated on a grep, not on the compiler.
 
 ## In flight
 
-Nothing. Working tree clean apart from the steward records for this release,
-`main` pushed, `v1.4.0` tagged and published.
+Nothing uncommitted. Four commits on `main`, unpushed:
+`cf59398` theme tokens, `4370a2a` main window, `e48e199` backends,
+`5025af9` settings. `design_handoff_ubuntu_refresh/` is still untracked —
+decide whether it belongs in the repo before wrapping.
 
 ## Validation completed
 
@@ -54,17 +57,22 @@ confirmation after installing.
 
 ## Next steps
 
-1. Watch for upgrade reports. The release is **breaking for Gemini/OpenRouter
-   users**: their keys are not migrated and those installs land on Google
-   Translate until they reconfigure via Settings → Translation → OpenAI
-   Compatible. The release notes lead with this.
-2. Coverage gaps from VERIFY.md's "Not covered": DeepL and Microsoft were
-   refactored onto the shared `httpJson` helper but never exercised against live
-   keys.
-3. The Electron backend's Wayland path is still only verified in dev, never as
-   an installed package on a 20.04 Wayland session.
-4. Pre-existing nit: `Cpu`, `Image` and `Save` are dead imports in
-   `components/SettingsModal.tsx`.
+1. Step 5: `components/OcrModal.tsx` — 480px dialog, segmented mode control.
+   The preview area is the capture trigger; selecting a segment must NOT start
+   `gnome-screenshot`, since screenshot is the default mode. Keep `max-h-full`
+   and the scrolling body: the host window is now 520px, not 680.
+2. Step 6: `components/QuickTranslateWindow.tsx` — delete `desiredWidth`
+   (width is pinned at 360, so the old `scrollWidth + 48` would grow the window
+   every cycle), replace the `HEADER_HEIGHT + LANG_BAR_HEIGHT + PADDING` sum
+   with one measured wrapper, and set the menu-open height to 362 — 300 cuts off
+   Spanish and Russian.
+3. Step 7: remove the macOS skin behind the two grep gates in the plan.
+4. Step 8: regenerate `src-tauri/icons/*` from an SVG master via
+   `~/.cargo/bin/cargo-tauri icon`, then overwrite 32px (flat) and 64px
+   (no inset shadow) from their own SVGs.
+5. Not yet run this session: `npm run app:dev` and `npm run electron:dev`.
+   The window radius, drag regions, real gsettings read and tray artwork have
+   only been checked in a browser.
 
 ## Blockers
 

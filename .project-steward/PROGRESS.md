@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T10:30:00Z — claude
+[auto-checkpoint] Ubuntu/Yaru refresh steps 1-4 of 8 landed (cf59398, 4370a2a, e48e199, 5025af9): theme tokens + appearance state, two-pane main window, get_system_appearance in both backends, Settings as a full-window view with the new Appearance tab. OCR dialog, pop-up, macOS-skin removal and icons still to do.
+
 ### 2026-09-20T00:30:00Z — claude
 Wayland Quick Translate shipped: user installed the package, logged back in, the
 placement extension reports ACTIVE and the whole flow works on their machine.
