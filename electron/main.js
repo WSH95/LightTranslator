@@ -290,7 +290,18 @@ function createQuickWindow() {
 
   quickWindow.loadURL(rendererUrl('?mode=quick'));
 
+  // Hide-on-blur, and the drag suppression that has to ride along with it.
+  // Chromium drives this window's drag from CSS (-webkit-app-region), so
+  // there is no JS entry point to flag — but will-move/moved bracket a native
+  // move precisely, which is the same information.
+  //
+  // PARITY: mirrors the quick_drag_active flag in src-tauri/src/lib.rs.
+  let quickDragActive = false;
+  quickWindow.on('will-move', () => { quickDragActive = true; });
+  quickWindow.on('moved', () => { quickDragActive = false; });
+
   quickWindow.on('blur', () => {
+    if (quickDragActive) return;
     if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
   });
 

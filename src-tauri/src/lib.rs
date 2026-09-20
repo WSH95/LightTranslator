@@ -110,6 +110,10 @@ struct AppState {
     /// Kept open so the selection backend is initialised once instead of on
     /// every hotkey press (arboard probes Wayland, then falls back to X11).
     selection_clipboard: Mutex<Option<arboard::Clipboard>>,
+    /// True while a compositor move grab we started is in progress. The grab
+    /// clears the pop-up's keyboard focus, which is indistinguishable from the
+    /// user clicking another window, so the hide-on-blur below consults this.
+    quick_drag_active: AtomicBool,
 }
 
 impl Default for AppState {
@@ -120,6 +124,7 @@ impl Default for AppState {
             quick_ready: AtomicBool::new(false),
             pending_quick_text: Mutex::new(None),
             selection_clipboard: Mutex::new(None),
+            quick_drag_active: AtomicBool::new(false),
         }
     }
 }
@@ -759,6 +764,69 @@ async fn open_in_main_window(app: AppHandle, text: String) -> Result<(), String>
     Ok(())
 }
 
+/// Start a compositor-driven move of the quick pop-up.
+///
+/// Wayland forbids a client from moving its own window, so this has to be an
+/// `xdg_toplevel.move` grab — and mutter clears the client's keyboard focus
+/// for the grab's duration, which arrives as a plain `Focused(false)`. Setting
+/// the flag and starting the drag in ONE command is what removes the race:
+/// there is no window in which the blur can reach the handler unguarded.
+///
+/// PARITY: `electron/main.js` brackets the same state with will-move/moved,
+/// because its drag is CSS-driven and has no JS entry point.
+#[tauri::command]
+async fn start_quick_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let Some(window) = app.get_webview_window("quick") else {
+        return Ok(());
+    };
+    state.quick_drag_active.store(true, Ordering::SeqCst);
+    window.start_dragging().map_err(|e| e.to_string())?;
+    arm_quick_drag_watchdog(app);
+    Ok(())
+}
+
+/// Suppress the pop-up's hide-on-blur around a grab this process cannot start
+/// itself.
+///
+/// A resize grab clears focus exactly like a move grab, but
+/// `start_resize_dragging` lives on `Window`, which is behind Tauri's
+/// `unstable` feature — not a flag worth enabling for one call. The frontend
+/// awaits this, then starts the grab through the JS window API, which gives
+/// the same ordering guarantee without it.
+#[tauri::command]
+async fn set_quick_drag_active(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    active: bool,
+) -> Result<(), String> {
+    state.quick_drag_active.store(active, Ordering::SeqCst);
+    if active {
+        arm_quick_drag_watchdog(app);
+    }
+    Ok(())
+}
+
+/// Clear the suppression shortly after it is armed.
+///
+/// The flag only has to bridge the instant between asking for a grab and the
+/// grab-induced blur arriving — a few milliseconds. Once that blur has been
+/// swallowed the window stays unfocused for the rest of the drag, so no
+/// further blur can fire and the flag has nothing left to protect.
+///
+/// Keeping it short bounds the damage when a grab never actually starts (a
+/// stale serial, or a compositor that ignored the request): the pop-up goes
+/// back to dismissing normally a second later instead of ignoring click-away
+/// until the timeout. It is a bound on a known risk, not a fix for an
+/// observed failure.
+fn arm_quick_drag_watchdog(app: AppHandle) {
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(1000));
+        app.state::<AppState>()
+            .quick_drag_active
+            .store(false, Ordering::SeqCst);
+    });
+}
+
 #[tauri::command]
 async fn close_quick_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("quick") {
@@ -1167,6 +1235,8 @@ pub fn run() {
             quick_window_ready,
             close_quick_window,
             open_in_main_window,
+            start_quick_drag,
+            set_quick_drag_active,
         ])
         .setup(|app| {
             let start_hidden = should_start_hidden();
@@ -1237,10 +1307,31 @@ pub fn run() {
                     api.prevent_close();
                 }
             }
-            // Hide quick window on blur
+            // Hide the quick window on blur. This is the SOLE owner of that
+            // decision — the renderer used to hide it too, and two independent
+            // hiders made the drag suppression below impossible to honour.
             if window.label() == "quick" {
-                if let tauri::WindowEvent::Focused(false) = event {
-                    let _ = window.hide();
+                match event {
+                    tauri::WindowEvent::Focused(false) => {
+                        let dragging = window
+                            .app_handle()
+                            .state::<AppState>()
+                            .quick_drag_active
+                            .load(Ordering::SeqCst);
+                        if !dragging {
+                            let _ = window.hide();
+                        }
+                    }
+                    // Mutter restores input focus when the grab op ends, so
+                    // this is the natural end-of-drag signal.
+                    tauri::WindowEvent::Focused(true) => {
+                        window
+                            .app_handle()
+                            .state::<AppState>()
+                            .quick_drag_active
+                            .store(false, Ordering::SeqCst);
+                    }
+                    _ => {}
                 }
             }
         })

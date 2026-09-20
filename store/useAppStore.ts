@@ -193,7 +193,6 @@ export const useAppStore = create<AppState>()(
         quickWindowOpacity: state.quickWindowOpacity,
         quickWindowBorderOpacity: state.quickWindowBorderOpacity,
         quickWindowWidth: state.quickWindowWidth,
-        quickWindowHeight: state.quickWindowHeight,
         // Quick Window Language
         quickSourceLang: state.quickSourceLang,
         quickTargetLang: state.quickTargetLang,

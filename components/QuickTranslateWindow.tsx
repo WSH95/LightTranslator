@@ -72,34 +72,17 @@ export const QuickTranslateWindow: React.FC = () => {
     platform.resizeQuickWindow({ width: window.innerWidth, height });
   }, []);
 
-  /**
-   * A size the user dragged to wins over auto-fit; long translations scroll
-   * instead of growing the window. Settings > Pop-up > Window has a Reset
-   * that clears it. Read through getState() so this never closes over a
-   * stale snapshot.
-   */
-  const applyPreferredSize = useCallback(() => {
-    if (!platform.isAvailable()) return;
-    const { quickWindowWidth, quickWindowHeight } = useAppStore.getState();
-    if (quickWindowWidth != null && quickWindowHeight != null) {
-      platform
-        .resizeQuickWindow({ width: quickWindowWidth, height: quickWindowHeight })
-        .catch((e) => console.error('Failed to restore the pop-up size:', e));
-      return;
-    }
-    resizeToFitContent();
-  }, [resizeToFitContent]);
-
-  // Restore a persisted size once, before the window is ever shown.
+  // Restore a persisted width once, before the window is ever shown. The
+  // height is never restored — it always follows the content.
   useEffect(() => {
-    const { quickWindowWidth, quickWindowHeight } = useAppStore.getState();
-    if (quickWindowWidth == null || quickWindowHeight == null || !platform.isAvailable()) return;
+    const { quickWindowWidth } = useAppStore.getState();
+    if (quickWindowWidth == null || !platform.isAvailable()) return;
     platform
-      .resizeQuickWindow({ width: quickWindowWidth, height: quickWindowHeight })
-      .catch((e) => console.error('Failed to restore the pop-up size:', e));
+      .resizeQuickWindow({ width: quickWindowWidth, height: window.innerHeight })
+      .catch((e) => console.error('Failed to restore the pop-up width:', e));
   }, []);
 
-  // Remember a size the user dragged to. startResizeDragging hands off to the
+  // Remember a width the user dragged to. startResizeDragging hands off to the
   // compositor and never calls back, so the window's own resize event is the
   // only signal — gated on userResizingRef so auto-fits are not recorded.
   useEffect(() => {
@@ -110,10 +93,7 @@ export const QuickTranslateWindow: React.FC = () => {
       timer = setTimeout(() => {
         timer = null;
         userResizingRef.current = false;
-        updateSettings({
-          quickWindowWidth: window.innerWidth,
-          quickWindowHeight: window.innerHeight,
-        });
+        updateSettings({ quickWindowWidth: window.innerWidth });
       }, 250);
     };
     window.addEventListener('resize', onResize);
@@ -126,9 +106,9 @@ export const QuickTranslateWindow: React.FC = () => {
   // Resize when translation changes
   useEffect(() => {
     if (translated || error) {
-      setTimeout(applyPreferredSize, 50);
+      setTimeout(resizeToFitContent, 50);
     }
-  }, [translated, error, applyPreferredSize]);
+  }, [translated, error, resizeToFitContent]);
 
   useEffect(() => {
     if (platform.isAvailable()) {
@@ -146,14 +126,18 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
-  // Close window when clicking outside (on blur)
+  // Hide-on-blur lives in the backend now — it is the only side that can see
+  // whether a compositor drag is in progress, and two independent hiders made
+  // that suppression impossible to honour. Escape is the guaranteed way out if
+  // the compositor ever fails to hand focus back.
   useEffect(() => {
-    if (platform.isAvailable()) {
-      const unlisten = platform.onWindowBlur(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && platform.isAvailable()) {
         platform.closeQuickWindow();
-      });
-      return unlisten;
-    }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const handleTranslate = async (inputText: string) => {
@@ -222,9 +206,9 @@ export const QuickTranslateWindow: React.FC = () => {
           .catch((e) => console.error('Failed to resize quick window:', e));
       }
     } else {
-      setTimeout(applyPreferredSize, 50);
+      setTimeout(resizeToFitContent, 50);
     }
-  }, [applyPreferredSize]);
+  }, [resizeToFitContent]);
 
   const handleSelectLang = async (code: LanguageCode) => {
     if (code === quickTargetLang) return;
@@ -232,7 +216,7 @@ export const QuickTranslateWindow: React.FC = () => {
     // settings the main window saved while this window held a stale copy
     await refreshSettings();
     setQuickTargetLang(code);
-    setTimeout(applyPreferredSize, 50);
+    setTimeout(resizeToFitContent, 50);
     // Re-translate with the new target language
     if (sourceText.trim()) {
       setTimeout(() => handleTranslate(sourceText), 100);
@@ -278,7 +262,15 @@ export const QuickTranslateWindow: React.FC = () => {
       <div
         ref={headerRef}
         className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none -webkit-app-region-drag"
-        data-tauri-drag-region
+        onPointerDown={(event) => {
+          // NOT data-tauri-drag-region: that routes to the built-in
+          // start_dragging and would bypass the backend flag that stops the
+          // pop-up hiding itself mid-drag. Electron still drags from the CSS
+          // app-region above, where this call is a no-op.
+          if (event.button !== 0) return;
+          if ((event.target as HTMLElement).closest('button')) return;
+          void platform.startQuickDrag();
+        }}
       >
         <LanguagePill
           value={quickTargetLang}
@@ -288,7 +280,7 @@ export const QuickTranslateWindow: React.FC = () => {
           title="Target language"
         />
 
-        <div className="flex-1 self-stretch" data-tauri-drag-region />
+        <div className="flex-1 self-stretch" />
 
         {/* While translating the header keeps only the pill and the close. */}
         {!loading && (
@@ -363,7 +355,15 @@ export const QuickTranslateWindow: React.FC = () => {
         </div>
       )}
 
-      <ResizeHandles onResizeStart={() => { userResizingRef.current = true; }} />
+      {/* East only. Routed through the backend so the same flag that keeps a
+          header drag from dismissing the window covers the resize grab too. */}
+      <ResizeHandles
+        directions={['East']}
+        onResizeStart={() => { userResizingRef.current = true; }}
+        onBeginResize={(direction, pointer) => {
+          void platform.startQuickResize(direction, pointer);
+        }}
+      />
     </div>
   );
 };

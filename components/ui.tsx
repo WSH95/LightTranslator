@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, ChevronUp, Minus, Square, X } from 'lucide-react';
-import { platform, type ResizeDirection } from '../src/lib/platform';
+import { platform, type ResizeDirection, type ResizePointer } from '../src/lib/platform';
 import type { Language, LanguageCode } from '../types';
 
 /* ------------------------------------------------------------------ */
@@ -67,35 +67,66 @@ const HANDLES: { dir: ResizeDirection; cursor: string; style: React.CSSPropertie
   { dir: 'SouthEast', cursor: 'se-resize', style: { bottom: 0, right: 0, width: CORNER, height: CORNER } },
 ];
 
+interface ResizeHandlesProps {
+  /** Defaults to all eight. The quick pop-up asks for `['East']` only. */
+  directions?: ResizeDirection[];
+  onResizeStart?: () => void;
+  /**
+   * Override how a resize starts.
+   *
+   * The quick pop-up routes through a backend command that first suppresses
+   * its hide-on-blur, because a resize grab clears the window's focus exactly
+   * like a move grab does.
+   */
+  onBeginResize?: (direction: ResizeDirection, pointer: ResizePointer) => void;
+}
+
 /**
  * Invisible grips around the window edge.
  *
  * Frameless windows get no resize border of their own, so the app draws one.
- * `position: fixed` anchors these to the window rather than to whatever
- * mounted them, and `-webkit-app-region: no-drag` is mandatory on Electron:
- * Chromium ranks a drag region above its own resize hit test, and the top
- * 47px of every window is a drag region. The handles carry no
- * `data-tauri-drag-region`, so Tauri's drag shim ignores them and the two
- * never fight over the title bar.
+ * Portalled to <body> because `backdrop-filter` makes an element a containing
+ * block for fixed-position descendants: inside the pop-up's root (and the main
+ * window's in glass mode) the grips would stop being viewport-fixed and get
+ * clipped by that root's overflow and border-radius.
+ *
+ * `-webkit-app-region: no-drag` is mandatory on Electron — Chromium ranks a
+ * drag region above its own resize hit test. The grips carry no
+ * `data-tauri-drag-region`, so Tauri's drag shim ignores them.
  */
-export const ResizeHandles: React.FC<{ onResizeStart?: () => void }> = ({ onResizeStart }) => (
-  <>
-    {HANDLES.map(({ dir, cursor, style }) => (
-      <div
-        key={dir}
-        aria-hidden
-        className="fixed z-[100] -webkit-app-region-no-drag"
-        style={{ ...style, cursor }}
-        onPointerDown={(event) => {
-          if (event.button !== 0) return;
-          event.preventDefault();
-          onResizeStart?.();
-          void platform.startResize(dir, event);
-        }}
-      />
-    ))}
-  </>
-);
+export const ResizeHandles: React.FC<ResizeHandlesProps> = ({
+  directions,
+  onResizeStart,
+  onBeginResize,
+}) => {
+  const shown = directions
+    ? HANDLES.filter((handle) => directions.includes(handle.dir))
+    : HANDLES;
+
+  return createPortal(
+    <>
+      {shown.map(({ dir, cursor, style }) => (
+        <div
+          key={dir}
+          aria-hidden
+          className="fixed z-[100] -webkit-app-region-no-drag"
+          style={{ ...style, cursor }}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            onResizeStart?.();
+            if (onBeginResize) {
+              onBeginResize(dir, event);
+              return;
+            }
+            void platform.startResize(dir, event);
+          }}
+        />
+      ))}
+    </>,
+    document.body,
+  );
+};
 
 /* ------------------------------------------------------------------ */
 /* Language pill + popover                                             */

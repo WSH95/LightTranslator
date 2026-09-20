@@ -455,6 +455,36 @@ const tauriBackend = {
     }
   },
 
+  /**
+   * Move the quick pop-up by its header.
+   *
+   * Not `data-tauri-drag-region`: that routes to the built-in `start_dragging`
+   * and would bypass the backend flag that stops the pop-up hiding itself
+   * mid-drag. The backend command sets the flag and starts the grab together.
+   */
+  async startQuickDrag(): Promise<void> {
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('start_quick_drag');
+    }
+  },
+
+  /**
+   * Resize the pop-up from its right edge.
+   *
+   * Awaiting the flag before starting the grab is what keeps the pop-up from
+   * hiding itself: a resize grab clears focus just like a move grab. The grab
+   * is started from the JS window API rather than a single Rust command
+   * because `start_resize_dragging` is only on `Window`, which sits behind
+   * Tauri's `unstable` feature.
+   */
+  async startQuickResize(direction: ResizeDirection, _pointer: ResizePointer): Promise<void> {
+    await initTauri();
+    if (!tauriInvoke || !tauriWindow) return;
+    await tauriInvoke('set_quick_drag_active', { active: true });
+    await tauriWindow.getCurrentWindow().startResizeDragging(direction);
+  },
+
   /** Text handed over by the pop-up (main window only). */
   onQuickToMain(callback: (text: string) => void): () => void {
     return makeDisposableListener(async () => {
@@ -695,6 +725,24 @@ const electronBackend: PlatformBackend = {
   },
 
   /**
+   * No-op: Chromium already drags the window from `-webkit-app-region: drag`,
+   * and the main process brackets the move with will-move/moved.
+   */
+  /** Chromium already drags the window from `-webkit-app-region: drag`. */
+  async startQuickDrag(): Promise<void> {
+    /* handled natively */
+  },
+
+  /**
+   * Reuses the manual bounds drag, which works here because Chromium supports
+   * pointer capture — the thing WebKitGTK is missing, and the reason the Tauri
+   * side hands resizes to the compositor instead.
+   */
+  async startQuickResize(direction: ResizeDirection, pointer: ResizePointer): Promise<void> {
+    await electronBackend.startResize(direction, pointer);
+  },
+
+  /**
    * Electron exposes no equivalent of startResizeDragging, so drive the
    * window bounds directly. Deltas are in SCREEN coordinates: the window
    * itself moves while resizing from a north or west edge, so client
@@ -813,6 +861,9 @@ export const platform = {
   ocrImage: (base64Image: string) => activeBackend().ocrImage(base64Image),
   onOcrResult: (cb: (text: string) => void) => activeBackend().onOcrResult(cb),
   openInMainWindow: (text: string) => activeBackend().openInMainWindow(text),
+  startQuickDrag: () => activeBackend().startQuickDrag(),
+  startQuickResize: (direction: ResizeDirection, pointer: ResizePointer) =>
+    activeBackend().startQuickResize(direction, pointer),
   startResize: (direction: ResizeDirection, pointer: ResizePointer) =>
     activeBackend().startResize(direction, pointer),
   onQuickToMain: (cb: (text: string) => void) => activeBackend().onQuickToMain(cb),

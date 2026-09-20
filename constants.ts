@@ -126,7 +126,6 @@ export const DEFAULT_SETTINGS = {
   quickWindowOpacity: 0.95,
   quickWindowBorderOpacity: 0.05,
   quickWindowWidth: null as number | null,
-  quickWindowHeight: null as number | null,
 
   // Quick Window Language Defaults
   quickSourceLang: 'auto' as const,

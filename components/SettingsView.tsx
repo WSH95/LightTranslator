@@ -112,7 +112,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     quickSourceLang,
     quickTargetLang,
     quickWindowWidth,
-    quickWindowHeight,
     appearanceTheme,
     surfaceStyle,
     glassOpacity,
@@ -674,18 +673,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     </div>
                   </Row>
                   <Row
-                    label="Size"
+                    label="Width"
                     description={
-                      quickWindowWidth != null && quickWindowHeight != null
-                        ? `Remembered: ${quickWindowWidth} \u00d7 ${quickWindowHeight}. Drag an edge of the pop-up to change it.`
-                        : 'The pop-up sizes itself to the translation. Drag an edge to fix a size.'
+                      quickWindowWidth != null
+                        ? `Remembered: ${quickWindowWidth}px. Drag the pop-up's right edge to change it.`
+                        : "Drag the pop-up's right edge to set a width. The height always follows the translation."
                     }
                   >
                     <button
                       type="button"
                       className="btn shrink-0"
-                      disabled={quickWindowWidth == null && quickWindowHeight == null}
-                      onClick={() => updateSettings({ quickWindowWidth: null, quickWindowHeight: null })}
+                      disabled={quickWindowWidth == null}
+                      onClick={() => updateSettings({ quickWindowWidth: null })}
                     >
                       Reset
                     </button>
