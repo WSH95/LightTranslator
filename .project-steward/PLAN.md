@@ -158,6 +158,26 @@ options 2a + 3a + 3b, approved by the user. Decisions 0018-0020.
 - [ ] R5 Electron `.deb` (`npm run electron:build:deb`) — not built this session
 - [ ] R6 Tag and publish, with release notes covering the refresh
 
+## Post-1.5.0 fixes + resize + glass (2026-09-20)
+
+From the user's test of 1.5.0. Decisions 0021.
+
+- [x] V1 `feat(ui)`: pop-up scroll container restored, geometry unpinned
+      (300-600 wide, 600 max height), size persisted with a Reset in
+      Settings > Pop-up > Window (041dc36)
+- [x] V2 `feat(ui)`: `.pane` hover/focus-within highlight restored (041dc36)
+- [x] V3 `feat(ui)`: eight edge/corner resize handles; `platform.startResize`
+      native on Tauri, manual bounds drag on Electron (041dc36)
+- [x] V4 `feat(ui)`: frosted-glass Appearance > Theme with a transparency
+      slider; pop-up regains backdrop-filter (041dc36)
+- [x] V5 `fix(ui)`: grab band widened to 8px after measuring both engines'
+      own hit tests (932e1c1)
+- [x] V6 Release 1.6.0 + jammy `.deb`, GLIBC floor 2.34 (ab9cc78)
+- [ ] V7 User acceptance test of 1.6.0
+- [ ] V8 Human-only checks: drag the pop-up's edges (it blur-closes, so
+      automation cannot hold focus on it), and Tauri edge resize (a synthetic
+      pointer cannot start a compositor-side grab)
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

@@ -5,6 +5,16 @@ Newest first. One short entry per semantic checkpoint — not per edit.
 ### 2026-09-20T12:10:00Z — claude
 [auto-checkpoint] Cut 1.5.0 (05a0656) and built the release .deb in the jammy container. GLIBC floor 2.34 so it starts on Ubuntu 22.04; packaged icons byte-identical to the rebuilt artwork. Had to reclaim a container-owned Cargo.lock via `podman unshare chown` first. Awaiting the user's acceptance test; not tagged, not published.
 
+### 2026-09-20T13:10:00Z — claude
+Answered the 1.5.0 test feedback and shipped 1.6.0 (041dc36..ab9cc78). Checked
+each report against the pre-refresh tree first: the pop-up's missing scrollbar
+and the panes' missing hover/focus were regressions the refresh caused; edge
+resize never existed, so it went in as a feature. Added eight resize handles
+(native on Tauri, manual bounds drag on Electron), unpinned and persisted the
+pop-up size, and added a frosted-glass Appearance > Theme. Measured both
+engines' own edge hit tests rather than guessing a grab width. Release .deb
+built, GLIBC floor 2.34.
+
 ### 2026-09-20T11:45:00Z — claude
 Native verification of the refresh on both backends. Tauri under GDK_BACKEND=x11
 (a native Wayland surface is not capturable and GNOME's screenshot D-Bus is

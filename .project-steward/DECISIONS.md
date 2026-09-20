@@ -529,3 +529,27 @@ are unreachable as written or unsafe.
 the dark OCR stripes and the dark popover are extrapolated — the brief pins only
 the medium sizes and drew no dark variants of those screens. See QUESTIONS.md
 for the Yaru Orange contrast issue.
+
+## 0021 — 2026-09-20 — Edge resize is per-backend; glass is a separate axis
+
+**Context**: The 1.5.0 test asked for draggable window edges and a
+frosted-glass theme. Frameless windows get no resize border of their own:
+`decorations: false` strips GTK's CSD margin, and both engines run their own
+edge hit test that consumes the press before the DOM sees it.
+**Decision**: The app draws eight handles and hands off per backend. Tauri
+calls `startResizeDragging` (compositor-side; correct on Wayland and X11, and
+`core:window:allow-start-resize-dragging` was already granted). Electron has no
+equivalent, so it drags bounds by hand from a main-process snapshot using
+screen-space deltas. Glass is `surfaceStyle: 'solid' | 'glass'`, orthogonal to
+`appearanceTheme`, so light-glass and dark-glass both exist; the field is named
+`surfaceStyle` rather than `theme` because `appearanceTheme` already means
+light/dark, while the Settings group is titled "Theme" as the user asked.
+**Consequences**: Electron's manual path moves the window origin, which Wayland
+forbids, so north/west edges only work under X11 — the sessions that backend
+targets. The grab band is 8px because measurement showed Chromium consumes
+roughly the outer 6px (no handler at 2px or 5px inset, handler fires at 7px)
+and tao has a comparable 5px band. A persisted pop-up size disables auto-fit,
+so Settings > Pop-up > Window carries a Reset. Glass also makes every surface
+non-opaque, which incidentally removes the WebKitGTK antialiasing
+inconsistency recorded in RISKS.md — at the cost of uniformly heavier text.
+

@@ -25,6 +25,33 @@ unguarded read aborts. Electron: `electron/main.js` via `execFile('gsettings')`,
 exposed in `electron/preload.cjs`. `npm run typecheck` proves the Electron side
 implements it, because `PlatformBackend` is derived from the Tauri object.
 
+**Release artifact 1.6.0** — `LightTranslator_1.6.0_amd64.deb`, 6033208 bytes,
+sha256 `3593bcdf21c197d0f323aaeed082b0bd08113c3ccc55b1df611dc09fade1c440`.
+Built in the jammy container; GLIBC floor **2.34**, so it starts on Ubuntu
+22.04.
+
+Verified natively for 1.6.0 (Electron under `--no-sandbox`, Tauri under
+`GDK_BACKEND=x11`):
+
+- **Edge resize works end to end**, proven on the Electron backend because its
+  manual `setBounds` path can be driven by a synthetic pointer: east +110 gave
+  exactly +110 width; west -50 gave +50 width and -50 x; the SE corner gave
+  -60/+40. Tauri's path hands off to the compositor, which a synthetic pointer
+  cannot start — the handler firing was confirmed instead by making the handle
+  recolour on press.
+- **Both engines eat the outermost pixels.** No handler at 2px or 5px inset, a
+  handler at 7px. Hence 8px edges. See RISKS.md.
+- Pop-up scrolling, the pane hover/focus highlight, the Theme group and glass
+  were verified in the browser, where they render identically and measure
+  without a focus fight.
+- **The size-persistence gate** was proven in the browser: a bare `resize`
+  event is not recorded, one preceded by a handle pointerdown is, the flag
+  resets afterwards, and Settings > Pop-up > Window's Reset clears it and
+  disables itself.
+
+**Not covered**: dragging the pop-up's own edges and Tauri edge resize, both of
+which need a human (see RISKS.md), and the 1.6.0 package itself.
+
 **Release artifact 1.5.0** — `LightTranslator_1.5.0_amd64.deb`, 6030312 bytes,
 sha256 `85a195b2c9e514d39d2de452323258fb3dee1d199ed477811c1b2908ac045215`.
 Built in the jammy container (`npm run app:docker:build`), never natively.

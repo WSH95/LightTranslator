@@ -3,7 +3,7 @@ updated_at: 2026-09-20T11:00:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: 9cf7d93 docs(steward): record the 1.5.0 artifact
+last_commit: ab9cc78 chore(release): 1.6.0
 ---
 # Handoff
 
@@ -12,53 +12,37 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**v1.5.0 is cut and the release `.deb` is built, awaiting the user's test.**
-The Ubuntu 24.04 / Yaru UI refresh is code-complete and natively verified on
-both backends.
+**v1.6.0 is cut and its `.deb` is built, awaiting the user's test.** It answers
+the three things that came back from their 1.5.0 test: the quick pop-up's
+missing scroll container and unresizable window, the translator panes' missing
+hover/focus feedback, and a request for a frosted-glass theme. Rationale:
+DECISIONS 0021. Tasks: PLAN.md "Post-1.5.0 fixes + resize + glass".
 
-Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.5.0_amd64.deb`,
-sha256 `85a195b2c9e514d39d2de452323258fb3dee1d199ed477811c1b2908ac045215`,
-GLIBC floor 2.34. Built in the jammy container. Not tagged, not published. All eight steps of the
-plan landed as six feature commits plus two steward commits, all on `main`,
-**unpushed**. Design source: `design_handoff_ubuntu_refresh/` (options 2a + 3a
-+ 3b). Rationale: DECISIONS 0018-0020. Task list: PLAN.md "Ubuntu / Yaru UI
-refresh".
+Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.6.0_amd64.deb`,
+sha256 `3593bcdf21c197d0f323aaeed082b0bd08113c3ccc55b1df611dc09fade1c440`,
+GLIBC floor 2.34. Not tagged, not published.
 
-Green: typecheck, build, `node --check` on both Electron entries, 22 JS/TS unit
-tests, `cargo check --all-targets`, `cargo test` (5/5), `cargo build`. The CSS
-bundle dropped from 38.5KB to 20.8KB with the macOS skin.
+What a successor should not re-derive, on top of the 1.5.0 list:
 
-Six things a successor should not re-derive:
-
-- **`org.gnome.desktop.interface accent-color` does not exist on this host.**
-  The key landed in GNOME 47; Ubuntu 24.04 ships 46. The accent is `gtk-theme`,
-  and `/usr/share/themes` carries `Yaru` plus nine `Yaru-<name>` variants that
-  map 1:1 onto the ten swatches. `src/lib/accents.ts` owns the mapping and is
-  unit tested. DECISIONS 0019.
-- **Reading a gsettings key a schema does not declare aborts the process**, it
-  does not return an error. Both `schema_installed()` and `has_key()` guards are
-  load-bearing. `interface_schema_reads_are_guarded` in `gnome_shortcut.rs` is
-  the canary: a regression takes the test runner down rather than failing.
-- **`TranslatorView` stays mounted while Settings is shown** (hidden, not
-  unmounted). It owns `platform.onOcrResult`, so unmounting loses tray OCR
-  results, and remounting re-fires auto-translate against the surviving store
-  text.
-- **Tailwind drops unknown classes silently**, so the skin removal was gated on
-  a grep, not the compiler. A second gate asserts every `--token` reached
-  `dist/assets/*.css`; both are in VERIFY.md and the plan file. `@layer
-  components` classes are purged until a component consumes them — that is
-  expected, not a bug.
-- **Baked-alpha colour tokens are terminal.** `bg-ctrl/50` compiles and renders
-  at full alpha, because Tailwind drops the modifier on a colour that already
-  carries one. Only `bg` and `accent` are channel triplets. The config says so.
-- **The pop-up cannot have an outer drop shadow.** `#root` fills the window, so
-  anything drawn outside it never composites. The inset ring is what
-  `quickWindowBorderOpacity` maps to. DECISIONS 0020.
+- **Two of the three reports were regressions the refresh caused**, checked
+  against `7dc5f6b` rather than assumed. Edge resize, by contrast, never
+  existed in this app — it is a new feature, not a fix.
+- **Frameless windows get no resize border**, and both engines claim the
+  outermost pixels for their own hit test (~6px Chromium, ~5px tao). The app
+  draws 8px handles behind that. Do not shrink them without re-measuring.
+- **Tauri and Electron resize differently on purpose.** Wayland forbids a
+  client moving its own window, so only a compositor-side grab can work there;
+  Electron has no such API and drags bounds by hand, which is fine because it
+  targets X11 sessions.
+- **The pop-up cannot be driven by UI automation** — it blur-closes, so any
+  focus change hides it. Its resize needs a human.
+- **`surfaceStyle` is the glass field**, not `theme`; `appearanceTheme` already
+  means light/dark. The Settings group is titled "Theme".
 
 ## In flight
 
-Tree clean. Twelve commits on `main`, **none pushed**, ending at `9cf7d93`.
-The release is built but not tagged and not published.
+Tree clean. Sixteen commits on `main`, **none pushed**, ending at `ab9cc78`.
+1.6.0 is built but not tagged and not published.
 
 ## Validation completed
 
@@ -70,18 +54,16 @@ confirmation after installing.
 
 ## Next steps
 
-1. **The user is testing the installed 1.5.0 package.** Wait for their report
-   before tagging or publishing.
-2. Three checks a machine could not do: drag the window by its title (a
-   synthetic pointer cannot start a compositor-side interactive move, so only
-   the markup was verified), look at the tray icon in the GNOME panel, and
-   decide the WebKitGTK text-antialiasing finding in RISKS.md — the one-line
-   fix is a typography call, not a bug fix.
-3. Electron `.deb` not built this session (`npm run electron:build:deb`).
-   Note Electron will not start on this host without `--no-sandbox`; see
-   RISKS.md.
+1. **The user is testing the installed 1.6.0 package.** Wait for their report.
+2. Two checks only a human can do: drag the **pop-up's** edges (it blur-closes,
+   so automation cannot hold focus), and Tauri edge resize on the main window
+   (a synthetic pointer cannot start a compositor-side grab; the handler itself
+   was confirmed to fire). Also worth a glance: the tray icon in the panel.
+3. Decide the WebKitGTK antialiasing item in RISKS.md. Glass mode incidentally
+   removes the inconsistency, which may change the answer.
 4. Decide the Yaru Orange contrast question in QUESTIONS.md before publishing.
-5. Then tag and publish with release notes covering the refresh.
+5. Electron `.deb` still not built this session (`npm run electron:build:deb`).
+6. Then tag and publish.
 
 ## Blockers
 
