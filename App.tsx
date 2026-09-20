@@ -5,6 +5,7 @@ import { SettingsView } from './components/SettingsView';
 import { OcrModal } from './components/OcrModal';
 import { QuickTranslateWindow } from './components/QuickTranslateWindow';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ResizeHandles } from './components/ui';
 import { useAppStore } from './store/useAppStore';
 import { platform } from './src/lib/platform';
 
@@ -157,6 +158,10 @@ const App: React.FC = () => {
         </div>
 
         {showSettings && <SettingsView onBack={() => setShowSettings(false)} />}
+
+        {/* Outside the view swap: the translator and Settings share one
+            window, so the grips must survive switching between them. */}
+        <ResizeHandles />
       </div>
     </ErrorBoundary>
   );

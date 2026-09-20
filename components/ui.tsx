@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, ChevronUp, Minus, Square, X } from 'lucide-react';
-import { platform } from '../src/lib/platform';
+import { platform, type ResizeDirection } from '../src/lib/platform';
 import type { Language, LanguageCode } from '../types';
 
 /* ------------------------------------------------------------------ */
@@ -43,6 +43,58 @@ export const WindowControls: React.FC = () => (
       <X size={14} />
     </button>
   </div>
+);
+
+/* ------------------------------------------------------------------ */
+/* Window resize handles                                               */
+/* ------------------------------------------------------------------ */
+
+const EDGE = 6;
+const CORNER = 12;
+
+/**
+ * Edges are inset by CORNER so the eight regions never overlap and no
+ * z-ordering between them is needed.
+ */
+const HANDLES: { dir: ResizeDirection; cursor: string; style: React.CSSProperties }[] = [
+  { dir: 'North', cursor: 'n-resize', style: { top: 0, left: CORNER, right: CORNER, height: EDGE } },
+  { dir: 'South', cursor: 's-resize', style: { bottom: 0, left: CORNER, right: CORNER, height: EDGE } },
+  { dir: 'West', cursor: 'w-resize', style: { left: 0, top: CORNER, bottom: CORNER, width: EDGE } },
+  { dir: 'East', cursor: 'e-resize', style: { right: 0, top: CORNER, bottom: CORNER, width: EDGE } },
+  { dir: 'NorthWest', cursor: 'nw-resize', style: { top: 0, left: 0, width: CORNER, height: CORNER } },
+  { dir: 'NorthEast', cursor: 'ne-resize', style: { top: 0, right: 0, width: CORNER, height: CORNER } },
+  { dir: 'SouthWest', cursor: 'sw-resize', style: { bottom: 0, left: 0, width: CORNER, height: CORNER } },
+  { dir: 'SouthEast', cursor: 'se-resize', style: { bottom: 0, right: 0, width: CORNER, height: CORNER } },
+];
+
+/**
+ * Invisible grips around the window edge.
+ *
+ * Frameless windows get no resize border of their own, so the app draws one.
+ * `position: fixed` anchors these to the window rather than to whatever
+ * mounted them, and `-webkit-app-region: no-drag` is mandatory on Electron:
+ * Chromium ranks a drag region above its own resize hit test, and the top
+ * 47px of every window is a drag region. The handles carry no
+ * `data-tauri-drag-region`, so Tauri's drag shim ignores them and the two
+ * never fight over the title bar.
+ */
+export const ResizeHandles: React.FC<{ onResizeStart?: () => void }> = ({ onResizeStart }) => (
+  <>
+    {HANDLES.map(({ dir, cursor, style }) => (
+      <div
+        key={dir}
+        aria-hidden
+        className="fixed z-[100] -webkit-app-region-no-drag"
+        style={{ ...style, cursor }}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          onResizeStart?.();
+          void platform.startResize(dir, event);
+        }}
+      />
+    ))}
+  </>
 );
 
 /* ------------------------------------------------------------------ */

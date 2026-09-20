@@ -19,7 +19,10 @@
 
   --bg-rgb: 250 250 250;
   --bg: rgb(var(--bg-rgb));
-  --card: #ffffff;
+  --card-rgb: 255 255 255;
+  --card: rgb(var(--card-rgb));
+  /* Window alpha; only consulted while data-surface="glass". */
+  --surface-a: 1;
   --card-border: rgba(0, 0, 0, .10);
   --row-sep: rgba(0, 0, 0, .08);
   --text: #2e2e2e;
@@ -75,7 +78,7 @@ html[data-theme="dark"] {
   color-scheme: dark;
 
   --bg-rgb: 36 36 36;
-  --card: #303030;
+  --card-rgb: 48 48 48;
   --card-border: rgba(255, 255, 255, .06);
   --row-sep: rgba(255, 255, 255, .08);
   --text: #ffffff;
@@ -115,6 +118,19 @@ html[data-theme="dark"] {
   --quick-ring-scale: 3;
 }
 
+/* Frosted glass.
+   Orthogonal to light/dark: both combine with it. Cards stay a little more
+   opaque than the window so text survives an arbitrary wallpaper behind it. */
+html[data-surface="glass"] {
+  --bg: rgb(var(--bg-rgb) / var(--surface-a));
+  --card: rgb(var(--card-rgb) / calc(var(--surface-a) * .85 + .15));
+}
+
+html[data-surface="glass"][data-window-mode="main"] #root {
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+}
+
 /* First-paint safety net. Applies only between the stylesheet loading and
    theme.ts writing data-theme, so the dark block above stays the single
    source. Tauri's CSP forbids an inline <head> script, so this is the
@@ -122,7 +138,7 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
     --bg-rgb: 36 36 36;
-    --card: #303030;
+    --card-rgb: 48 48 48;
     --text: #ffffff;
     --window-ring: rgba(0, 0, 0, .6);
   }
@@ -250,6 +266,22 @@ html, body {
     background: var(--card);
     border: 1px solid var(--card-border);
     border-radius: 12px;
+  }
+
+  /**
+   * The translator panes only. Scoped away from .card so the settings boxed
+   * lists do not light up too. Restores the feedback the pre-refresh build
+   * had as focus-within:ring-2 + an accent border.
+   */
+  .pane {
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .pane:hover {
+    border: 1px solid rgb(var(--accent-rgb) / .45);
+  }
+  .pane:focus-within {
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-tint);
   }
 
   /* Separators live between rows, so no row needs to know it is last. */

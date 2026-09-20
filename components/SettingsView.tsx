@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { ACCENTS, PROVIDERS, LLM_PRESETS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
-import type { AppearanceTheme, LlmPreset, TranslationProviderId, TranslationTextSize } from '../types';
+import type {
+  AppearanceTheme, LlmPreset, SurfaceStyle, TranslationProviderId, TranslationTextSize,
+} from '../types';
 import { platform, type ShortcutStatus } from '../src/lib/platform';
 import { accentFor, getSystemAccent, refreshSystemAppearance } from '../src/lib/theme';
 import { LanguagePill, List, Radio, Row, SettingsGroup, Switch, WindowControls } from './ui';
@@ -42,6 +44,33 @@ const PROVIDER_NOTES: Record<TranslationProviderId, string> = {
   deepl: 'Supports both Free and Pro API keys.',
   microsoft: 'Azure Cognitive Services. Needs a subscription key and the resource region.',
 };
+
+const SURFACES: { value: SurfaceStyle; label: string }[] = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'glass', label: 'Frosted glass' },
+];
+
+/**
+ * Surface preview. Glass only reads as glass against something, so both tiles
+ * sit on the same stand-in wallpaper and only the window layer differs.
+ */
+const SurfacePreview: React.FC<{ glass: boolean }> = ({ glass }) => (
+  <div className="w-full h-[92px] relative overflow-hidden rounded-[8px]">
+    <div
+      className="absolute inset-0"
+      style={{ background: 'linear-gradient(135deg, #5b7cfa 0%, #a855b8 55%, #e9724c 100%)' }}
+    />
+    <div
+      className="absolute inset-3 rounded-[6px]"
+      style={{
+        background: glass ? 'rgb(var(--bg-rgb) / .55)' : 'rgb(var(--bg-rgb))',
+        backdropFilter: glass ? 'blur(6px)' : undefined,
+        WebkitBackdropFilter: glass ? 'blur(6px)' : undefined,
+        border: '1px solid var(--card-border)',
+      }}
+    />
+  </div>
+);
 
 /** One half of an Appearance style preview: a 14px header over an inset card. */
 const PreviewPane: React.FC<{ dark: boolean }> = ({ dark }) => (
@@ -82,7 +111,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     quickWindowBorderOpacity,
     quickSourceLang,
     quickTargetLang,
+    quickWindowWidth,
+    quickWindowHeight,
     appearanceTheme,
+    surfaceStyle,
+    glassOpacity,
     accentColor,
     followSystemAccent,
     translationTextSize,
@@ -640,6 +673,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                       </span>
                     </div>
                   </Row>
+                  <Row
+                    label="Size"
+                    description={
+                      quickWindowWidth != null && quickWindowHeight != null
+                        ? `Remembered: ${quickWindowWidth} \u00d7 ${quickWindowHeight}. Drag an edge of the pop-up to change it.`
+                        : 'The pop-up sizes itself to the translation. Drag an edge to fix a size.'
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="btn shrink-0"
+                      disabled={quickWindowWidth == null && quickWindowHeight == null}
+                      onClick={() => updateSettings({ quickWindowWidth: null, quickWindowHeight: null })}
+                    >
+                      Reset
+                    </button>
+                  </Row>
                 </List>
               </SettingsGroup>
             </>
@@ -830,6 +880,65 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     );
                   })}
                 </div>
+              </SettingsGroup>
+
+              <SettingsGroup
+                title="Theme"
+                description={
+                  surfaceStyle === 'glass'
+                    ? 'The window blurs whatever is behind it. Combines with Light, Dark or System.'
+                    : 'An opaque window. Combines with Light, Dark or System.'
+                }
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {SURFACES.map(({ value, label }) => {
+                    const selected = surfaceStyle === value;
+                    return (
+                      <div key={value} className="flex flex-col items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => updateSettings({ surfaceStyle: value })}
+                          className="w-full rounded-[10px] overflow-hidden box-border"
+                          style={{ border: selected ? '2px solid var(--accent)' : '1px solid var(--preview-border)' }}
+                          aria-label={label}
+                        >
+                          <SurfacePreview glass={value === 'glass'} />
+                        </button>
+                        <div className="flex items-center gap-2 text-[13px] text-text">
+                          <Radio
+                            checked={selected}
+                            onChange={() => updateSettings({ surfaceStyle: value })}
+                            size={18}
+                            aria-label={label}
+                          />
+                          {label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {surfaceStyle === 'glass' && (
+                  <List>
+                    <Row label="Transparency">
+                      <div className="flex items-center gap-3 w-[220px] shrink-0">
+                        <input
+                          type="range"
+                          min={5}
+                          max={60}
+                          step={5}
+                          value={Math.round((1 - glassOpacity) * 100)}
+                          onChange={(e) =>
+                            updateSettings({ glassOpacity: 1 - parseInt(e.target.value, 10) / 100 })
+                          }
+                        />
+                        <span className="text-xs font-mono text-muted w-10 text-right shrink-0">
+                          {Math.round((1 - glassOpacity) * 100)}%
+                        </span>
+                      </div>
+                    </Row>
+                  </List>
+                )}
               </SettingsGroup>
 
               <SettingsGroup title="Accent Color">

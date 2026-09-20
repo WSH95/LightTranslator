@@ -94,6 +94,23 @@ export interface OcrInstallGuidance {
   commands: string[];
 }
 
+/** The eight compositor resize edges, spelled as Tauri's ResizeDirection. */
+export type ResizeDirection =
+  | 'North' | 'NorthEast' | 'East' | 'SouthEast'
+  | 'South' | 'SouthWest' | 'West' | 'NorthWest';
+
+/**
+ * The slice of a pointer event a resize needs. Structural rather than
+ * React.PointerEvent so this module stays free of React types; a real
+ * React.PointerEvent<HTMLDivElement> satisfies it.
+ */
+export interface ResizePointer {
+  pointerId: number;
+  screenX: number;
+  screenY: number;
+  currentTarget: HTMLElement;
+}
+
 // Detect Tauri runtime
 export const isTauri = (): boolean => {
   return typeof window !== 'undefined' &&
@@ -127,6 +144,14 @@ interface ElectronBridge {
   updateShortcut(shortcut: string, gnomeBinding: string | null): Promise<{ success: boolean; message?: string }>;
   getShortcutStatus(): Promise<ShortcutStatus>;
   getSystemAppearance(): Promise<SystemAppearance>;
+  /**
+   * Electron has no compositor-side resize, so it drags bounds by hand.
+   * `beginWindowResize` snapshots the starting bounds in the main process;
+   * every move then sends a total delta from that snapshot, which avoids the
+   * rounding drift of accumulating per-move deltas.
+   */
+  beginWindowResize(): void;
+  updateWindowResize(direction: string, dx: number, dy: number): void;
   openInMainWindow(text: string): Promise<{ success: boolean }>;
   onQuickToMain(callback: (text: string) => void): () => void;
   reregisterShortcut(): Promise<{ success: boolean; message?: string; mechanism: string }>;
@@ -142,7 +167,7 @@ const bridge = (): ElectronBridge => (window as unknown as { electron: ElectronB
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
-let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; isMaximized: () => Promise<boolean>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void>; onResized: (handler: () => void) => Promise<() => void> } } | null = null;
+let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; isMaximized: () => Promise<boolean>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void>; onResized: (handler: () => void) => Promise<() => void>; startResizeDragging: (direction: ResizeDirection) => Promise<void> } } | null = null;
 let tauriEvent: { listen: (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>; emitTo: (target: string, event: string, payload?: unknown) => Promise<void> } | null = null;
 
 // Initialize Tauri APIs if available
@@ -406,6 +431,22 @@ const tauriBackend = {
     return { success: false, error: 'No OCR backend available' };
   },
 
+  /**
+   * Begin an interactive resize from a window edge.
+   *
+   * Frameless windows get no resize border: `decorations: false` strips GTK's
+   * CSD margin, and tao's hand-rolled 5px hit test is bound to the GtkWindow,
+   * which the WebKitGTK child covers. So the app draws its own handles and
+   * hands off to the compositor here. `core:window:allow-start-resize-dragging`
+   * is already granted in capabilities/default.json.
+   */
+  async startResize(direction: ResizeDirection, _pointer: ResizePointer): Promise<void> {
+    await initTauri();
+    if (tauriWindow) {
+      await tauriWindow.getCurrentWindow().startResizeDragging(direction);
+    }
+  },
+
   /** Hand the pop-up's text to the main window and bring it forward. */
   async openInMainWindow(text: string): Promise<void> {
     await initTauri();
@@ -653,6 +694,45 @@ const electronBackend: PlatformBackend = {
     await bridge().openInMainWindow(text);
   },
 
+  /**
+   * Electron exposes no equivalent of startResizeDragging, so drive the
+   * window bounds directly. Deltas are in SCREEN coordinates: the window
+   * itself moves while resizing from a north or west edge, so client
+   * coordinates would feed back on themselves.
+   *
+   * Moving the window origin is forbidden on Wayland, so N/W edges only work
+   * under X11 — which is what this backend targets (Ubuntu 18.04-20.04).
+   */
+  async startResize(direction: ResizeDirection, pointer: ResizePointer): Promise<void> {
+    const handle = pointer.currentTarget;
+    const startX = pointer.screenX;
+    const startY = pointer.screenY;
+
+    bridge().beginWindowResize();
+    try {
+      handle.setPointerCapture(pointer.pointerId);
+    } catch {
+      /* capture is an optimisation; the listeners below still work without it */
+    }
+
+    const onMove = (event: PointerEvent) => {
+      bridge().updateWindowResize(direction, event.screenX - startX, event.screenY - startY);
+    };
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      try {
+        handle.releasePointerCapture(pointer.pointerId);
+      } catch {
+        /* already released */
+      }
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  },
+
   onQuickToMain(callback: (text: string) => void): () => void {
     return makeDisposableListener(async () => bridge().onQuickToMain(callback));
   },
@@ -733,6 +813,8 @@ export const platform = {
   ocrImage: (base64Image: string) => activeBackend().ocrImage(base64Image),
   onOcrResult: (cb: (text: string) => void) => activeBackend().onOcrResult(cb),
   openInMainWindow: (text: string) => activeBackend().openInMainWindow(text),
+  startResize: (direction: ResizeDirection, pointer: ResizePointer) =>
+    activeBackend().startResize(direction, pointer),
   onQuickToMain: (cb: (text: string) => void) => activeBackend().onQuickToMain(cb),
   onOcrDepsMissing: (cb: () => void) => activeBackend().onOcrDepsMissing(cb),
   setProxy: (settings: ProxySettings) => activeBackend().setProxy(settings),

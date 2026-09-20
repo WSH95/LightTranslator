@@ -268,12 +268,14 @@ function createQuickWindow() {
     title: 'Quick Translate',
     width: 360,
     height: 200,
-    // Width is pinned: the pop-up is a fixed 360 column and only its height
-    // tracks the content. maxHeight matches MAX_HEIGHT in the renderer.
-    minWidth: 360,
+    // 360 is the design's default width, not a pin: the user can drag the
+    // pop-up wider and that size is persisted. maxHeight is deliberately
+    // above the renderer's MAX_HEIGHT auto-grow cap, so the window can be
+    // dragged taller than it will ever size itself.
+    minWidth: 300,
     minHeight: 80,
-    maxWidth: 360,
-    maxHeight: 500,
+    maxWidth: 600,
+    maxHeight: 600,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -939,6 +941,47 @@ ipcMain.handle('open-in-main-window', (_event, text) => {
   }
   if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
   return { success: true };
+});
+
+/**
+ * Manual edge resize. Tauri hands this to the compositor via
+ * start_resize_dragging; Electron has no equivalent, so the main process
+ * snapshots the bounds on pointer-down and applies a total delta on each
+ * move. Total-from-snapshot rather than per-move deltas, so clamping at the
+ * min/max size cannot accumulate drift.
+ *
+ * Moving the window origin is forbidden under Wayland, so north/west edges
+ * only work on X11 — the sessions this backend actually targets.
+ */
+let resizeAnchor = null;
+
+ipcMain.on('begin-window-resize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  resizeAnchor = win && !win.isDestroyed() ? { win, bounds: win.getBounds() } : null;
+});
+
+ipcMain.on('update-window-resize', (_event, direction, dx, dy) => {
+  if (!resizeAnchor || resizeAnchor.win.isDestroyed()) return;
+  const { win, bounds } = resizeAnchor;
+  const next = { ...bounds };
+
+  if (direction.includes('East')) next.width = bounds.width + dx;
+  if (direction.includes('West')) {
+    next.width = bounds.width - dx;
+    next.x = bounds.x + dx;
+  }
+  if (direction.includes('South')) next.height = bounds.height + dy;
+  if (direction.includes('North')) {
+    next.height = bounds.height - dy;
+    next.y = bounds.y + dy;
+  }
+
+  win.setBounds({
+    x: Math.round(next.x),
+    y: Math.round(next.y),
+    width: Math.round(next.width),
+    height: Math.round(next.height),
+  });
 });
 
 ipcMain.on('close-quick-window', () => {

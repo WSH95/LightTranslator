@@ -87,6 +87,8 @@ function apply(): void {
     state.translationTextSize,
     state.quickWindowOpacity,
     state.quickWindowBorderOpacity,
+    state.surfaceStyle,
+    state.glassOpacity,
     prefersDark(),
     systemColorScheme,
   ].join('|');
@@ -96,6 +98,8 @@ function apply(): void {
   const root = document.documentElement;
   root.dataset.theme = resolveTheme(state.appearanceTheme);
   root.dataset.textSize = state.translationTextSize;
+  root.dataset.surface = state.surfaceStyle;
+  root.style.setProperty('--surface-a', String(state.glassOpacity));
   root.style.setProperty('--accent-light', accent.light);
   root.style.setProperty('--accent-light-rgb', channels(accent.light));
   root.style.setProperty('--accent-dark', accent.dark);

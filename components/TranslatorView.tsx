@@ -285,7 +285,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     <div className="flex-1 min-h-0 grid grid-cols-2 gap-3 pt-1 px-3 pb-3 relative">
 
       {/* ---------------- source ---------------- */}
-      <div className="card overflow-hidden flex flex-col min-h-0">
+      <div className="card pane overflow-hidden flex flex-col min-h-0">
         <div className="h-12 shrink-0 flex items-center justify-between pl-[10px] pr-2">
           <LanguagePill
             value={sourceLang}
@@ -348,7 +348,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
       </div>
 
       {/* ---------------- target ---------------- */}
-      <div className="card overflow-hidden flex flex-col min-h-0">
+      <div className="card pane overflow-hidden flex flex-col min-h-0">
         <div className="h-12 shrink-0 flex items-center justify-between pl-[10px] pr-2">
           <LanguagePill
             value={targetLang}

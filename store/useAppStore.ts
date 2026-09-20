@@ -192,6 +192,8 @@ export const useAppStore = create<AppState>()(
         // Quick Window Appearance
         quickWindowOpacity: state.quickWindowOpacity,
         quickWindowBorderOpacity: state.quickWindowBorderOpacity,
+        quickWindowWidth: state.quickWindowWidth,
+        quickWindowHeight: state.quickWindowHeight,
         // Quick Window Language
         quickSourceLang: state.quickSourceLang,
         quickTargetLang: state.quickTargetLang,
@@ -200,6 +202,8 @@ export const useAppStore = create<AppState>()(
         accentColor: state.accentColor,
         followSystemAccent: state.followSystemAccent,
         translationTextSize: state.translationTextSize,
+        surfaceStyle: state.surfaceStyle,
+        glassOpacity: state.glassOpacity,
       }),
     }
   )

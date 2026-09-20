@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('electron', {
   sendQuickReady: () => ipcRenderer.send('quick-window-ready'),
   closeQuickWindow: () => ipcRenderer.send('close-quick-window'),
   openInMainWindow: (text) => ipcRenderer.invoke('open-in-main-window', text),
+
+  // Manual window resize (Electron has no compositor-side equivalent)
+  beginWindowResize: () => ipcRenderer.send('begin-window-resize'),
+  updateWindowResize: (direction, dx, dy) =>
+    ipcRenderer.send('update-window-resize', direction, dx, dy),
   onQuickToMain: (callback) =>
     subscribe('quick-to-main', (_event, text) => callback(text)),
 

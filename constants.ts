@@ -125,6 +125,8 @@ export const DEFAULT_SETTINGS = {
   // Quick Window Appearance Defaults
   quickWindowOpacity: 0.95,
   quickWindowBorderOpacity: 0.05,
+  quickWindowWidth: null as number | null,
+  quickWindowHeight: null as number | null,
 
   // Quick Window Language Defaults
   quickSourceLang: 'auto' as const,
@@ -135,4 +137,6 @@ export const DEFAULT_SETTINGS = {
   accentColor: DEFAULT_ACCENT.light,
   followSystemAccent: false,
   translationTextSize: 'medium' as const,
+  surfaceStyle: 'solid' as const,
+  glassOpacity: 0.75,
 };

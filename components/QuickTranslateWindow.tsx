@@ -5,12 +5,13 @@ import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
-import { LanguagePill } from './ui';
+import { LanguagePill, ResizeHandles } from './ui';
 import { LanguageCode } from '../types';
 
-// The pop-up is a fixed 360 column (tauri.conf.json and electron/main.js pin
-// min == max), so only the height ever tracks the content.
-const WIDTH = 360;
+// 360 is the design's default width, not a pin — the window is resizable
+// between 300 and 600 and the chosen size is persisted. MAX_HEIGHT is the
+// AUTO-GROW cap only; the window's own maxHeight is higher (600), so the user
+// can drag it taller than it will ever size itself.
 const MIN_HEIGHT = 80;
 const MAX_HEIGHT = 500;
 // Enough for the whole language popover: 46 (its top) + 308 (6 + 9x32 + 8x1
@@ -28,7 +29,12 @@ export const QuickTranslateWindow: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const measureRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  // Set when a resize handle takes a pointer down. Without it, every
+  // programmatic auto-fit would be written back as if the user had chosen it.
+  const userResizingRef = useRef(false);
   // Always-current handleTranslate for the mount-once event listener
   const handleTranslateRef = useRef<(text: string) => void>(() => {});
   // Monotonic token so a slow response can't overwrite a newer request
@@ -39,6 +45,7 @@ export const QuickTranslateWindow: React.FC = () => {
     quickSourceLang,
     quickTargetLang,
     setQuickTargetLang,
+    updateSettings,
   } = useAppStore();
 
   const refreshSettings = useCallback(async () => {
@@ -50,24 +57,78 @@ export const QuickTranslateWindow: React.FC = () => {
   }, []);
 
   /**
-   * Measure the whole window body — header, text and footer — rather than
-   * summing constants for each piece. The old version added HEADER_HEIGHT +
-   * LANG_BAR_HEIGHT + PADDING, which silently drifts the moment the chrome
-   * changes. Width is never computed: the window is pinned to 360, so a
-   * content-derived width would grow it on every pass.
+   * Sum three MEASURED elements rather than a constants table: the body is a
+   * scroll container now, so its own box no longer reveals the content
+   * height. Width is never computed — it is read back from the window, so a
+   * size the user dragged to survives the next translation.
    */
   const resizeToFitContent = useCallback(() => {
-    if (!measureRef.current || !platform.isAvailable()) return;
-    const height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, measureRef.current.scrollHeight));
-    platform.resizeQuickWindow({ width: WIDTH, height });
+    if (!bodyRef.current || !platform.isAvailable()) return;
+    const content =
+      (headerRef.current?.offsetHeight ?? 0) +
+      bodyRef.current.scrollHeight +
+      (footerRef.current?.offsetHeight ?? 0);
+    const height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, content));
+    platform.resizeQuickWindow({ width: window.innerWidth, height });
   }, []);
+
+  /**
+   * A size the user dragged to wins over auto-fit; long translations scroll
+   * instead of growing the window. Settings > Pop-up > Window has a Reset
+   * that clears it. Read through getState() so this never closes over a
+   * stale snapshot.
+   */
+  const applyPreferredSize = useCallback(() => {
+    if (!platform.isAvailable()) return;
+    const { quickWindowWidth, quickWindowHeight } = useAppStore.getState();
+    if (quickWindowWidth != null && quickWindowHeight != null) {
+      platform
+        .resizeQuickWindow({ width: quickWindowWidth, height: quickWindowHeight })
+        .catch((e) => console.error('Failed to restore the pop-up size:', e));
+      return;
+    }
+    resizeToFitContent();
+  }, [resizeToFitContent]);
+
+  // Restore a persisted size once, before the window is ever shown.
+  useEffect(() => {
+    const { quickWindowWidth, quickWindowHeight } = useAppStore.getState();
+    if (quickWindowWidth == null || quickWindowHeight == null || !platform.isAvailable()) return;
+    platform
+      .resizeQuickWindow({ width: quickWindowWidth, height: quickWindowHeight })
+      .catch((e) => console.error('Failed to restore the pop-up size:', e));
+  }, []);
+
+  // Remember a size the user dragged to. startResizeDragging hands off to the
+  // compositor and never calls back, so the window's own resize event is the
+  // only signal — gated on userResizingRef so auto-fits are not recorded.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onResize = () => {
+      if (!userResizingRef.current) return;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = null;
+        userResizingRef.current = false;
+        updateSettings({
+          quickWindowWidth: window.innerWidth,
+          quickWindowHeight: window.innerHeight,
+        });
+      }, 250);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      if (timer) clearTimeout(timer);
+    };
+  }, [updateSettings]);
 
   // Resize when translation changes
   useEffect(() => {
     if (translated || error) {
-      setTimeout(resizeToFitContent, 50);
+      setTimeout(applyPreferredSize, 50);
     }
-  }, [translated, error, resizeToFitContent]);
+  }, [translated, error, applyPreferredSize]);
 
   useEffect(() => {
     if (platform.isAvailable()) {
@@ -155,12 +216,15 @@ export const QuickTranslateWindow: React.FC = () => {
     setMenuOpen(open);
     if (!platform.isAvailable()) return;
     if (open) {
-      platform.resizeQuickWindow({ width: WIDTH, height: MENU_OPEN_HEIGHT })
-        .catch((e) => console.error('Failed to resize quick window:', e));
+      // Only grow: a window the user already made tall enough is left alone.
+      if (window.innerHeight < MENU_OPEN_HEIGHT) {
+        platform.resizeQuickWindow({ width: window.innerWidth, height: MENU_OPEN_HEIGHT })
+          .catch((e) => console.error('Failed to resize quick window:', e));
+      }
     } else {
-      setTimeout(resizeToFitContent, 50);
+      setTimeout(applyPreferredSize, 50);
     }
-  }, [resizeToFitContent]);
+  }, [applyPreferredSize]);
 
   const handleSelectLang = async (code: LanguageCode) => {
     if (code === quickTargetLang) return;
@@ -168,7 +232,7 @@ export const QuickTranslateWindow: React.FC = () => {
     // settings the main window saved while this window held a stale copy
     await refreshSettings();
     setQuickTargetLang(code);
-    setTimeout(resizeToFitContent, 50);
+    setTimeout(applyPreferredSize, 50);
     // Re-translate with the new target language
     if (sourceText.trim()) {
       setTimeout(() => handleTranslate(sourceText), 100);
@@ -197,99 +261,109 @@ export const QuickTranslateWindow: React.FC = () => {
 
   return (
     <div
-      className="h-screen w-screen rounded-xl overflow-hidden"
+      className="h-screen w-screen rounded-xl overflow-hidden flex flex-col"
       style={{
         background: 'rgb(var(--bg-rgb) / var(--quick-bg-a))',
+        // The Opacity slider has been user-facing since before the refresh,
+        // and alpha with no blur is just a muddy ghost of the desktop. This
+        // is independent of the glass theme, which governs the main window.
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         // Inset, not an outer shadow: #root fills the window, so anything
         // drawn outside it never composites. quickWindowBorderOpacity feeds
         // the ring alpha, scaled per theme (see --quick-ring-scale).
         boxShadow: 'inset 0 0 0 1px rgb(0 0 0 / calc(var(--quick-ring-a) * var(--quick-ring-scale)))',
       }}
     >
-      <div ref={measureRef} className="flex flex-col">
+      <div
+        ref={headerRef}
+        className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none -webkit-app-region-drag"
+        data-tauri-drag-region
+      >
+        <LanguagePill
+          value={quickTargetLang}
+          options={TARGET_LANGUAGES}
+          onChange={handleSelectLang}
+          onOpenChange={handleMenuOpenChange}
+          title="Target language"
+        />
 
-        <div
-          className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none -webkit-app-region-drag"
-          data-tauri-drag-region
+        <div className="flex-1 self-stretch" data-tauri-drag-region />
+
+        {/* While translating the header keeps only the pill and the close. */}
+        {!loading && (
+          <>
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={!translated}
+              className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
+              title="Copy translation"
+              aria-label="Copy translation"
+            >
+              {copied ? <Check size={15} /> : <Copy size={15} />}
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenInMain}
+              disabled={!sourceText.trim()}
+              className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
+              title="Open in main window"
+              aria-label="Open in main window"
+            >
+              <AppWindow size={15} />
+            </button>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={handleClose}
+          className="win-ctrl ml-1 -webkit-app-region-no-drag"
+          title="Close"
+          aria-label="Close"
         >
-          <LanguagePill
-            value={quickTargetLang}
-            options={TARGET_LANGUAGES}
-            onChange={handleSelectLang}
-            onOpenChange={handleMenuOpenChange}
-            title="Target language"
-          />
+          <X size={14} />
+        </button>
+      </div>
 
-          <div className="flex-1 self-stretch" data-tauri-drag-region />
-
-          {/* While translating the header keeps only the pill and the close. */}
-          {!loading && (
-            <>
-              <button
-                type="button"
-                onClick={handleCopy}
-                disabled={!translated}
-                className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
-                title="Copy translation"
-                aria-label="Copy translation"
-              >
-                {copied ? <Check size={15} /> : <Copy size={15} />}
-              </button>
-              <button
-                type="button"
-                onClick={handleOpenInMain}
-                disabled={!sourceText.trim()}
-                className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
-                title="Open in main window"
-                aria-label="Open in main window"
-              >
-                <AppWindow size={15} />
-              </button>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={handleClose}
-            className="win-ctrl ml-1 -webkit-app-region-no-drag"
-            title="Close"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
+      {/* The scroll container. Its absence was the regression: a translation
+          past the window's max height was clipped with no way to reach it. */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {loading ? (
-          <div className="px-4 pt-0.5 pb-3.5 flex items-center gap-2.5 text-sm text-muted">
+          <div ref={bodyRef} className="px-4 pt-0.5 pb-3.5 flex items-center gap-2.5 text-sm text-muted">
             <LoaderCircle size={16} className="shrink-0 text-accent animate-spin" />
             Translating…
           </div>
         ) : (
-          <>
-            {/* Dimmed while the language popover is open. */}
-            <div
-              className={`px-4 pt-0.5 pb-3.5 transition-opacity duration-150 ${menuOpen ? 'opacity-40' : ''}`}
-            >
-              {error ? (
-                <div className="text-sm text-danger">{error}</div>
-              ) : (
-                <div lang={quickTargetLang} className="translation-text text-text break-words">
-                  {translated || (
-                    <span lang="en" className="text-placeholder select-none">
-                      Select text and press the shortcut
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="px-4 pb-2.5 flex items-center gap-2 text-[11px] text-muted">
-              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="truncate">{providerName} · {sourceName}</span>
-            </div>
-          </>
+          /* Dimmed while the language popover is open. */
+          <div
+            ref={bodyRef}
+            className={`px-4 pt-0.5 pb-3.5 transition-opacity duration-150 ${menuOpen ? 'opacity-40' : ''}`}
+          >
+            {error ? (
+              <div className="text-sm text-danger">{error}</div>
+            ) : (
+              <div lang={quickTargetLang} className="translation-text text-text break-words">
+                {translated || (
+                  <span lang="en" className="text-placeholder select-none">
+                    Select text and press the shortcut
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
+
+      {!loading && (
+        <div ref={footerRef} className="shrink-0 px-4 pb-2.5 flex items-center gap-2 text-[11px] text-muted">
+          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
+          <span className="truncate">{providerName} · {sourceName}</span>
+        </div>
+      )}
+
+      <ResizeHandles onResizeStart={() => { userResizingRef.current = true; }} />
     </div>
   );
 };
