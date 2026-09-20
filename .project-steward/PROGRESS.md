@@ -2,6 +2,16 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T11:00:00Z — claude
+Ubuntu/Yaru UI refresh code-complete (cf59398..7dec432): theme tokens and four
+appearance settings, two-pane main window, `get_system_appearance` in both
+backends, Settings as a full-window view with the Appearance tab, OCR dialog and
+quick pop-up restyled, macOS skin removed, app icons rebuilt from SVG masters.
+All automated checks green; the CSS bundle halved. Three bugs found and fixed on
+the way: a stale-closure commit in the language popover, a pop-up resize loop
+from a width that was still content-derived, and a dev server that died with
+ENOSPC watching `src-tauri/target`. Nothing has been run in a packaged app yet.
+
 ### 2026-09-20T10:30:00Z — claude
 [auto-checkpoint] Ubuntu/Yaru refresh steps 1-4 of 8 landed (cf59398, 4370a2a, e48e199, 5025af9): theme tokens + appearance state, two-pane main window, get_system_appearance in both backends, Settings as a full-window view with the new Appearance tab. OCR dialog, pop-up, macOS-skin removal and icons still to do.
 

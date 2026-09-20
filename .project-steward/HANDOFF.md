@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-09-20T10:30:00Z
+updated_at: 2026-09-20T11:00:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: 5025af9 feat(settings): Settings as a full-window view + Appearance
+last_commit: 7dec432 docs(steward): refresh decisions + the Orange contrast question
 ---
 # Handoff
 
@@ -12,40 +12,55 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**Mid-flight: the Ubuntu 24.04 / Yaru UI refresh**, from
-`design_handoff_ubuntu_refresh/` (options 2a + 3a + 3b, approved).
-Plan: `~/.claude/plans/pasted-content-id-ab1d-read-design-hand-linear-nova.md`.
+**The Ubuntu 24.04 / Yaru UI refresh is code-complete.** All eight steps of the
+plan landed as six feature commits plus two steward commits, all on `main`,
+**unpushed**. Design source: `design_handoff_ubuntu_refresh/` (options 2a + 3a
++ 3b). Rationale: DECISIONS 0018-0020. Task list: PLAN.md "Ubuntu / Yaru UI
+refresh".
 
-Steps 1-4 of 8 are committed and green (typecheck, build, 22 JS/TS tests,
-`cargo check`, 5 Rust tests). Steps 5-8 remain: OCR dialog, quick-translate
-pop-up, macOS-skin removal, app icons.
+Green: typecheck, build, `node --check` on both Electron entries, 22 JS/TS unit
+tests, `cargo check --all-targets`, `cargo test` (5/5), `cargo build`. The CSS
+bundle dropped from 38.5KB to 20.8KB with the macOS skin.
 
-Four things a successor should not re-derive:
+Six things a successor should not re-derive:
 
 - **`org.gnome.desktop.interface accent-color` does not exist on this host.**
   The key landed in GNOME 47; Ubuntu 24.04 ships 46. The accent is `gtk-theme`,
   and `/usr/share/themes` carries `Yaru` plus nine `Yaru-<name>` variants that
-  map 1:1 onto the ten swatches. `get_system_appearance` returns both keys raw;
-  `src/lib/accents.ts` owns the mapping and is unit tested.
+  map 1:1 onto the ten swatches. `src/lib/accents.ts` owns the mapping and is
+  unit tested. DECISIONS 0019.
 - **Reading a gsettings key a schema does not declare aborts the process**, it
   does not return an error. Both `schema_installed()` and `has_key()` guards are
   load-bearing. `interface_schema_reads_are_guarded` in `gnome_shortcut.rs` is
   the canary: a regression takes the test runner down rather than failing.
-- **`TranslatorView` must stay mounted while Settings is shown** (it is hidden,
-  not unmounted). It owns `platform.onOcrResult`, so unmounting loses tray OCR
+- **`TranslatorView` stays mounted while Settings is shown** (hidden, not
+  unmounted). It owns `platform.onOcrResult`, so unmounting loses tray OCR
   results, and remounting re-fires auto-translate against the surviving store
   text.
-- **The old macOS skin is still in the tree on purpose.** `colors.macos`,
-  `.toggle-*` and `.traffic-*` stay until step 7, because OcrModal and
-  QuickTranslateWindow still use them. Tailwind drops unknown classes silently,
-  so step 7 is gated on a grep, not on the compiler.
+- **Tailwind drops unknown classes silently**, so the skin removal was gated on
+  a grep, not the compiler. A second gate asserts every `--token` reached
+  `dist/assets/*.css`; both are in VERIFY.md and the plan file. `@layer
+  components` classes are purged until a component consumes them — that is
+  expected, not a bug.
+- **Baked-alpha colour tokens are terminal.** `bg-ctrl/50` compiles and renders
+  at full alpha, because Tailwind drops the modifier on a colour that already
+  carries one. Only `bg` and `accent` are channel triplets. The config says so.
+- **The pop-up cannot have an outer drop shadow.** `#root` fills the window, so
+  anything drawn outside it never composites. The inset ring is what
+  `quickWindowBorderOpacity` maps to. DECISIONS 0020.
 
 ## In flight
 
-Nothing uncommitted. Four commits on `main`, unpushed:
-`cf59398` theme tokens, `4370a2a` main window, `e48e199` backends,
-`5025af9` settings. `design_handoff_ubuntu_refresh/` is still untracked —
-decide whether it belongs in the repo before wrapping.
+Nothing uncommitted in tracked files.
+
+`design_handoff_ubuntu_refresh/` is still **untracked** — ~250KB of design
+reference including a 69KB canvas runtime. Left for the user to decide: the
+decisions and the icon masters reference it, but it is generated vendor HTML.
+
+Eight commits on `main`, none pushed:
+`cf59398` theme tokens · `4370a2a` main window · `e48e199` backend appearance ·
+`5025af9` settings view · `e1c3d63` steward checkpoint · `ada8631` OCR + pop-up
++ skin removal · `60a73b6` icons · `7dec432` decisions.
 
 ## Validation completed
 
@@ -57,22 +72,25 @@ confirmation after installing.
 
 ## Next steps
 
-1. Step 5: `components/OcrModal.tsx` — 480px dialog, segmented mode control.
-   The preview area is the capture trigger; selecting a segment must NOT start
-   `gnome-screenshot`, since screenshot is the default mode. Keep `max-h-full`
-   and the scrolling body: the host window is now 520px, not 680.
-2. Step 6: `components/QuickTranslateWindow.tsx` — delete `desiredWidth`
-   (width is pinned at 360, so the old `scrollWidth + 48` would grow the window
-   every cycle), replace the `HEADER_HEIGHT + LANG_BAR_HEIGHT + PADDING` sum
-   with one measured wrapper, and set the menu-open height to 362 — 300 cuts off
-   Spanish and Russian.
-3. Step 7: remove the macOS skin behind the two grep gates in the plan.
-4. Step 8: regenerate `src-tauri/icons/*` from an SVG master via
-   `~/.cargo/bin/cargo-tauri icon`, then overwrite 32px (flat) and 64px
-   (no inset shadow) from their own SVGs.
-5. Not yet run this session: `npm run app:dev` and `npm run electron:dev`.
-   The window radius, drag regions, real gsettings read and tray artwork have
-   only been checked in a browser.
+1. **Run it natively — nothing has been checked in a packaged app.**
+   `npm run app:dev`, then `npm run electron:dev`. Look at: the 12px window
+   radius and its squaring when maximised; **both drag regions** (Tauri reads
+   `data-tauri-drag-region` off the event target itself, so the header title and
+   the spacers carry it — dragging by the title is the thing to try); the live
+   gsettings read with the Appearance tab's "Follow system accent" on (this host
+   reports `color-scheme='default'`, `gtk-theme='Yaru'` → Orange); the pop-up at
+   its opacity; and the new tray/launcher artwork.
+   **Quit the installed app first**, or the single-instance plugin forwards to
+   it (see Warnings).
+2. Behaviour regression pass — none of this changed, but none of it has been
+   exercised end to end: auto-translate debounce, Ctrl+Enter, paste-image OCR,
+   clipboard translate, tray OCR result **while Settings is open**, shortcut
+   registration and Re-register, proxy apply, launch-at-startup, settings sync
+   between the two windows, and the pop-up's new "open in main window" button.
+3. Decide the Yaru Orange contrast question in QUESTIONS.md before release.
+4. Decide whether `design_handoff_ubuntu_refresh/` belongs in the repo.
+5. Version bump + release only after 1 and 2. Remember: release `.deb`s go
+   through `npm run app:docker:build`, never a native build.
 
 ## Blockers
 

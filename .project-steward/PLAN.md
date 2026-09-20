@@ -116,6 +116,29 @@ Shell extension that installs itself).
 - [x] W8 Release 1.3.0: version bumped in all five locations, merged to
       `main` and pushed at the user's request
 
+## Ubuntu / Yaru UI refresh (2026-09-20)
+
+Design source: `design_handoff_ubuntu_refresh/` (README + `Ubuntu Redesign.dc.html`),
+options 2a + 3a + 3b, approved by the user. Decisions 0018-0020.
+
+- [x] U1 `feat(theme)`: light/dark token block in `index.css`, component classes in
+      `@layer components`, `src/lib/theme.ts` as a module singleton, `ACCENTS`
+      table, four persisted appearance fields (cf59398)
+- [x] U2 `feat(ui)`: main window as two side-by-side panes — header bar, language
+      pills in the panes, floating swap button, status caption; window geometry
+      760x520 / quick pinned to 360 in both backends (4370a2a)
+- [x] U3 `feat(platform)`: `get_system_appearance` in both backends + the
+      `gtk-theme` fallback and its unit tests (e48e199)
+- [x] U4 `feat(settings)`: Settings as a full-window view with the new Appearance
+      tab; TranslatorView stays mounted behind it (5025af9)
+- [x] U5 `feat(ui)`: OCR dialog modes + quick pop-up chrome, `open_in_main_window`
+      in both backends, macOS skin removed behind two grep gates (ada8631)
+- [x] U6 `feat(icons)`: SVG masters under `src-tauri/icons/source/`, full set
+      regenerated via `cargo-tauri icon` (60a73b6)
+- [ ] U7 Hands-on verification in the packaged apps: window radius and its
+      squaring when maximised, both drag regions, the live gsettings read, tray
+      and launcher artwork, on both backends. Not run this session.
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)
