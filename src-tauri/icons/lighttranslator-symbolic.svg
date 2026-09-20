@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Symbolic tray mark. Single currentColor so a themed-icon lookup can recolour
+  it. Deliberately NOT a proportional scale of the launcher: the bar is 14/16
+  of the box against 150/256, i.e. optically enlarged for a 16px panel.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <rect x="1" y="2" width="14" height="2.5" rx="1.25" ry="1.25"/>
+  <rect x="6.75" y="2" width="2.5" height="12" rx="1.25" ry="1.25"/>
+  <circle cx="13.75" cy="1.75" r="1.75"/>
+</svg>

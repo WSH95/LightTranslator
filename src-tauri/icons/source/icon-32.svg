@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 32px window variant: flat #03875B, no gradient; bar/stem thickness 4px. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect x="0" y="0" width="32" height="32" rx="7" ry="7" fill="#03875B"/>
+  <rect x="7" y="8" width="19" height="4" rx="2" ry="2" fill="#ffffff"/>
+  <rect x="14" y="8" width="4" height="16" rx="2" ry="2" fill="#ffffff"/>
+  <circle cx="24" cy="8" r="2.5" fill="#B9F0D8"/>
+</svg>

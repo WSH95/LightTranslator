@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LightTranslator app icon master (design 3b).
+
+  Geometry is the 256px spec scaled x4:
+    base   rounded square, radius 22% of the size (225.28 at 1024)
+    bar    left 224, top 264, 600x120, r60
+    stem   left 456, top 264, 120x496, r60
+    dot    left 688, top 184, 144x144, #B9F0D8
+
+  The bar and stem centres differ by 2 units at 256 (131 vs 129); that is the
+  approved artwork, not a rounding slip. Do not "correct" it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14A374"/>
+      <stop offset="1" stop-color="#03875B"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="0" y="0" width="1024" height="1024" rx="225.28" ry="225.28"/>
+    </clipPath>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" rx="225.28" ry="225.28" fill="url(#base)"/>
+
+  <!-- inset 0 1px 0 rgba(255,255,255,.25) and inset 0 -2px 0 rgba(0,0,0,.12), x4 -->
+  <g clip-path="url(#squircle)">
+    <rect x="0" y="0" width="1024" height="4" fill="#ffffff" opacity="0.25"/>
+    <rect x="0" y="1016" width="1024" height="8" fill="#000000" opacity="0.12"/>
+  </g>
+
+  <rect x="224" y="264" width="600" height="120" rx="60" ry="60" fill="#ffffff"/>
+  <rect x="456" y="264" width="120" height="496" rx="60" ry="60" fill="#ffffff"/>
+  <circle cx="760" cy="256" r="72" fill="#B9F0D8"/>
+</svg>
