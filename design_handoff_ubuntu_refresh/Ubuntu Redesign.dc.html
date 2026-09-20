@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&family=Ubuntu+Mono&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.562.0/dist/umd/lucide.min.js"></script>
+<style>
+body{margin:0;background:#2a2a2a;font-family:Ubuntu,Cantarell,'Segoe UI',sans-serif;color:#3d3d3d;text-wrap:pretty}
+a,a:hover{color:#dcdcdc}
+</style>
+</helmet>
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px;align-items:flex-start;border-bottom:1px solid #3a3a3a">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font:500 13px Ubuntu,sans-serif;color:#cfcfcf;letter-spacing:.04em;text-transform:uppercase">Turn 3 · Pop-up and app icon</div>
+    <div style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Quick Translate pop-up and the app icon in the <a href="#2a">2a</a> style. Pop-up shows result, target-language menu open, and dark. Icon keeps the T mark for continuity, recolored to viridian on a Yaru rounded square; the symbolic tray glyph is monochrome as GNOME expects.</div>
+  </div>
+
+  <div id="3a" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#3a" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">3a</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">Quick Translate pop-up</span><span style="font:13px Ubuntu,sans-serif;color:#8f8f8f">360px wide, grows with content (min 80, max 500); background at the 95% opacity setting</span></div>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- popup result -->
+      <div data-screen-label="3a — Pop-up" style="width:360px;border-radius:12px;background:rgba(250,250,250,.95);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden">
+        <div style="height:44px;display:flex;align-items:center;padding:0 8px 0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(0,0,0,.06);font-size:13px;font-weight:500;color:#2e2e2e">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6f6f6f"></i></div>
+          <div style="flex:1"></div>
+          <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="copy" style="width:15px;height:15px"></i></div>
+          <div style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="app-window" style="width:15px;height:15px"></i></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e;margin-left:4px"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+        </div>
+        <div style="padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px">
+          <div lang="zh-CN" style="font-size:15px;line-height:1.6;color:#2e2e2e">敏捷的棕色狐狸跳过了懒狗。</div>
+          
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:11px;color:#6f6f6f"><span style="width:6px;height:6px;border-radius:50%;background:#03875B"></span>Google Translate · Auto Detect</div>
+      </div>
+
+      <!-- popup menu open -->
+      <div data-screen-label="3a — Pop-up, language menu" style="width:360px;height:300px;border-radius:12px;background:rgba(250,250,250,.95);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden;position:relative">
+        <div style="height:44px;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(0,0,0,.12);font-size:13px;font-weight:500;color:#2e2e2e">Chinese (Simplified)<i data-lucide="chevron-up" style="width:14px;height:14px;color:#6f6f6f"></i></div>
+          <div style="flex:1"></div>
+          <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="copy" style="width:15px;height:15px"></i></div>
+          <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="app-window" style="width:15px;height:15px"></i></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e;margin-left:4px"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+        </div>
+        <div style="padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px;opacity:.4">
+          <div lang="zh-CN" style="font-size:15px;line-height:1.6;color:#2e2e2e">敏捷的棕色狐狸跳过了懒狗。</div>
+          
+        </div>
+        <div style="position:absolute;left:8px;top:46px;width:220px;background:#fff;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.12),0 8px 24px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:1px">
+          <div style="display:flex;align-items:center;justify-content:space-between;height:32px;padding:0 10px;border-radius:8px;background:rgba(0,0,0,.06);font-size:13px;font-weight:500;color:#2e2e2e">Chinese (Simplified)<i data-lucide="check" style="width:14px;height:14px;color:#03875B"></i></div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">Chinese (Traditional)</div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">English</div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">Japanese</div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">Korean</div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">French</div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border-radius:8px;font-size:13px;color:#2e2e2e">German</div>
+        </div>
+      </div>
+
+      <!-- popup loading -->
+      <div data-screen-label="3a — Pop-up, translating" style="width:360px;border-radius:12px;background:rgba(250,250,250,.95);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 14px 36px rgba(0,0,0,.4);display:flex;flex-direction:column;overflow:hidden">
+        <div style="height:44px;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(0,0,0,.06);font-size:13px;font-weight:500;color:#2e2e2e">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6f6f6f"></i></div>
+          <div style="flex:1"></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e;margin-left:4px"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+        </div>
+        <div style="padding:2px 16px 14px;display:flex;align-items:center;gap:10px;font-size:14px;color:#6f6f6f"><i data-lucide="loader-circle" style="width:16px;height:16px;color:#03875B"></i>Translating…</div>
+      </div>
+
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <!-- popup dark -->
+      <div data-screen-label="3a — Pop-up (dark)" style="width:360px;border-radius:12px;background:rgba(36,36,36,.95);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 14px 36px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden">
+        <div style="height:44px;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(255,255,255,.1);font-size:13px;font-weight:500;color:#fff">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+          <div style="flex:1"></div>
+          <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="copy" style="width:15px;height:15px"></i></div>
+          <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="app-window" style="width:15px;height:15px"></i></div>
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff;margin-left:4px"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+        </div>
+        <div style="padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px">
+          <div lang="zh-CN" style="font-size:15px;line-height:1.6;color:#fff">敏捷的棕色狐狸跳过了懒狗。</div>
+          
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 16px 10px;font-size:11px;color:#8c8c8c"><span style="width:6px;height:6px;border-radius:50%;background:#3dc78f"></span>Google Translate · Auto Detect</div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div id="3b" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#3b" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">3b</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">App icon</span><span style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Yaru rounded square (22% radius), soft top-light gradient, white T, mint dot; symbolic tray glyph in one color</span></div>
+    <div style="display:flex;gap:40px;align-items:flex-end;flex-wrap:wrap">
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <img src="src-tauri/icons/icon.png" alt="current icon" style="width:128px;height:128px;display:block">
+        <div style="font:12px Ubuntu,sans-serif;color:#8f8f8f">Current</div>
+      </div>
+      <div data-screen-label="3b — Icon 256" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div style="width:256px;height:256px;border-radius:56px;background:linear-gradient(180deg,#14A374 0%,#03875B 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),inset 0 -2px 0 rgba(0,0,0,.12);position:relative">
+          <div style="position:absolute;left:56px;top:66px;width:150px;height:30px;border-radius:15px;background:#fff"></div>
+          <div style="position:absolute;left:114px;top:66px;width:30px;height:124px;border-radius:15px;background:#fff"></div>
+          <div style="position:absolute;left:172px;top:46px;width:36px;height:36px;border-radius:50%;background:#B9F0D8"></div>
+        </div>
+        <div style="font:12px Ubuntu,sans-serif;color:#8f8f8f">256 · launcher</div>
+      </div>
+      <div data-screen-label="3b — Icon 64" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div style="width:64px;height:64px;border-radius:14px;background:linear-gradient(180deg,#14A374 0%,#03875B 100%);position:relative">
+          <div style="position:absolute;left:14px;top:16.5px;width:37.5px;height:7.5px;border-radius:4px;background:#fff"></div>
+          <div style="position:absolute;left:28.5px;top:16.5px;width:7.5px;height:31px;border-radius:4px;background:#fff"></div>
+          <div style="position:absolute;left:43px;top:11.5px;width:9px;height:9px;border-radius:50%;background:#B9F0D8"></div>
+        </div>
+        <div style="font:12px Ubuntu,sans-serif;color:#8f8f8f">64 · dock</div>
+      </div>
+      <div data-screen-label="3b — Icon 32" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div style="width:32px;height:32px;border-radius:7px;background:#03875B;position:relative">
+          <div style="position:absolute;left:7px;top:8px;width:19px;height:4px;border-radius:2px;background:#fff"></div>
+          <div style="position:absolute;left:14px;top:8px;width:4px;height:16px;border-radius:2px;background:#fff"></div>
+          <div style="position:absolute;left:21.5px;top:5.5px;width:5px;height:5px;border-radius:50%;background:#B9F0D8"></div>
+        </div>
+        <div style="font:12px Ubuntu,sans-serif;color:#8f8f8f">32 · window</div>
+      </div>
+      <div data-screen-label="3b — Tray symbolic" style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div style="display:flex;gap:16px">
+          <div style="width:44px;height:28px;border-radius:6px;background:#1b1b1b;display:flex;align-items:center;justify-content:center"><div style="width:16px;height:16px;position:relative"><div style="position:absolute;left:1px;top:2px;width:14px;height:2.5px;border-radius:1.5px;background:#fff"></div><div style="position:absolute;left:6.75px;top:2px;width:2.5px;height:12px;border-radius:1.5px;background:#fff"></div><div style="position:absolute;left:12px;top:0;width:3.5px;height:3.5px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="width:44px;height:28px;border-radius:6px;background:#ebebeb;display:flex;align-items:center;justify-content:center"><div style="width:16px;height:16px;position:relative"><div style="position:absolute;left:1px;top:2px;width:14px;height:2.5px;border-radius:1.5px;background:#2e2e2e"></div><div style="position:absolute;left:6.75px;top:2px;width:2.5px;height:12px;border-radius:1.5px;background:#2e2e2e"></div><div style="position:absolute;left:12px;top:0;width:3.5px;height:3.5px;border-radius:50%;background:#2e2e2e"></div></div></div>
+        </div>
+        <div style="font:12px Ubuntu,sans-serif;color:#8f8f8f">16 · tray, symbolic</div>
+      </div>
+    </div>
+  </div>
+</section>
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px;align-items:flex-start;border-bottom:1px solid #3a3a3a">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font:500 13px Ubuntu,sans-serif;color:#cfcfcf;letter-spacing:.04em;text-transform:uppercase">Turn 2 · Blend</div>
+    <div style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Main + Settings from <a href="#1b">1b</a>, OCR from <a href="#1c">1c</a>, viridian from <a href="#1a">1a</a>, restyled toward current Ubuntu 24.04 / libadwaita: flat header merged with the window, 12px radii, pill buttons, boxed lists, no dividers. New Appearance tab with theme and Yaru accent picker.</div>
+  </div>
+
+  <div id="2a" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#2a" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">2a</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">Modern Yaru</span></div>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- 2a main light -->
+      <div data-screen-label="2a — Main" style="width:760px;height:520px;border-radius:12px;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 22px 50px rgba(0,0,0,.4)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="font-size:15px;font-weight:700;color:#2e2e2e;flex-shrink:0">LightTranslator</div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 10px;border-radius:8px;background:rgba(3,135,91,.12);font-size:14px;font-weight:500;color:#03875B"><i data-lucide="zap" style="width:15px;height:15px"></i>Auto</div>
+          <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 12px 12px;position:relative">
+          <div style="display:flex;flex-direction:column;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+            <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px"><div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(0,0,0,.06);font-size:13px;font-weight:500;color:#2e2e2e">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6f6f6f"></i></div><div style="display:flex;gap:2px"><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="scan-text" style="width:15px;height:15px"></i></div><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="clipboard-list" style="width:15px;height:15px"></i></div></div></div>
+            <div style="flex:1;padding:6px 16px 16px;font-size:16px;line-height:1.5;color:#8c8c8c">Enter text...</div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+            <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px"><div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(0,0,0,.06);font-size:13px;font-weight:500;color:#2e2e2e">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6f6f6f"></i></div><div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="copy" style="width:15px;height:15px"></i></div></div>
+            <div style="flex:1;padding:6px 16px 16px;font-size:16px;line-height:1.5;color:#8c8c8c">Translation will appear here...</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 12px;font-size:12px;color:#6f6f6f"><span style="width:7px;height:7px;border-radius:50%;background:#03875B"></span>Ready · Google Translate</div>
+          </div>
+          <div style="position:absolute;left:50%;top:32px;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;color:#6f6f6f"><i data-lucide="arrow-right-left" style="width:13px;height:13px"></i></div>
+        </div>
+      </div>
+
+      <!-- 2a settings translation light -->
+      <div data-screen-label="2a — Settings · Translation" style="width:760px;height:600px;border-radius:12px;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 22px 50px rgba(0,0,0,.4)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="arrow-left" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;gap:2px"><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;background:rgba(0,0,0,.1);font-size:13px;font-weight:500;color:#2e2e2e"><i data-lucide="languages" style="width:15px;height:15px"></i>Translation</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="mouse-pointer-2" style="width:15px;height:15px"></i>Pop-up</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="sliders-horizontal" style="width:15px;height:15px"></i>General</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="palette" style="width:15px;height:15px"></i>Appearance</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:20px 0;display:flex;justify-content:center">
+          <div style="width:560px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#2e2e2e">Provider</div>
+              <div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.08)"><div style="width:20px;height:20px;border-radius:50%;border:2px solid #9a9a9a;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#2e2e2e">OpenAI Compatible</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">Any /chat/completions endpoint — OpenAI, Gemini, OpenRouter, DeepSeek, Ollama.</div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.08)"><div style="width:20px;height:20px;border-radius:50%;border:2px solid #9a9a9a;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#2e2e2e">DeepL Translate</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">High accuracy</div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.08)"><div style="width:20px;height:20px;border-radius:50%;background:#03875B;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="check" style="width:13px;height:13px;color:#fff"></i></div><div style="flex:1"><div style="font-size:14px;color:#2e2e2e">Google Translate</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">No-key web endpoints</div></div><div style="font-size:12px;color:#03875B;font-weight:500;background:rgba(3,135,91,.12);padding:3px 8px;border-radius:10px">No key needed</div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px"><div style="width:20px;height:20px;border-radius:50%;border:2px solid #9a9a9a;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#2e2e2e">Microsoft Translator</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">Azure Cognitive Services</div></div></div>
+              </div>
+              <div style="font-size:12px;line-height:1.5;color:#6f6f6f;padding:0 4px">Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;opacity:.5">
+              <div style="font-size:15px;font-weight:700;color:#2e2e2e">System Prompt</div>
+              <div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,.08)"><div><div style="font-size:14px;color:#2e2e2e">Use custom prompt</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">Only the OpenAI Compatible provider uses a system prompt.</div></div><div style="width:44px;height:26px;border-radius:13px;background:#03875B;position:relative"><div style="position:absolute;top:3px;left:21px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></div></div></div>
+                <div style="padding:12px 16px;font-size:14px;line-height:1.5;color:#8c8c8c">Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2a settings appearance light -->
+      <div data-screen-label="2a — Settings · Appearance" style="width:760px;height:600px;border-radius:12px;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 22px 50px rgba(0,0,0,.4)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="arrow-left" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;gap:2px"><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="languages" style="width:15px;height:15px"></i>Translation</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="mouse-pointer-2" style="width:15px;height:15px"></i>Pop-up</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#2e2e2e"><i data-lucide="sliders-horizontal" style="width:15px;height:15px"></i>General</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;background:rgba(0,0,0,.1);font-size:13px;font-weight:500;color:#2e2e2e"><i data-lucide="palette" style="width:15px;height:15px"></i>Appearance</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:20px 0;display:flex;justify-content:center">
+          <div style="width:560px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#2e2e2e">Style</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:2px solid #03875B;overflow:hidden;display:flex;box-sizing:border-box"><div style="flex:1;background:#fafafa;display:flex;flex-direction:column"><div style="height:14px;background:#fafafa"></div><div style="flex:1;margin:0 8px 8px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:5px"></div></div><div style="flex:1;background:#242424;display:flex;flex-direction:column"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#303030;border-radius:5px"></div></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2e2e2e"><div style="width:18px;height:18px;border-radius:50%;background:#03875B;display:flex;align-items:center;justify-content:center"><i data-lucide="check" style="width:12px;height:12px;color:#fff"></i></div>System</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:1px solid rgba(0,0,0,.15);background:#fafafa;display:flex;flex-direction:column;box-sizing:border-box"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:5px"></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2e2e2e"><div style="width:18px;height:18px;border-radius:50%;border:2px solid #9a9a9a;box-sizing:border-box"></div>Light</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:1px solid rgba(0,0,0,.15);background:#242424;display:flex;flex-direction:column;box-sizing:border-box"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#303030;border-radius:5px"></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#2e2e2e"><div style="width:18px;height:18px;border-radius:50%;border:2px solid #9a9a9a;box-sizing:border-box"></div>Dark</div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#2e2e2e">Accent Color</div>
+              <div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08)">
+                  <div style="font-size:14px;color:#2e2e2e">Viridian</div>
+                  <div style="display:flex;gap:10px">
+                    <div style="width:22px;height:22px;border-radius:50%;background:#E95420"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#787859"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#657B69"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#4B8501"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#03875B;box-shadow:0 0 0 2px #fff,0 0 0 4px #03875B"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#308280"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#0073E5"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#7764D8"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#B34CB3"></div>
+                    <div style="width:22px;height:22px;border-radius:50%;background:#DA3450"></div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px"><div><div style="font-size:14px;color:#2e2e2e">Follow system accent</div><div style="font-size:12px;color:#6f6f6f;margin-top:2px">Use the accent chosen in Ubuntu Settings → Appearance</div></div><div style="width:44px;height:26px;border-radius:13px;background:rgba(0,0,0,.15);position:relative"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></div></div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#2e2e2e">Text</div>
+              <div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px"><div style="font-size:14px;color:#2e2e2e">Translation text size</div><div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.12)"><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;color:#2e2e2e">Small</div><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;font-weight:500;color:#2e2e2e;background:rgba(0,0,0,.1);border-left:1px solid rgba(0,0,0,.12);border-right:1px solid rgba(0,0,0,.12)">Medium</div><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;color:#2e2e2e">Large</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2a OCR light -->
+      <div data-screen-label="2a — OCR dialog" style="width:760px;height:520px;border-radius:12px;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 22px 50px rgba(0,0,0,.4)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;box-sizing:border-box">
+          <div style="font-size:15px;font-weight:700;color:#2e2e2e">LightTranslator</div><div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 10px;border-radius:8px;background:rgba(3,135,91,.12);font-size:14px;font-weight:500;color:#03875B"><i data-lucide="zap" style="width:15px;height:15px"></i>Auto</div>
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 12px 12px"><div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:54px 16px 0;font-size:16px;color:#8c8c8c">Enter text...</div><div style="background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:54px 16px 0;font-size:16px;color:#8c8c8c">Translation will appear here...</div></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center">
+          <div style="width:480px;background:#fafafa;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 16px 40px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:47px;display:flex;align-items:center;justify-content:center;position:relative;font-size:15px;font-weight:700;color:#2e2e2e">OCR Screenshot/Image<div style="position:absolute;right:10px;top:11px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;color:#2e2e2e"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+            <div style="padding:6px 20px 20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;background:rgba(0,0,0,.08);border-radius:9px;padding:3px;gap:3px"><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:500;color:#2e2e2e;background:#fff;border-radius:7px;box-shadow:0 1px 2px rgba(0,0,0,.12)"><i data-lucide="scissors" style="width:14px;height:14px"></i>Screenshot Area</div><div style="flex:1;height:30px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#2e2e2e"><i data-lucide="upload" style="width:14px;height:14px"></i>Upload image</div></div>
+              <div style="height:200px;border:1px dashed rgba(0,0,0,.25);border-radius:12px;background:repeating-linear-gradient(135deg,#f3f3f3 0 8px,#fafafa 8px 16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px"><i data-lucide="scissors" style="width:26px;height:26px;color:#6f6f6f"></i><div style="font-size:14px;font-weight:500;color:#2e2e2e;margin-top:4px">Click and drag to select region</div><div style="font:12px 'Ubuntu Mono',monospace;color:#6f6f6f">preview appears here</div></div>
+              <div style="display:flex;justify-content:flex-end;gap:8px"><div style="height:34px;padding:0 16px;border-radius:8px;background:rgba(0,0,0,.08);font-size:14px;font-weight:500;display:flex;align-items:center;color:#2e2e2e">Cancel</div><div style="height:34px;padding:0 16px;border-radius:8px;background:#03875B;color:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;opacity:.5">Analyze &amp; Translate</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <!-- 2a main dark -->
+      <div data-screen-label="2a — Main (dark)" style="width:760px;height:520px;border-radius:12px;overflow:hidden;background:#242424;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 22px 50px rgba(0,0,0,.5)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="font-size:15px;font-weight:700;color:#fff;flex-shrink:0">LightTranslator</div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 10px;border-radius:8px;background:rgba(61,199,143,.16);font-size:14px;font-weight:500;color:#3dc78f"><i data-lucide="zap" style="width:15px;height:15px"></i>Auto</div>
+          <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 12px 12px;position:relative">
+          <div style="display:flex;flex-direction:column;background:#303030;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">
+            <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px"><div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(255,255,255,.1);font-size:13px;font-weight:500;color:#fff">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div><div style="display:flex;gap:2px"><div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="scan-text" style="width:15px;height:15px"></i></div><div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="clipboard-list" style="width:15px;height:15px"></i></div></div></div>
+            <div style="flex:1;padding:6px 16px 16px;font-size:16px;line-height:1.5;color:#8c8c8c">Enter text...</div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:#303030;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">
+            <div style="height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px"><div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 12px;border-radius:15px;background:rgba(255,255,255,.1);font-size:13px;font-weight:500;color:#fff">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div><div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="copy" style="width:15px;height:15px"></i></div></div>
+            <div style="flex:1;padding:6px 16px 16px;font-size:16px;line-height:1.5;color:#8c8c8c">Translation will appear here...</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 16px 12px;font-size:12px;color:#b8b8b8"><span style="width:7px;height:7px;border-radius:50%;background:#3dc78f"></span>Ready · Google Translate</div>
+          </div>
+          <div style="position:absolute;left:50%;top:32px;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;background:#3a3a3a;border:1px solid rgba(255,255,255,.1);box-shadow:0 1px 3px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;color:#b8b8b8"><i data-lucide="arrow-right-left" style="width:13px;height:13px"></i></div>
+        </div>
+      </div>
+
+      <!-- 2a appearance dark -->
+      <div data-screen-label="2a — Settings · Appearance (dark)" style="width:760px;height:600px;border-radius:12px;overflow:hidden;background:#242424;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 22px 50px rgba(0,0,0,.5)">
+        <div style="height:47px;display:flex;align-items:center;padding:0 10px 0 14px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="arrow-left" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;gap:2px"><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#fff"><i data-lucide="languages" style="width:15px;height:15px"></i>Translation</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#fff"><i data-lucide="mouse-pointer-2" style="width:15px;height:15px"></i>Pop-up</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;font-size:13px;color:#fff"><i data-lucide="sliders-horizontal" style="width:15px;height:15px"></i>General</div><div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:8px;background:rgba(255,255,255,.12);font-size:13px;font-weight:500;color:#fff"><i data-lucide="palette" style="width:15px;height:15px"></i>Appearance</div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-left:8px;flex-shrink:0"><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:20px 0;display:flex;justify-content:center">
+          <div style="width:560px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#fff">Style</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:1px solid rgba(255,255,255,.15);overflow:hidden;display:flex;box-sizing:border-box"><div style="flex:1;background:#fafafa;display:flex;flex-direction:column"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:5px"></div></div><div style="flex:1;background:#242424;display:flex;flex-direction:column"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#303030;border-radius:5px"></div></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#fff"><div style="width:18px;height:18px;border-radius:50%;border:2px solid #8a8a8a;box-sizing:border-box"></div>System</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#fafafa;display:flex;flex-direction:column;box-sizing:border-box"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:5px"></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#fff"><div style="width:18px;height:18px;border-radius:50%;border:2px solid #8a8a8a;box-sizing:border-box"></div>Light</div></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:100%;height:92px;border-radius:10px;border:2px solid #3dc78f;background:#242424;display:flex;flex-direction:column;box-sizing:border-box"><div style="height:14px"></div><div style="flex:1;margin:0 8px 8px;background:#303030;border-radius:5px"></div></div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#fff"><div style="width:18px;height:18px;border-radius:50%;background:#3dc78f;display:flex;align-items:center;justify-content:center"><i data-lucide="check" style="width:12px;height:12px;color:#1a1a1a"></i></div>Dark</div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#fff">Accent Color</div>
+              <div style="background:#303030;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)">
+                  <div style="font-size:14px;color:#fff">Viridian</div>
+                  <div style="display:flex;gap:10px">
+                    <div style="width:22px;height:22px;border-radius:50%;background:#E95420"></div><div style="width:22px;height:22px;border-radius:50%;background:#787859"></div><div style="width:22px;height:22px;border-radius:50%;background:#657B69"></div><div style="width:22px;height:22px;border-radius:50%;background:#4B8501"></div><div style="width:22px;height:22px;border-radius:50%;background:#03875B;box-shadow:0 0 0 2px #303030,0 0 0 4px #3dc78f"></div><div style="width:22px;height:22px;border-radius:50%;background:#308280"></div><div style="width:22px;height:22px;border-radius:50%;background:#0073E5"></div><div style="width:22px;height:22px;border-radius:50%;background:#7764D8"></div><div style="width:22px;height:22px;border-radius:50%;background:#B34CB3"></div><div style="width:22px;height:22px;border-radius:50%;background:#DA3450"></div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px"><div><div style="font-size:14px;color:#fff">Follow system accent</div><div style="font-size:12px;color:#b8b8b8;margin-top:2px">Use the accent chosen in Ubuntu Settings → Appearance</div></div><div style="width:44px;height:26px;border-radius:13px;background:rgba(255,255,255,.18);position:relative"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#e0e0e0"></div></div></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:15px;font-weight:700;color:#fff">Text</div>
+              <div style="background:#303030;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px"><div style="font-size:14px;color:#fff">Translation text size</div><div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.12)"><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;color:#fff">Small</div><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;font-weight:500;color:#fff;background:rgba(255,255,255,.14);border-left:1px solid rgba(255,255,255,.12);border-right:1px solid rgba(255,255,255,.12)">Medium</div><div style="padding:0 12px;height:30px;display:flex;align-items:center;font-size:13px;color:#fff">Large</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+</section>
+<section style="padding:48px;display:flex;flex-direction:column;gap:40px;align-items:flex-start">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font:500 13px Ubuntu,sans-serif;color:#cfcfcf;letter-spacing:.04em;text-transform:uppercase">Turn 1 · Ubuntu / Yaru directions</div>
+    <div style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Header bar with window controls on the right, flat Yaru surfaces, Ubuntu type. Each option: main window, Settings, OCR dialog, plus the main window in Yaru dark. Compare with <a href="Current UI.dc.html">the current UI</a>.</div>
+  </div>
+
+  <!-- ===================== 1a ===================== -->
+  <div id="1a" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#1a" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">1a</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">Yaru stock</span><span style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Stacked panes, GNOME Settings-style sidebar, viridian accent used only for on-states</span></div>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- 1a main light -->
+      <div data-screen-label="1a — Main" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 10px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:6px;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d;flex-shrink:0"><i data-lucide="zap" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center">
+            <div style="display:flex;border:1px solid #cdcdcd;border-radius:6px;overflow:hidden;background:#fff">
+              <div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;color:#3d3d3d;white-space:nowrap">Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+              <div style="width:32px;height:32px;border-left:1px solid #cdcdcd;border-right:1px solid #cdcdcd;display:flex;align-items:center;justify-content:center;color:#b0b0b0"><i data-lucide="arrow-right-left" style="width:14px;height:14px"></i></div>
+              <div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;color:#3d3d3d;white-space:nowrap">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+            </div>
+          </div>
+          <div style="width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d;flex-shrink:0"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#fff">
+          <div style="flex:1;min-height:0;padding:16px 18px;font-size:16px;line-height:1.5;color:#8a8a8a">Enter text...</div>
+          <div style="height:1px;background:#e0e0e0;margin:0 0"></div>
+          <div style="flex:1;min-height:0;padding:16px 18px;font-size:16px;line-height:1.5;color:#8a8a8a;background:#fafafa">Translation will appear here...</div>
+        </div>
+        <div style="height:44px;border-top:1px solid #cdcdcd;background:#ebebeb;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="scan-text" style="width:16px;height:16px"></i></div>
+          <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="clipboard-list" style="width:16px;height:16px"></i></div>
+          <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="copy" style="width:16px;height:16px"></i></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#6e6e6e;padding-right:6px"><span style="width:7px;height:7px;border-radius:50%;background:#03875B"></span>Ready · Google Translate</div>
+        </div>
+      </div>
+
+      <!-- 1a settings light -->
+      <div data-screen-label="1a — Settings" style="width:820px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 10px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;color:#3d3d3d"><i data-lucide="arrow-left" style="width:14px;height:14px"></i>Back</div>
+          <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#3d3d3d">Settings</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex">
+          <div style="width:220px;flex-shrink:0;background:#f2f2f2;border-right:1px solid #d9d9d9;padding:10px 8px;display:flex;flex-direction:column;gap:2px;box-sizing:border-box">
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;background:rgba(0,0,0,.09);font-size:14px;color:#3d3d3d"><i data-lucide="languages" style="width:16px;height:16px;color:#3d3d3d"></i>Translation</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;font-size:14px;color:#3d3d3d"><i data-lucide="mouse-pointer-2" style="width:16px;height:16px;color:#6e6e6e"></i>Pop-up</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;font-size:14px;color:#3d3d3d"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;color:#6e6e6e"></i>General</div>
+          </div>
+          <div style="flex:1;min-width:0;overflow:hidden;padding:28px 40px;display:flex;flex-direction:column;gap:28px;box-sizing:border-box">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:14px;font-weight:700;color:#3d3d3d">Select Provider</div>
+              <div style="background:#fff;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">OpenAI Compatible</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">Any /chat/completions endpoint — OpenAI, Gemini, OpenRouter, DeepSeek, Ollama.</div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">DeepL Translate</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">High accuracy</div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><div style="width:18px;height:18px;border-radius:50%;background:#03875B;display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:7px;height:7px;border-radius:50%;background:#fff"></div></div><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">Google Translate</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">No-key web endpoints</div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px"><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">Microsoft Translator</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">Azure Cognitive Services</div></div></div>
+              </div>
+              <div style="display:flex;gap:10px;padding:10px 12px;background:#f2f2f2;border-radius:6px;font-size:12px;line-height:1.5;color:#3d3d3d"><i data-lucide="info" style="width:16px;height:16px;color:#6e6e6e;flex-shrink:0;margin-top:1px"></i><div><span style="font-weight:700">No API Key Required.</span> Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;opacity:.55">
+              <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:700;color:#3d3d3d">Custom System Prompt</div><div style="width:44px;height:24px;border-radius:12px;background:#03875B;position:relative"><div style="position:absolute;top:2px;left:22px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></div></div></div>
+              <div style="background:#fff;border:1px solid #cdcdcd;border-radius:6px;padding:9px 12px;font-size:14px;line-height:1.5;color:#8a8a8a;height:84px;box-sizing:border-box">Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.</div>
+              <div style="font-size:12px;color:#6e6e6e">Only the OpenAI Compatible provider uses a system prompt.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1a OCR light -->
+      <div data-screen-label="1a — OCR dialog" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 10px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:6px;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="zap" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;border:1px solid #cdcdcd;border-radius:6px;overflow:hidden;background:#fff"><div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;white-space:nowrap">Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div><div style="width:32px;height:32px;border-left:1px solid #cdcdcd;border-right:1px solid #cdcdcd;display:flex;align-items:center;justify-content:center;color:#b0b0b0"><i data-lucide="arrow-right-left" style="width:14px;height:14px"></i></div><div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;white-space:nowrap">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div></div></div>
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="flex:1;background:#fff;display:flex;flex-direction:column"><div style="flex:1;padding:16px 18px;font-size:16px;color:#8a8a8a">Enter text...</div><div style="height:1px;background:#e0e0e0"></div><div style="flex:1;padding:16px 18px;font-size:16px;color:#8a8a8a;background:#fafafa">Translation will appear here...</div></div>
+        <div style="height:44px;border-top:1px solid #cdcdcd;background:#ebebeb;flex-shrink:0"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;padding:24px">
+          <div style="width:100%;background:#fafafa;border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 14px 36px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px;gap:8px;box-sizing:border-box">
+              <div style="height:32px;padding:0 12px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;display:flex;align-items:center;color:#3d3d3d">Cancel</div>
+              <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#3d3d3d">OCR Screenshot/Image</div>
+              <div style="height:32px;padding:0 12px;border-radius:6px;background:#03875B;color:#fff;font-size:14px;display:flex;align-items:center;opacity:.5">Analyze &amp; Translate</div>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;background:#fff;border:1px solid #cdcdcd;border-radius:8px"><i data-lucide="scissors" style="width:28px;height:28px;color:#3d3d3d"></i><div style="font-size:14px;font-weight:500;color:#3d3d3d;margin-top:6px">Screenshot Area</div><div style="font-size:12px;color:#6e6e6e">Click and drag to select region</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;border:1px dashed #b5b5b5;border-radius:8px"><i data-lucide="upload" style="width:24px;height:24px;color:#6e6e6e"></i><div style="font-size:14px;font-weight:500;color:#3d3d3d;margin-top:6px">Upload image</div><div style="font-size:12px;color:#6e6e6e">PNG, JPG, WebP</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1a main dark -->
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="1a — Main (dark)" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#3b3b3b;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 40px rgba(0,0,0,.45)">
+        <div style="height:46px;background:#2c2c2c;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;padding:0 8px 0 10px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><i data-lucide="zap" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;display:flex;justify-content:center">
+            <div style="display:flex;border:1px solid #1e1e1e;border-radius:6px;overflow:hidden;background:#4a4a4a">
+              <div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;color:#fff;white-space:nowrap">Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+              <div style="width:32px;height:32px;border-left:1px solid #1e1e1e;border-right:1px solid #1e1e1e;display:flex;align-items:center;justify-content:center;color:#7a7a7a"><i data-lucide="arrow-right-left" style="width:14px;height:14px"></i></div>
+              <div style="display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;font-size:14px;color:#fff;white-space:nowrap">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+            </div>
+          </div>
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#303030">
+          <div style="flex:1;padding:16px 18px;font-size:16px;line-height:1.5;color:#9a9a9a">Enter text...</div>
+          <div style="height:1px;background:#1e1e1e"></div>
+          <div style="flex:1;padding:16px 18px;font-size:16px;line-height:1.5;color:#9a9a9a;background:#3b3b3b">Translation will appear here...</div>
+        </div>
+        <div style="height:44px;border-top:1px solid #1e1e1e;background:#2c2c2c;display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="scan-text" style="width:16px;height:16px"></i></div>
+          <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="clipboard-list" style="width:16px;height:16px"></i></div>
+          <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="copy" style="width:16px;height:16px"></i></div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#c8c8c8;padding-right:6px"><span style="width:7px;height:7px;border-radius:50%;background:#2fbf85"></span>Ready · Google Translate</div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- ===================== 1b ===================== -->
+  <div id="1b" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#1b" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">1b</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">Side by side</span><span style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Wider window with two columns, Settings as a single page with a view switcher in the header, Yaru blue accent</span></div>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- 1b main light -->
+      <div data-screen-label="1b — Main" style="width:760px;height:520px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 12px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="font-size:14px;font-weight:700;color:#3d3d3d;flex-shrink:0">LightTranslator</div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;color:#3d3d3d"><i data-lucide="zap" style="width:14px;height:14px;color:#0073E5"></i>Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+          <div style="width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr">
+          <div style="display:flex;flex-direction:column;background:#fff;border-right:1px solid #d9d9d9">
+            <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 16px;border-bottom:1px solid #e6e6e6"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#3d3d3d">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div><div style="display:flex;gap:2px"><div style="width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="scan-text" style="width:15px;height:15px"></i></div><div style="width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="clipboard-list" style="width:15px;height:15px"></i></div></div></div>
+            <div style="flex:1;padding:14px 16px;font-size:15px;line-height:1.5;color:#8a8a8a">Enter text...</div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:#fafafa">
+            <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 16px;border-bottom:1px solid #e6e6e6"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#3d3d3d">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div><div style="width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="copy" style="width:15px;height:15px"></i></div></div>
+            <div style="flex:1;padding:14px 16px;font-size:15px;line-height:1.5;color:#8a8a8a">Translation will appear here...</div>
+          </div>
+        </div>
+        <div style="height:30px;border-top:1px solid #d9d9d9;background:#f2f2f2;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:12px;color:#6e6e6e;flex-shrink:0;box-sizing:border-box"><div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#0073E5"></span>Ready</div><span>Google Translate</span><span>v1.4.0</span></div>
+      </div>
+
+      <!-- 1b settings light -->
+      <div data-screen-label="1b — Settings" style="width:760px;height:600px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 12px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="font-size:14px;font-weight:700;color:#3d3d3d;flex-shrink:0;width:160px">Settings</div>
+          <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;background:rgba(0,0,0,.08);border-radius:6px;padding:2px;gap:2px"><div style="padding:0 16px;height:28px;display:flex;align-items:center;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);font-size:13px;font-weight:500;color:#3d3d3d">Translation</div><div style="padding:0 16px;height:28px;display:flex;align-items:center;font-size:13px;color:#3d3d3d">Pop-up</div><div style="padding:0 16px;height:28px;display:flex;align-items:center;font-size:13px;color:#3d3d3d">General</div></div></div>
+          <div style="width:160px;display:flex;justify-content:flex-end;align-items:center;gap:10px">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:28px 0;display:flex;justify-content:center">
+          <div style="width:560px;display:flex;flex-direction:column;gap:26px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:14px;font-weight:700;color:#3d3d3d">Select Provider</div>
+              <div style="background:#fff;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><i data-lucide="terminal" style="width:16px;height:16px;color:#6e6e6e"></i><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">OpenAI Compatible</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">Any /chat/completions endpoint — OpenAI, Gemini, OpenRouter, DeepSeek, Ollama.</div></div><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><i data-lucide="cloud" style="width:16px;height:16px;color:#6e6e6e"></i><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">DeepL Translate</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">High accuracy</div></div><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #e6e6e6"><i data-lucide="globe" style="width:16px;height:16px;color:#6e6e6e"></i><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">Google Translate</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">No-key web endpoints</div></div><div style="width:18px;height:18px;border-radius:50%;background:#0073E5;display:flex;align-items:center;justify-content:center"><div style="width:7px;height:7px;border-radius:50%;background:#fff"></div></div></div>
+                <div style="display:flex;align-items:center;gap:14px;padding:12px 16px"><i data-lucide="cloud" style="width:16px;height:16px;color:#6e6e6e"></i><div style="flex:1"><div style="font-size:14px;color:#3d3d3d">Microsoft Translator</div><div style="font-size:12px;color:#6e6e6e;margin-top:2px">Azure Cognitive Services</div></div><div style="width:18px;height:18px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div></div>
+              </div>
+              <div style="font-size:12px;line-height:1.5;color:#6e6e6e;padding:0 2px"><span style="font-weight:700;color:#3d3d3d">No API Key Required.</span> Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;opacity:.55">
+              <div style="font-size:14px;font-weight:700;color:#3d3d3d">Custom System Prompt</div>
+              <div style="background:#fff;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e6e6e6"><div style="font-size:14px;color:#3d3d3d">Use custom prompt</div><div style="width:44px;height:24px;border-radius:12px;background:#0073E5;position:relative"><div style="position:absolute;top:2px;left:22px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></div></div></div>
+                <div style="padding:12px 16px;font-size:14px;line-height:1.5;color:#8a8a8a">Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.</div>
+              </div>
+              <div style="font-size:12px;color:#6e6e6e;padding:0 2px">Only the OpenAI Compatible provider uses a system prompt.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1b OCR light -->
+      <div data-screen-label="1b — OCR dialog" style="width:760px;height:520px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px 0 12px;gap:8px;box-sizing:border-box">
+          <div style="font-size:14px;font-weight:700;color:#3d3d3d">LightTranslator</div><div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px"><i data-lucide="zap" style="width:14px;height:14px;color:#0073E5"></i>Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="flex:1;display:grid;grid-template-columns:1fr 1fr"><div style="background:#fff;border-right:1px solid #d9d9d9;padding:54px 16px 0;font-size:15px;color:#8a8a8a">Enter text...</div><div style="background:#fafafa;padding:54px 16px 0;font-size:15px;color:#8a8a8a">Translation will appear here...</div></div>
+        <div style="height:30px;border-top:1px solid #d9d9d9;background:#f2f2f2"></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center">
+          <div style="width:520px;background:#fafafa;border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 14px 36px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:46px;display:flex;align-items:center;justify-content:center;position:relative;font-size:14px;font-weight:700;color:#3d3d3d">OCR Screenshot/Image<div style="position:absolute;right:8px;top:11px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+            <div style="padding:6px 20px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:28px 16px;background:#fff;border:1px solid #cdcdcd;border-radius:8px;text-align:center"><i data-lucide="scissors" style="width:28px;height:28px;color:#0073E5"></i><div style="font-size:14px;font-weight:500;color:#3d3d3d;margin-top:8px">Screenshot Area</div><div style="font-size:12px;color:#6e6e6e">Click and drag to select region</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:28px 16px;border:1px dashed #b5b5b5;border-radius:8px;text-align:center"><i data-lucide="upload" style="width:26px;height:26px;color:#6e6e6e"></i><div style="font-size:14px;font-weight:500;color:#3d3d3d;margin-top:8px">Upload image</div><div style="font-size:12px;color:#6e6e6e">PNG, JPG, WebP</div></div>
+            </div>
+            <div style="padding:12px 20px;border-top:1px solid #d9d9d9;background:#f2f2f2;display:flex;justify-content:flex-end;gap:8px"><div style="height:32px;padding:0 14px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;display:flex;align-items:center;color:#3d3d3d">Cancel</div><div style="height:32px;padding:0 14px;border-radius:6px;background:#0073E5;color:#fff;font-size:14px;display:flex;align-items:center;opacity:.5">Analyze &amp; Translate</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1b main dark -->
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="1b — Main (dark)" style="width:760px;height:520px;border-radius:8px 8px 0 0;overflow:hidden;background:#3b3b3b;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 40px rgba(0,0,0,.45)">
+        <div style="height:46px;background:#2c2c2c;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;padding:0 8px 0 12px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="font-size:14px;font-weight:700;color:#fff">LightTranslator</div><div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #1e1e1e;border-radius:6px;background:#4a4a4a;font-size:14px;color:#fff"><i data-lucide="zap" style="width:14px;height:14px;color:#5aa9f5"></i>Auto<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="settings" style="width:16px;height:16px"></i></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:2px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr">
+          <div style="display:flex;flex-direction:column;background:#303030;border-right:1px solid #1e1e1e">
+            <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 16px;border-bottom:1px solid #1e1e1e"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#fff">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div><div style="display:flex;gap:2px"><div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="scan-text" style="width:15px;height:15px"></i></div><div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="clipboard-list" style="width:15px;height:15px"></i></div></div></div>
+            <div style="flex:1;padding:14px 16px;font-size:15px;line-height:1.5;color:#9a9a9a">Enter text...</div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:#3b3b3b">
+            <div style="height:40px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 16px;border-bottom:1px solid #1e1e1e"><div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:#fff">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div><div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="copy" style="width:15px;height:15px"></i></div></div>
+            <div style="flex:1;padding:14px 16px;font-size:15px;line-height:1.5;color:#9a9a9a">Translation will appear here...</div>
+          </div>
+        </div>
+        <div style="height:30px;border-top:1px solid #1e1e1e;background:#2c2c2c;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:12px;color:#c8c8c8;flex-shrink:0;box-sizing:border-box"><div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:#5aa9f5"></span>Ready</div><span>Google Translate</span><span>v1.4.0</span></div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- ===================== 1c ===================== -->
+  <div id="1c" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#1c" style="font:700 12px Ubuntu,sans-serif;background:#e6e6e6;color:#3d3d3d;padding:2px 8px;border-radius:4px;text-decoration:none">1c</a><span style="font:500 14px Ubuntu,sans-serif;color:#eee">Toolbar utility</span><span style="font:13px Ubuntu,sans-serif;color:#8f8f8f">Plain title in the header, a GTK toolbar row for controls, notebook tabs in Settings, prussian green accent</span></div>
+    <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- 1c main light -->
+      <div data-screen-label="1c — Main" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="menu" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#3d3d3d;padding-left:98px">LightTranslator</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="height:48px;background:#fafafa;border-bottom:1px solid #d9d9d9;display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:13px;color:#3d3d3d;flex:1;justify-content:space-between">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+          <div style="width:32px;height:32px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;color:#b0b0b0;flex-shrink:0"><i data-lucide="arrow-right-left" style="width:14px;height:14px"></i></div>
+          <div style="display:flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:13px;color:#3d3d3d;flex:1;justify-content:space-between">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#6e6e6e"></i></div>
+          <div style="width:1px;height:22px;background:#d9d9d9;margin:0 4px"></div>
+          <div style="width:32px;height:32px;border-radius:6px;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d;flex-shrink:0"><i data-lucide="zap" style="width:15px;height:15px"></i></div>
+          <div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#3d3d3d;flex-shrink:0"><i data-lucide="settings" style="width:15px;height:15px"></i></div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:12px;gap:12px;background:#fafafa">
+          <div style="flex:1;min-height:0;background:#fff;border:1px solid #cdcdcd;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:1;padding:12px 14px;font-size:15px;line-height:1.5;color:#8a8a8a">Enter text...</div>
+            <div style="display:flex;align-items:center;gap:2px;padding:6px;border-top:1px solid #e6e6e6;background:#f7f7f7">
+              <div style="height:28px;padding:0 10px;border-radius:5px;display:flex;align-items:center;gap:6px;font-size:12px;color:#3d3d3d"><i data-lucide="scan-text" style="width:14px;height:14px"></i>OCR</div>
+              <div style="height:28px;padding:0 10px;border-radius:5px;display:flex;align-items:center;gap:6px;font-size:12px;color:#3d3d3d"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i>Paste</div>
+              <div style="flex:1"></div>
+              <div style="height:28px;padding:0 10px;border-radius:5px;display:flex;align-items:center;gap:6px;font-size:12px;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i>Clear</div>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;background:#fff;border:1px solid #cdcdcd;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:1;padding:12px 14px;font-size:15px;line-height:1.5;color:#8a8a8a">Translation will appear here...</div>
+            <div style="display:flex;align-items:center;gap:2px;padding:6px;border-top:1px solid #e6e6e6;background:#f7f7f7">
+              <div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#6e6e6e"><span style="width:7px;height:7px;border-radius:50%;background:#308280"></span>Ready · Google Translate</div>
+              <div style="flex:1"></div>
+              <div style="height:28px;padding:0 10px;border-radius:5px;display:flex;align-items:center;gap:6px;font-size:12px;color:#3d3d3d"><i data-lucide="copy" style="width:14px;height:14px"></i>Copy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c settings light -->
+      <div data-screen-label="1c — Settings" style="width:640px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#3d3d3d;padding-left:98px">LightTranslator Settings</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="minus" style="width:14px;height:14px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="square" style="width:11px;height:11px"></i></div>
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;color:#3d3d3d"><i data-lucide="x" style="width:14px;height:14px"></i></div>
+          </div>
+        </div>
+        <div style="display:flex;border-bottom:1px solid #cdcdcd;background:#f2f2f2;flex-shrink:0">
+          <div style="padding:0 20px;height:40px;display:flex;align-items:center;font-size:14px;color:#3d3d3d;background:#fafafa;border-right:1px solid #cdcdcd;box-shadow:inset 0 -2px 0 #308280">Translation</div>
+          <div style="padding:0 20px;height:40px;display:flex;align-items:center;font-size:14px;color:#6e6e6e;border-right:1px solid #cdcdcd">Pop-up</div>
+          <div style="padding:0 20px;height:40px;display:flex;align-items:center;font-size:14px;color:#6e6e6e;border-right:1px solid #cdcdcd">General</div>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;padding:24px 28px;display:flex;flex-direction:column;gap:22px">
+          <div style="border:1px solid #d9d9d9;border-radius:6px;background:#fff">
+            <div style="padding:10px 14px;border-bottom:1px solid #e6e6e6;font-size:13px;font-weight:700;color:#3d3d3d">Select Provider</div>
+            <div style="padding:6px 14px;display:flex;flex-direction:column">
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0"><div style="width:16px;height:16px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div><div style="font-size:14px;color:#3d3d3d">OpenAI Compatible</div><div style="font-size:12px;color:#6e6e6e;margin-left:auto">Any /chat/completions endpoint</div></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0"><div style="width:16px;height:16px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div><div style="font-size:14px;color:#3d3d3d">DeepL Translate</div><div style="font-size:12px;color:#6e6e6e;margin-left:auto">High accuracy</div></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0"><div style="width:16px;height:16px;border-radius:50%;background:#308280;display:flex;align-items:center;justify-content:center"><div style="width:6px;height:6px;border-radius:50%;background:#fff"></div></div><div style="font-size:14px;color:#3d3d3d">Google Translate</div><div style="font-size:12px;color:#6e6e6e;margin-left:auto">No-key web endpoints</div></div>
+              <div style="display:flex;align-items:center;gap:12px;padding:9px 0"><div style="width:16px;height:16px;border-radius:50%;border:1px solid #8f8f8f;box-sizing:border-box"></div><div style="font-size:14px;color:#3d3d3d">Microsoft Translator</div><div style="font-size:12px;color:#6e6e6e;margin-left:auto">Azure Cognitive Services</div></div>
+            </div>
+          </div>
+          <div style="font-size:12px;line-height:1.5;color:#6e6e6e;display:flex;gap:8px"><i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;margin-top:2px"></i><div><span style="font-weight:700;color:#3d3d3d">No API Key Required.</span> Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.</div></div>
+          <div style="border:1px solid #d9d9d9;border-radius:6px;background:#fff;opacity:.55">
+            <div style="padding:10px 14px;border-bottom:1px solid #e6e6e6;display:flex;align-items:center;justify-content:space-between"><div style="font-size:13px;font-weight:700;color:#3d3d3d">Custom System Prompt</div><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#3d3d3d"><div style="width:16px;height:16px;border-radius:3px;background:#308280;display:flex;align-items:center;justify-content:center"><i data-lucide="check" style="width:12px;height:12px;color:#fff"></i></div>Enabled</div></div>
+            <div style="padding:14px"><div style="border:1px solid #cdcdcd;border-radius:6px;padding:9px 12px;font-size:14px;line-height:1.5;color:#8a8a8a;height:84px;box-sizing:border-box">Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.</div><div style="font-size:12px;color:#6e6e6e;margin-top:8px">Only the OpenAI Compatible provider uses a system prompt.</div></div>
+          </div>
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid #cdcdcd;background:#f2f2f2;display:flex;justify-content:flex-end;flex-shrink:0"><div style="height:32px;padding:0 16px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;display:flex;align-items:center;color:#3d3d3d">Close</div></div>
+      </div>
+
+      <!-- 1c OCR light -->
+      <div data-screen-label="1c — OCR dialog" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#fafafa;display:flex;flex-direction:column;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 18px 40px rgba(0,0,0,.35)">
+        <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;padding:0 8px;gap:8px;box-sizing:border-box">
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center"><i data-lucide="menu" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#3d3d3d;padding-left:98px">LightTranslator</div>
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="height:48px;border-bottom:1px solid #d9d9d9"></div>
+        <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:12px"><div style="flex:1;background:#fff;border:1px solid #cdcdcd;border-radius:6px;padding:12px 14px;font-size:15px;color:#8a8a8a">Enter text...</div><div style="flex:1;background:#fff;border:1px solid #cdcdcd;border-radius:6px;padding:12px 14px;font-size:15px;color:#8a8a8a">Translation will appear here...</div></div>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;padding:24px">
+          <div style="width:100%;background:#fafafa;border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 14px 36px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column">
+            <div style="height:46px;background:#ebebeb;border-bottom:1px solid #cdcdcd;display:flex;align-items:center;justify-content:center;position:relative;font-size:14px;font-weight:700;color:#3d3d3d">OCR Screenshot/Image<div style="position:absolute;right:8px;top:11px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+            <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;border:1px solid #cdcdcd;border-radius:6px;overflow:hidden;background:#fff"><div style="flex:1;height:34px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#3d3d3d;background:rgba(0,0,0,.08)"><i data-lucide="scissors" style="width:14px;height:14px"></i>Screenshot Area</div><div style="flex:1;height:34px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#3d3d3d;border-left:1px solid #cdcdcd"><i data-lucide="upload" style="width:14px;height:14px"></i>Upload image</div></div>
+              <div style="height:190px;border:1px dashed #b5b5b5;border-radius:6px;background:repeating-linear-gradient(135deg,#f4f4f4 0 8px,#fafafa 8px 16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px"><div style="font-size:13px;color:#3d3d3d">Click and drag to select region</div><div style="font:12px 'Ubuntu Mono',monospace;color:#8a8a8a">preview appears here</div></div>
+            </div>
+            <div style="padding:12px 20px;border-top:1px solid #d9d9d9;background:#f2f2f2;display:flex;justify-content:flex-end;gap:8px"><div style="height:32px;padding:0 14px;border:1px solid #cdcdcd;border-radius:6px;background:#fff;font-size:14px;display:flex;align-items:center;color:#3d3d3d">Cancel</div><div style="height:32px;padding:0 14px;border-radius:6px;background:#308280;color:#fff;font-size:14px;display:flex;align-items:center;opacity:.5">Analyze &amp; Translate</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c main dark -->
+      <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="1c — Main (dark)" style="width:480px;height:680px;border-radius:8px 8px 0 0;overflow:hidden;background:#3b3b3b;display:flex;flex-direction:column;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 40px rgba(0,0,0,.45)">
+        <div style="height:46px;background:#2c2c2c;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;padding:0 8px;gap:8px;flex-shrink:0;box-sizing:border-box">
+          <div style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="menu" style="width:16px;height:16px"></i></div>
+          <div style="flex:1;text-align:center;font-size:14px;font-weight:700;color:#fff;padding-left:98px">LightTranslator</div>
+          <div style="display:flex;align-items:center;gap:10px"><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="minus" style="width:14px;height:14px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="square" style="width:11px;height:11px"></i></div><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i></div></div>
+        </div>
+        <div style="height:48px;background:#3b3b3b;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;box-sizing:border-box">
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border:1px solid #1e1e1e;border-radius:6px;background:#4a4a4a;font-size:13px;color:#fff;flex:1;justify-content:space-between">Auto Detect<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+          <div style="width:32px;height:32px;border:1px solid #1e1e1e;border-radius:6px;background:#4a4a4a;display:flex;align-items:center;justify-content:center;color:#7a7a7a;flex-shrink:0"><i data-lucide="arrow-right-left" style="width:14px;height:14px"></i></div>
+          <div style="display:flex;align-items:center;height:32px;padding:0 10px;border:1px solid #1e1e1e;border-radius:6px;background:#4a4a4a;font-size:13px;color:#fff;flex:1;justify-content:space-between">Chinese (Simplified)<i data-lucide="chevron-down" style="width:14px;height:14px;color:#b8b8b8"></i></div>
+          <div style="width:1px;height:22px;background:#1e1e1e;margin:0 4px"></div>
+          <div style="width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><i data-lucide="zap" style="width:15px;height:15px"></i></div>
+          <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0"><i data-lucide="settings" style="width:15px;height:15px"></i></div>
+        </div>
+        <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:12px;gap:12px">
+          <div style="flex:1;min-height:0;background:#303030;border:1px solid #1e1e1e;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:1;padding:12px 14px;font-size:15px;line-height:1.5;color:#9a9a9a">Enter text...</div>
+            <div style="display:flex;align-items:center;gap:2px;padding:6px;border-top:1px solid #1e1e1e;background:#353535"><div style="height:28px;padding:0 10px;display:flex;align-items:center;gap:6px;font-size:12px;color:#fff"><i data-lucide="scan-text" style="width:14px;height:14px"></i>OCR</div><div style="height:28px;padding:0 10px;display:flex;align-items:center;gap:6px;font-size:12px;color:#fff"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i>Paste</div><div style="flex:1"></div><div style="height:28px;padding:0 10px;display:flex;align-items:center;gap:6px;font-size:12px;color:#fff"><i data-lucide="x" style="width:14px;height:14px"></i>Clear</div></div>
+          </div>
+          <div style="flex:1;min-height:0;background:#303030;border:1px solid #1e1e1e;border-radius:6px;display:flex;flex-direction:column;overflow:hidden">
+            <div style="flex:1;padding:12px 14px;font-size:15px;line-height:1.5;color:#9a9a9a">Translation will appear here...</div>
+            <div style="display:flex;align-items:center;gap:2px;padding:6px;border-top:1px solid #1e1e1e;background:#353535"><div style="height:28px;padding:0 8px;display:flex;align-items:center;gap:8px;font-size:12px;color:#c8c8c8"><span style="width:7px;height:7px;border-radius:50%;background:#4fb3ae"></span>Ready · Google Translate</div><div style="flex:1"></div><div style="height:28px;padding:0 10px;display:flex;align-items:center;gap:6px;font-size:12px;color:#fff"><i data-lucide="copy" style="width:14px;height:14px"></i>Copy</div></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showDark&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Canvas&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.draw(); }
+  componentDidUpdate() { this.draw(); }
+  draw() {
+    const go = () => { if (window.lucide) { window.lucide.createIcons(); return true; } return false; };
+    if (!go()) { let t = 0; const id = setInterval(() => { if (go() || ++t > 40) clearInterval(id); }, 100); }
+  }
+  renderVals() {
+    return { showDark: this.props.showDark ?? true };
+  }
+}
+</script>
+</body>
+</html>
