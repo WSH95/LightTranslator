@@ -1,26 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Save, Bot, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2, Languages, Copy, Check, RefreshCw, MonitorCog } from 'lucide-react';
+import { X, Save, Terminal, Zap, Globe, Cloud, Layout, Cpu, Image, Network, Keyboard, Power, MessageSquare, MousePointer2, Languages, Copy, Check, RefreshCw, MonitorCog, type LucideIcon } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
+import { PROVIDERS, LLM_PRESETS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
+import type { LlmPreset, TranslationProviderId } from '../types';
 import { platform, type ShortcutStatus } from '../src/lib/platform';
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
+const PROVIDER_ICONS: Record<TranslationProviderId, LucideIcon> = {
+  openai: Terminal,
+  deepl: Cloud,
+  google: Globe,
+  microsoft: Cloud,
+};
+
+// Presets differ from a hand-typed URL only by a trailing slash, so compare
+// loosely when deciding which preset button to highlight.
+const normalizeUrl = (url: string) => (url || '').trim().replace(/\/+$/, '');
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const {
     provider,
     debounceMs,
-    modelId,
     customSystemInstruction,
     systemPromptEnabled,
-    geminiApiKey,
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
-    openrouterApiKey,
-    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion,
@@ -39,7 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     updateSettings
   } = useAppStore();
 
-  const [activeTab, setActiveTab] = useState<'llm' | 'cloud' | 'selection' | 'general'>('llm');
+  const [activeTab, setActiveTab] = useState<'translation' | 'selection' | 'general'>('translation');
   const [isRecordingShortcut, setIsRecordingShortcut] = useState(false);
   const [tempShortcut, setTempShortcut] = useState('');
   const [shortcutError, setShortcutError] = useState<string | null>(null);
@@ -84,8 +92,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     }
   };
 
-  const selectedProvider = PROVIDERS.find(p => p.id === provider);
-  const isLlmProvider = selectedProvider?.category === 'llm';
+  const isLlmProvider = provider === 'openai';
 
   // Handle system prompt change with auto-revert logic
   const handleSystemPromptChange = (value: string) => {
@@ -102,10 +109,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     }
   };
 
-  const applyDeepSeekPreset = () => {
+  // Fill the endpoint and a sample model, but never touch the key: presets are
+  // a shortcut for the two fields the user cannot guess, not a reset.
+  const applyPreset = (preset: LlmPreset) => {
     updateSettings({
-      openaiBaseUrl: 'https://api.deepseek.com',
-      openaiModel: 'deepseek-chat',
+      openaiBaseUrl: preset.baseUrl,
+      openaiModel: preset.model,
       provider: 'openai'
     });
   };
@@ -206,8 +215,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           </div>
 
           <nav className="space-y-1">
-            <SidebarItem id="llm" label="Generative AI" icon={Bot} />
-            <SidebarItem id="cloud" label="Cloud Translate" icon={Cloud} />
+            <SidebarItem id="translation" label="Translation" icon={Languages} />
             <SidebarItem id="selection" label="Pop-up" icon={MousePointer2} />
             <SidebarItem id="general" label="General" icon={Layout} />
           </nav>
@@ -229,8 +237,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           {/* Header */}
           <div className="h-16 flex items-center px-8 border-b border-black/5">
             <h1 className="text-xl font-semibold text-macos-text tracking-tight">
-              {activeTab === 'llm' && 'Generative AI Models'}
-              {activeTab === 'cloud' && 'Cloud Translation APIs'}
+              {activeTab === 'translation' && 'Translation Providers'}
               {activeTab === 'selection' && 'Pop-up Settings'}
               {activeTab === 'general' && 'General Configuration'}
             </h1>
@@ -239,87 +246,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
-            {/* === LLM TAB === */}
-            {activeTab === 'llm' && (
+            {/* === TRANSLATION TAB === */}
+            {activeTab === 'translation' && (
               <>
                 {/* Provider Selection Card */}
                 <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5">
-                  <h3 className="text-sm font-semibold mb-4 text-macos-text/80">Select Model Provider</h3>
+                  <h3 className="text-sm font-semibold mb-4 text-macos-text/80">Select Provider</h3>
                   <div className="space-y-3">
-                    {PROVIDERS.filter(p => p.category === 'llm').map(p => (
-                      <label key={p.id} className="flex items-center justify-between group cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${provider === p.id ? 'bg-macos-active text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            {p.id === 'gemini' ? <Bot size={16} /> : p.id === 'openrouter' ? <Globe size={16} /> : <Terminal size={16} />}
+                    {PROVIDERS.map(p => {
+                      const Icon = PROVIDER_ICONS[p.id];
+                      return (
+                        <label key={p.id} className="flex items-center justify-between group cursor-pointer">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${provider === p.id ? 'bg-macos-active text-white' : 'bg-gray-100 text-gray-500'}`}>
+                              <Icon size={16} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-macos-text group-hover:text-black">{p.name}</div>
+                              <div className="text-xs text-macos-muted">{p.description}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-macos-text group-hover:text-black">{p.name}</div>
-                            <div className="text-xs text-macos-muted">{p.description}</div>
-                          </div>
-                        </div>
 
-                        {/* Native Switch */}
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="provider-llm"
-                            checked={provider === p.id}
-                            onChange={() => updateSettings({ provider: p.id })}
-                            className="sr-only toggle-checkbox"
-                          />
-                          <div className="toggle-label"></div>
-                        </div>
-                      </label>
-                    ))}
+                          {/* Native Switch */}
+                          <div className="relative">
+                            <input
+                              type="radio"
+                              name="provider"
+                              checked={provider === p.id}
+                              onChange={() => updateSettings({ provider: p.id })}
+                              className="sr-only toggle-checkbox"
+                            />
+                            <div className="toggle-label"></div>
+                          </div>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Dynamic Config Card */}
-                {provider === 'gemini' && (
-                  <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
-                      <Bot size={16} className="text-blue-500" />
-                      Gemini Configuration
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
-                        <input
-                          type="password"
-                          value={geminiApiKey}
-                          onChange={(e) => updateSettings({ geminiApiKey: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none transition-all shadow-sm"
-                          placeholder="AIzaSy..."
-                        />
-                        <p className="text-xs text-macos-muted mt-2">Get your API key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Google AI Studio</a></p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Model ID</label>
-                        <input
-                          type="text"
-                          value={modelId}
-                          onChange={(e) => updateSettings({ modelId: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none transition-all shadow-sm"
-                          placeholder="gemini-3-flash-preview"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {provider === 'openai' && (
                   <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
-                        <Terminal size={16} className="text-purple-500" />
-                        Custom API Settings
-                      </div>
-                      <button onClick={applyDeepSeekPreset} className="text-xs font-medium text-blue-500 hover:text-blue-600 bg-blue-50 px-2 py-1 rounded-md transition-colors">
-                        Load DeepSeek
-                      </button>
+                    <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
+                      <Terminal size={16} className="text-purple-500" />
+                      OpenAI Compatible Settings
                     </div>
 
                     <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Presets</label>
+                        <div className="flex flex-wrap gap-2">
+                          {LLM_PRESETS.map(preset => (
+                            <button
+                              key={preset.label}
+                              onClick={() => applyPreset(preset)}
+                              className={`text-xs font-medium px-2.5 py-1 rounded-md transition-colors ${normalizeUrl(openaiBaseUrl) === normalizeUrl(preset.baseUrl) ? 'bg-blue-500 text-white' : 'text-blue-500 hover:text-blue-600 bg-blue-50'}`}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-macos-muted mt-2">Fills the base URL and a sample model. Your API key is left alone.</p>
+                      </div>
                       <div>
                         <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Base URL</label>
                         <input
@@ -327,7 +314,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                           value={openaiBaseUrl}
                           onChange={(e) => updateSettings({ openaiBaseUrl: e.target.value })}
                           className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
+                          placeholder="https://api.openai.com/v1"
                         />
+                        <p className="text-xs text-macos-muted mt-2">Any endpoint serving <code>/chat/completions</code>.</p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
@@ -338,6 +327,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                           className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
                           placeholder="sk-..."
                         />
+                        <p className="text-xs text-macos-muted mt-2">Leave empty for local servers that need no key (Ollama, llama.cpp, LM Studio).</p>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Model Name</label>
@@ -346,47 +336,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                           value={openaiModel}
                           onChange={(e) => updateSettings({ openaiModel: e.target.value })}
                           className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
+                          placeholder="gpt-4o-mini"
                         />
+                        <p className="text-xs text-macos-muted mt-2">Translating a pasted image needs a vision-capable model (gpt-4o-mini, gemini-3-flash-preview, qwen2.5vl).</p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {provider === 'openrouter' && (
+                {provider === 'google' && (
+                  <div className="bg-green-50/50 border border-green-100 shadow-sm rounded-xl p-5 flex items-start gap-4">
+                    <div className="p-2 bg-green-100 rounded-full text-green-600">
+                      <Globe size={20} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-green-800">No API Key Required</h4>
+                      <p className="text-xs text-green-700 mt-1 leading-relaxed">
+                        Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {provider === 'deepl' && (
                   <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
                     <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
-                      <Globe size={16} className="text-orange-500" />
-                      OpenRouter Settings
+                      <Cloud size={16} className="text-blue-500" />
+                      DeepL API Settings
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
+                      <input
+                        type="password"
+                        value={deeplApiKey || ''}
+                        onChange={(e) => updateSettings({ deeplApiKey: e.target.value })}
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
+                        placeholder="DeepL API Key"
+                      />
+                      <p className="text-xs text-macos-muted mt-2">Supports both Free and Pro API keys.</p>
+                    </div>
+                  </div>
+                )}
+
+                {provider === 'microsoft' && (
+                  <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
+                      <Cloud size={16} className="text-blue-500" />
+                      Microsoft Translator Settings
                     </div>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
+                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Subscription Key</label>
                         <input
                           type="password"
-                          value={openrouterApiKey}
-                          onChange={(e) => updateSettings({ openrouterApiKey: e.target.value })}
+                          value={microsoftSubscriptionKey || ''}
+                          onChange={(e) => updateSettings({ microsoftSubscriptionKey: e.target.value })}
                           className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
-                          placeholder="sk-or-..."
+                          placeholder="Azure Subscription Key"
                         />
-                        <p className="text-xs text-macos-muted mt-2">Get your API key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">OpenRouter</a></p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Model Name</label>
+                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Region</label>
                         <input
                           type="text"
-                          value={openrouterModel}
-                          onChange={(e) => updateSettings({ openrouterModel: e.target.value })}
+                          value={microsoftRegion || ''}
+                          onChange={(e) => updateSettings({ microsoftRegion: e.target.value })}
                           className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
-                          placeholder="openai/gpt-4-turbo"
+                          placeholder="eastus"
                         />
-                        <p className="text-xs text-macos-muted mt-2">Examples: openai/gpt-4-turbo, anthropic/claude-3-opus, meta-llama/llama-3-70b</p>
+                        <p className="text-xs text-macos-muted mt-2">Azure resource region (e.g., eastus, westeurope, eastasia)</p>
                       </div>
                     </div>
                   </div>
                 )}
-
-                {/* System Prompt Card - Only for LLM providers */}
+                {/* System Prompt Card - only the OpenAI-compatible provider uses one */}
                 <div className={`bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 transition-opacity ${!isLlmProvider ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
@@ -420,7 +445,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-macos-muted">
                         {!isLlmProvider
-                          ? 'Select an LLM provider to customize the system prompt.'
+                          ? 'Only the OpenAI Compatible provider uses a system prompt.'
                           : !systemPromptEnabled
                             ? 'Enable the toggle to use a custom system prompt.'
                             : 'Clear the field to restore the default prompt.'}
@@ -436,113 +461,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                     </div>
                   </div>
                 </div>
-              </>
-            )}
-
-            {/* === CLOUD TAB === */}
-            {activeTab === 'cloud' && (
-              <>
-                <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5">
-                  <h3 className="text-sm font-semibold mb-4 text-macos-text/80">Select Cloud Provider</h3>
-                  <div className="space-y-4">
-                    {PROVIDERS.filter(p => p.category === 'cloud').map(p => (
-                      <label key={p.id} className={`flex items-center justify-between group cursor-pointer ${!p.enabled && !p.requiresKey ? '' : (!p.enabled ? 'opacity-50 grayscale' : '')}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${provider === p.id ? 'bg-macos-active text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            {p.id === 'google' ? <Globe size={16} /> : <Cloud size={16} />}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-sm font-medium text-macos-text">{p.name}</div>
-                              {!p.enabled && <span className="text-[10px] bg-gray-200 px-1.5 rounded text-gray-500">Desktop App Only</span>}
-                            </div>
-                            <div className="text-xs text-macos-muted">{p.description}</div>
-                          </div>
-                        </div>
-
-                        <div className="relative">
-                          <input
-                            type="radio"
-                            name="provider-cloud"
-                            checked={provider === p.id}
-                            onChange={() => p.enabled && updateSettings({ provider: p.id })}
-                            disabled={!p.enabled}
-                            className="sr-only toggle-checkbox"
-                          />
-                          <div className="toggle-label"></div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedProvider?.id === 'google' && (
-                  <div className="bg-green-50/50 border border-green-100 shadow-sm rounded-xl p-5 flex items-start gap-4">
-                    <div className="p-2 bg-green-100 rounded-full text-green-600">
-                      <Globe size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-green-800">No API Key Required</h4>
-                      <p className="text-xs text-green-700 mt-1 leading-relaxed">
-                        Uses two no-key Google web endpoints with automatic fallback. No key configuration is needed, but availability is not guaranteed.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {selectedProvider?.id === 'deepl' && (
-                  <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
-                      <Cloud size={16} className="text-blue-500" />
-                      DeepL API Settings
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">API Key</label>
-                      <input
-                        type="password"
-                        value={deeplApiKey || ''}
-                        onChange={(e) => updateSettings({ deeplApiKey: e.target.value })}
-                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
-                        placeholder="DeepL API Key"
-                      />
-                      <p className="text-xs text-macos-muted mt-2">Supports both Free and Pro API keys.</p>
-                    </div>
-                  </div>
-                )}
-
-                {selectedProvider?.id === 'microsoft' && (
-                  <div className="bg-white/60 border border-white/50 shadow-macos-card rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2">
-                    <div className="flex items-center gap-2 text-macos-text text-sm font-semibold">
-                      <Cloud size={16} className="text-blue-500" />
-                      Microsoft Translator Settings
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Subscription Key</label>
-                        <input
-                          type="password"
-                          value={microsoftSubscriptionKey || ''}
-                          onChange={(e) => updateSettings({ microsoftSubscriptionKey: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
-                          placeholder="Azure Subscription Key"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-macos-muted ml-1 mb-1.5 block">Region</label>
-                        <input
-                          type="text"
-                          value={microsoftRegion || ''}
-                          onChange={(e) => updateSettings({ microsoftRegion: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-macos-active focus:ring-2 focus:ring-macos-active/20 outline-none shadow-sm"
-                          placeholder="eastus"
-                        />
-                        <p className="text-xs text-macos-muted mt-2">Azure resource region (e.g., eastus, westeurope, eastasia)</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </>
             )}
 

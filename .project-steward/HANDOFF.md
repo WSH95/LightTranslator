@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-09-20T00:30:00Z
+updated_at: 2026-09-20T01:03:00Z
 updated_by: claude
-session_status: closed
+session_status: active
 branch: main
-last_commit: (version bump 1.3.0, merged from fix/wayland-quick-translate)
+last_commit: 1ed2403 chore(release): 1.3.0 — provider refactor is UNCOMMITTED on top of it
 ---
 # Handoff
 
@@ -12,34 +12,36 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-v1.3.0 is on `main` and pushed: Quick Translate works in Wayland sessions, the
-OCR dialog stays inside the window, and the main window has rounded corners.
+**Uncommitted on `main`: the generative-AI providers were collapsed into one
+OpenAI-format interface.** 16 files changed, net -212 lines. `gemini` +
+`openai` + `openrouter` became a single "OpenAI Compatible" provider reachable
+at any base URL with five presets (OpenAI, Gemini, OpenRouter, DeepSeek,
+Ollama) and keyless local servers supported; DeepL/Google/Microsoft untouched.
+`ProviderCategory` is gone and the two Settings tabs merged into one
+**Translation** tab. `services/geminiService.ts` was renamed to
+`services/translationService.ts` (660 -> 424 lines). Decisions: DECISIONS
+0014-0016. Plan of record:
+`~/.claude/plans/pasted-content-id-b643-the-generative-curious-quokka.md`.
 
-The user reported all three problems on Ubuntu 24.04 / GNOME 46 / Wayland,
-installed the resulting package, logged out and back in, and confirmed it works
-(the placement extension reports `State: ACTIVE`). Plan of record:
-`~/.claude/plans/pasted-content-id-d703-i-have-noble-eclipse.md`.
+Two things a successor should not re-derive:
 
-How the hotkey now works, per session type:
+- **No backend code changed.** Both backends are provider-agnostic (one
+  `proxy_request` primitive), so the AGENTS.md parity rule did not apply. This
+  is now stated in AGENTS.md itself, along with the fact that the React app
+  lives at the **repo root**, not under `src/`.
+- **The stale-provider guard is in zustand `merge`, not `migrate`.** zustand v5
+  only calls `migrate` when the stored blob carries a *numeric* version, and
+  pre-upgrade blobs have none — so `migrate` never fires for the users who need
+  it. Do not "fix" this back to `migrate`. See DECISIONS 0015.
 
-- **X11**: unchanged — the app grabs the key itself and places the popup at the
-  pointer. Any GNOME entry left by a Wayland session is removed at startup
-  (with retries, because gnome-shell ungrabs asynchronously).
-- **Wayland on GNOME**: GNOME owns the key through a custom keybinding at our
-  own dconf path running `<exe> --quick-translate`; the single-instance plugin
-  hands it to the running app, which reads the PRIMARY selection (mutter bridges
-  it to X11 regardless of focus) and never touches the clipboard. The bundled
-  shell extension moves the popup to the pointer.
-- **Wayland elsewhere**: Settings shows the command to bind by hand.
+v1.3.0 itself is still released and pushed; that work is unchanged.
 
 ## In flight
 
-Nothing. Working tree clean, `main` pushed.
-
-An earlier record this file had not carried: v1.2.2 **was** released — PR #4 was
-squash-merged as `c17bec0` with the tag and GitHub release published on
-2026-08-26. v1.3.0 has **no tag or GitHub release yet**; only the branch merge
-was requested.
+The whole provider change is staged in the working tree and **not committed**.
+`git status` should show 16 modified files plus the
+`services/geminiService.ts -> services/translationService.ts` rename. A commit
+message was proposed to the user and not yet run; nothing is pushed.
 
 ## Validation completed
 
@@ -51,14 +53,18 @@ confirmation after installing.
 
 ## Next steps
 
-1. If a release is wanted: build the Electron `.deb` too
-   (`npm run electron:build:deb`), tag `v1.3.0` on `main`, and publish a GitHub
-   release with both packages — the pattern used for 1.2.0 and 1.2.2.
-2. The Electron backend's Wayland path was verified in dev, never as an
-   installed package. Worth one pass on an Ubuntu 20.04 Wayland session before
-   claiming it there.
-3. Backlog items untouched by this work are still listed under "Later" in
-   PLAN.md (single-instance is now done; Wayland selection capture is done).
+1. Commit the provider work (Conventional Commits, include
+   `.project-steward/`). The user was given a `refactor(providers):` message and
+   has not yet said to run it. Do not push without explicit approval.
+2. Optional coverage gaps, listed in VERIFY.md's "Not covered": DeepL and
+   Microsoft were refactored onto the shared `httpJson` helper but never
+   exercised against live keys, and neither packaged app was rebuilt (the
+   installed v1.3.0 was running on the host, so a Tauri dev instance would have
+   forwarded into it).
+3. Pre-existing nit, untouched on purpose: `Cpu`, `Image` and `Save` are dead
+   imports in `components/SettingsModal.tsx`.
+4. Earlier backlog still open: tag/publish v1.3.0 if a release is wanted, and
+   verify the Electron Wayland path as an installed package on 20.04.
 
 ## Blockers
 

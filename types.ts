@@ -5,17 +5,21 @@ export interface Language {
   name: string;
 }
 
-export type TranslationProviderId = 'gemini' | 'openai' | 'openrouter' | 'deepl' | 'google' | 'microsoft';
-
-export type ProviderCategory = 'llm' | 'cloud';
+export type TranslationProviderId = 'openai' | 'deepl' | 'google' | 'microsoft';
 
 export interface TranslationProvider {
   id: TranslationProviderId;
   name: string;
-  category: ProviderCategory;
-  enabled: boolean;
   description?: string;
-  requiresKey?: boolean; // New field to hide key input if needed
+}
+
+/** A one-click endpoint preset for the OpenAI-compatible provider. */
+export interface LlmPreset {
+  label: string;
+  baseUrl: string;
+  model: string;
+  /** False when the endpoint has no vision model, so image translation is unavailable. */
+  vision: boolean;
 }
 
 export interface AppSettings {
@@ -26,20 +30,12 @@ export interface AppSettings {
   provider: TranslationProviderId;
   useOcrPreProcessing: boolean;
 
-  // Gemini Specific
-  modelId: string;
-  customSystemInstruction: string;
-  systemPromptEnabled: boolean;
-  geminiApiKey: string;
-
-  // OpenAI / Custom LLM Specific
+  // OpenAI-compatible LLM (OpenAI, Gemini, OpenRouter, DeepSeek, Ollama, ...)
   openaiBaseUrl: string;
   openaiApiKey: string;
   openaiModel: string;
-
-  // OpenRouter Specific
-  openrouterApiKey: string;
-  openrouterModel: string;
+  customSystemInstruction: string;
+  systemPromptEnabled: boolean;
 
   // DeepL Specific
   deeplApiKey: string;

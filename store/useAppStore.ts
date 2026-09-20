@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppSettings, LanguageCode, TranslationProviderId, ModelVerificationState } from '../types';
-import { DEFAULT_SETTINGS } from '../constants';
+import { DEFAULT_SETTINGS, PROVIDER_IDS } from '../constants';
 import { platform } from '../src/lib/platform';
 
 // Cross-window sync: each window runs its own store instance over one shared
@@ -127,6 +127,38 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'light-translator-storage',
+      // Bumped alongside the provider collapse. Note this does NOT drive the
+      // fix-up below: zustand v5 only calls `migrate` when the stored blob has
+      // a *numeric* version field (middleware.js: `typeof
+      // deserializedStorageValue.version === "number"`), and every blob written
+      // before this release has no version at all -- so `migrate` would never
+      // fire for exactly the users who need it. It is kept so a future v1 -> v2
+      // migration can rely on it.
+      version: 1,
+      // The 'gemini' and 'openrouter' providers folded into the single
+      // OpenAI-compatible one. A blob written before that change holds an id
+      // that no longer exists in PROVIDERS, which leaves Settings with nothing
+      // selected and every translation failing -- and the quick-translate popup
+      // has no Settings UI to recover from. Coerce those users to the key-free
+      // default and drop the dead credentials rather than carrying them over.
+      // Anyone already on 'openai' keeps their config untouched.
+      //
+      // This runs on every rehydrate (including the cross-window ones), which is
+      // fine: it is pure and idempotent, and once partialize rewrites the blob
+      // without the dead keys it is a no-op.
+      //
+      // Typed loosely on purpose: the removed ids are gone from
+      // TranslationProviderId, so comparing a typed value against them would be
+      // a TS2367 "no overlap" error.
+      merge: (persisted: unknown, current) => {
+        if (!persisted || typeof persisted !== 'object') return current;
+        const { geminiApiKey, openrouterApiKey, openrouterModel, modelId, ...rest } =
+          persisted as Record<string, unknown>;
+        if (!PROVIDER_IDS.includes(rest.provider as never)) {
+          rest.provider = DEFAULT_SETTINGS.provider;
+        }
+        return { ...current, ...rest };
+      },
       partialize: (state) => ({
         // Only persist settings
         autoTranslate: state.autoTranslate,
@@ -135,18 +167,12 @@ export const useAppStore = create<AppState>()(
         targetLang: state.targetLang,
         provider: state.provider,
         useOcrPreProcessing: state.useOcrPreProcessing,
-        // Gemini
-        modelId: state.modelId,
-        customSystemInstruction: state.customSystemInstruction,
-        systemPromptEnabled: state.systemPromptEnabled,
-        geminiApiKey: state.geminiApiKey,
-        // OpenAI
+        // OpenAI-compatible LLM
         openaiBaseUrl: state.openaiBaseUrl,
         openaiApiKey: state.openaiApiKey,
         openaiModel: state.openaiModel,
-        // OpenRouter
-        openrouterApiKey: state.openrouterApiKey,
-        openrouterModel: state.openrouterModel,
+        customSystemInstruction: state.customSystemInstruction,
+        systemPromptEnabled: state.systemPromptEnabled,
         // DeepL
         deeplApiKey: state.deeplApiKey,
         // Microsoft

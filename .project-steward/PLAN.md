@@ -131,3 +131,52 @@ Shell extension that installs itself).
 - [ ] `proxy_request` SSRF surface: revisit once CSP has soaked (scheme check landed in S1; full allowlist conflicts with custom `openaiBaseUrl`/local LLMs)
 - [ ] Google GTX alternate-endpoint fallback if 429 persists across fresh connections (deferred from 0010; logs will show this if it happens)
 - [ ] Spoofed browser UA for Google GTX (deferred from 0010 — speculative, and would make the working Tauri fingerprint less consistent)
+
+## Collapse the LLM providers into one OpenAI-format interface (2026-09-20)
+
+User request: the generative-AI provider template was written long ago and no
+longer needs so many groups — keep one interface in the OpenAI API format.
+Decisions: DECISIONS 0014 (the merge), 0015 (the stale-provider guard),
+0016 (the AGENTS.md edit). Plan of record:
+`~/.claude/plans/pasted-content-id-b643-the-generative-curious-quokka.md`.
+
+- [x] C1 `types.ts` / `constants.ts`: `TranslationProviderId` down to
+      `openai | deepl | google | microsoft`; `ProviderCategory`, `enabled` and
+      `requiresKey` deleted; four `AppSettings` fields removed; `LLM_PRESETS`
+      and `PROVIDER_IDS` added
+- [x] C2 `services/geminiService.ts` → `services/translationService.ts`:
+      Gemini and OpenRouter implementations deleted, one `translateWithLlm`
+      kept; shared `httpJson` + `extractApiError` replace the per-provider
+      native/fetch duplication; `verifyModelIdentity` collapsed from three
+      branches to one; 660 → 424 lines
+- [x] C3 Image translation moved to OpenAI `image_url`, with tolerant JSON
+      parsing (fence + string-aware balanced-brace scan), a vision-capability
+      error that names the model, and an early guard for non-LLM providers
+- [x] C4 Options bag trimmed from 13 fields to 9 at all three call sites
+      (`TranslatorView`, `QuickTranslateWindow`, `OcrModal`)
+- [x] C5 `store/useAppStore.ts`: `merge`-based stale-provider guard (NOT
+      `migrate` — see DECISIONS 0015), `version: 1`, four fields dropped from
+      `partialize`
+- [x] C6 `SettingsModal`: "Generative AI" + "Cloud Translate" tabs merged into
+      one **Translation** tab with a flat four-item list; Gemini and OpenRouter
+      cards deleted; preset row replaces the hardcoded DeepSeek button
+- [x] C7 Truth pass: Gemini dev-key inlining removed from `vite.config.ts` and
+      `.env.example`; README provider section and setup steps rewritten
+- [x] C8 AGENTS.md guardrailed edit (repo layout + parity-rule limit), approved
+      in-session with a diff
+- [x] C9 Verification — see VERIFY.md rows 28-31 and the "Last verified" note
+
+## Release 1.4.0 (2026-09-20)
+
+Carries both the unreleased 1.3.0 Wayland work and the provider collapse:
+v1.3.0 was merged to `main` but never tagged or published, so the last public
+release is v1.2.2.
+
+- [x] V1 Version bumped to 1.4.0 in all five locations (package.json,
+      tauri.conf.json, Cargo.toml, package-lock.json x2, Cargo.lock). Note:
+      `package-lock.json` has six `"version": "1.3.0"` matches and `Cargo.lock`
+      two — only the project's own entries may change; the rest are
+      dependencies (es-errors, get-intrinsic, tiny-async-pool, any-promise,
+      shlex) that happen to share the number.
+- [ ] V2 Tag `v1.4.0` on `main` and publish a GitHub release
+- [ ] V3 Build both `.deb` artifacts and attach them (the 1.2.0 / 1.2.2 pattern)

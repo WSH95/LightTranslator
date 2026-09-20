@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { X, Copy, Check, ScanText, Loader2, ClipboardList } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { translateText, translateImage } from '../services/geminiService';
+import { translateText, translateImage } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS } from '../constants';
 import { platform } from '../src/lib/platform';
@@ -21,15 +21,11 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     isTranslating,
     errorMessage,
     provider,
-    modelId,
     customSystemInstruction,
     systemPromptEnabled,
-    geminiApiKey,
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
-    openrouterApiKey,
-    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion,
@@ -72,15 +68,11 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     try {
       const result = await translateText(text, sourceLang, targetLang, {
         provider,
-        modelId,
         customSystemInstruction,
         systemPromptEnabled,
-        geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
-        openrouterApiKey,
-        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion
@@ -106,7 +98,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         setIsTranslating(false);
       }
     }
-  }, [sourceLang, targetLang, provider, modelId, customSystemInstruction, systemPromptEnabled, geminiApiKey, openaiApiKey, openaiBaseUrl, openaiModel, openrouterApiKey, openrouterModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
+  }, [sourceLang, targetLang, provider, customSystemInstruction, systemPromptEnabled, openaiApiKey, openaiBaseUrl, openaiModel, deeplApiKey, microsoftSubscriptionKey, microsoftRegion, setIsTranslating, setErrorMessage, setTranslatedText]);
 
   // performTranslation's identity changes with every settings value; effects
   // call through this ref so editing a key/model/prompt in Settings doesn't
@@ -186,7 +178,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
   // Clear stale verification state when provider or model changes
   useEffect(() => {
     clearModelVerification();
-  }, [provider, modelId, openaiModel, openrouterModel, clearModelVerification]);
+  }, [provider, openaiModel, clearModelVerification]);
 
   const handleCopy = async () => {
     if (translatedText) {
@@ -231,7 +223,12 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     reader.onloadend = async () => {
       try {
         setErrorMessage(null);
-        const result = await translateImage(reader.result as string, targetLang, { modelId, geminiApiKey });
+        const result = await translateImage(reader.result as string, targetLang, {
+          provider,
+          openaiBaseUrl,
+          openaiApiKey,
+          openaiModel,
+        });
         cancelPendingDebounce();
         skipAutoTranslateRef.current = {
           text: result.detectedText,
@@ -241,8 +238,9 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
         setInputText(result.detectedText);
         setTranslatedText(result.translatedText);
       } catch (err: any) {
-        // Image translation always uses Gemini; surface the real cause
-        // (e.g. "Gemini API Key is required") instead of a generic message
+        // Image translation needs the OpenAI-compatible provider on a
+        // vision-capable model; surface the real cause rather than a
+        // generic message so the user knows what to change.
         setErrorMessage(err?.message || "Failed to process pasted image.");
       } finally {
         setIsProcessingImage(false);

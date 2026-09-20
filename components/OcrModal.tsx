@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Copy, Check, RefreshCw } from 'lucide-react';
-import { translateText } from '../services/geminiService';
+import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { useAppStore } from '../store/useAppStore';
 import { useOcrDependencies } from '../hooks/useOcrDependencies';
@@ -44,15 +44,11 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
     setInputText,
     setTranslatedText,
     provider,
-    modelId,
     customSystemInstruction,
     systemPromptEnabled,
-    geminiApiKey,
     openaiApiKey,
     openaiBaseUrl,
     openaiModel,
-    openrouterApiKey,
-    openrouterModel,
     deeplApiKey,
     microsoftSubscriptionKey,
     microsoftRegion
@@ -126,15 +122,11 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
       // Step 2: Translate using the user's selected provider
       const translatedResult = await translateText(extractedText, sourceLang, targetLang, {
         provider,
-        modelId,
         customSystemInstruction,
         systemPromptEnabled,
-        geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
-        openrouterApiKey,
-        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion

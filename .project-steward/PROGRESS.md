@@ -87,3 +87,23 @@ Project initialized as a Project Steward managed project.
 - 2026-07-28 ~16:10Z — Dual backend landed: Electron build restored+modernized for Ubuntu 18.04-20.04, verified running natively on this 20.04 host (hotkey → popup → live translation). Shared platform contract enforces surface parity; VERIFY.md gained an 18-point behavior checklist.
 - 2026-07-28 ~16:55Z — AGENTS.md parity rule added; both artifacts rebuilt from HEAD; branch pushed, PR #2 opened; draft release v1.2.0 created with both .debs and compatibility instructions (upload checksum-verified).
 - 2026-07-28 ~17:56Z — v1.2.0 SHIPPED: PR #2 merged to main (cbe1df9), release published with both .debs (Ubuntu 22.04+ Tauri and 20.04- Electron). Session closed.
+- 2026-09-20 ~01:00Z — Generative-AI providers collapsed to one OpenAI-format
+  interface. `gemini` + `openai` + `openrouter` → a single "OpenAI Compatible"
+  provider reachable at any base URL, with five one-click presets (OpenAI,
+  Gemini, OpenRouter, DeepSeek, Ollama) and support for keyless local servers;
+  DeepL/Google/Microsoft untouched. `ProviderCategory` deleted and the two
+  Settings tabs merged into one Translation tab with a flat four-item list.
+  `geminiService.ts` → `translationService.ts`, 660 → 424 lines, with one
+  `httpJson`/`extractApiError` pair replacing every provider's duplicated
+  native-vs-fetch branches. Image translation moved to OpenAI `image_url` with
+  tolerant JSON parsing (which also fixed an unguarded `JSON.parse` that leaked
+  a raw SyntaxError to users) plus a vision-capability error and a non-LLM
+  guard. Turned out to need **no backend changes at all** — both backends are
+  provider-agnostic, so the parity rule did not apply; that limit and the
+  repo-root layout are now recorded in AGENTS.md (guardrailed edit, approved).
+  The planned zustand `version`+`migrate` guard was found not to run at all on
+  real pre-upgrade blobs (v5 requires a numeric stored version) and was moved to
+  `merge` — caught only by seeding a live v0 blob. Verified in the browser and
+  over the native transport against a mock server and the real Google endpoint;
+  see VERIFY.md rows 28-31. DECISIONS 0014-0016.
+- [auto-checkpoint] 2026-09-20 ~01:03Z — Provider collapse complete and verified (typecheck/build/15 tests, live browser + native-transport checks); 16 files uncommitted on main, commit proposed to the user, nothing pushed.

@@ -293,3 +293,114 @@ it off afterwards is respected. GNOME only discovers new extensions when the
 shell starts, so the first install needs one log out — confirmed on the machine,
 and reported in Settings rather than failing silently. Without the extension the
 popup still opens, wherever GNOME decides.
+
+## 0014 — 2026-09-20 — One OpenAI-format interface replaces the three LLM providers
+
+**Context**: `services/geminiService.ts` and the `PROVIDERS` table date from the
+initial commit (d9f13e5, 2025-12-31), with OpenRouter bolted on a week later
+(0755ea6). That template assumed every LLM vendor needed its own wire format and
+its own settings block. It no longer does: OpenRouter has always been
+OpenAI-shaped, and Gemini now serves an OpenAI-compatible endpoint
+(`https://generativelanguage.googleapis.com/v1beta/openai/` — Bearer auth,
+`/chat/completions`, `/models`, `image_url` data-URIs, all confirmed against
+Google's docs). The result was three near-identical implementations,
+`translateWithOpenAI` and `translateWithOpenRouter` differing only by a
+hardcoded URL and two headers, plus a two-value `ProviderCategory` whose only
+job was splitting one UI list in two.
+
+**Decision**: collapse `gemini` + `openai` + `openrouter` into a single
+`openai` provider, "OpenAI Compatible", reachable at any base URL. Keep DeepL,
+Google and Microsoft untouched — they speak their own protocols and cannot be
+folded in. Delete `ProviderCategory`; Settings shows one flat list of four under
+a single **Translation** tab. The user chose **one config slot** (base URL / key
+/ model) with one-click presets over named profiles, and chose **not** to
+migrate old keys.
+
+Consequences of the single slot, each deliberate:
+- Image translation moves from Gemini-native `inlineData` to OpenAI
+  `image_url`, and now follows the same config. It needs a vision-capable
+  model; a text-only endpoint gets a message naming the model and what to
+  change, and a non-LLM provider is refused before any request goes out.
+- No `response_format: {type:'json_object'}` on the image request. Gemini's
+  compat layer accepts it, but llama.cpp, LM Studio, older vLLM and several
+  proxies reject unknown top-level fields outright. JSON is requested in the
+  prompt and parsed tolerantly instead (fence-stripping plus a string-aware
+  balanced-brace scan). This also fixes a live bug: the old
+  `JSON.parse(resultText)` was unguarded, so a fenced reply surfaced a raw
+  `SyntaxError` to the user.
+- An empty API key is now valid, so local servers (Ollama, llama.cpp, LM
+  Studio) work without inventing a key.
+- All six providers previously duplicated themselves into `platform.request`
+  and `fetch` branches with divergent error extraction. One `httpJson` helper
+  now serves every provider on both transports, with one `extractApiError`, so
+  a provider error reads as a message instead of a raw JSON body. The file went
+  from 660 to 424 lines.
+- `services/geminiService.ts` renamed to `services/translationService.ts`; the
+  old name had been wrong since OpenRouter landed.
+- Dead weight removed with the template: `requiresKey` (declared on all six
+  entries, read nowhere), `enabled` (true on all six, so its "Desktop App Only"
+  branch was unreachable), and the Gemini-only `process.env.API_KEY` dev
+  inlining with its two `vite.config.ts` defines.
+
+**Notably, this changed no backend code.** Neither `src-tauri/src/lib.rs` nor
+`electron/main.js` knows a provider exists — both expose one provider-agnostic
+HTTP primitive (`proxy_request`), and URLs, headers and bodies are all built in
+the renderer. The AGENTS.md dual-backend parity rule therefore did not apply;
+see 0015.
+
+## 0015 — 2026-09-20 — The stale-provider guard runs in `merge`, not `migrate`
+
+**Context**: Choosing not to migrate old keys left a hazard. `partialize`
+governs what zustand *writes*, not what it *reads*, so an upgrading user's
+`provider: 'gemini'` rehydrates into a store whose type no longer admits it.
+`PROVIDERS.find()` then returns undefined, Settings renders with nothing
+selected, and the quick-translate popup — which has no Settings UI to recover
+from — prints "Powered by Unknown" and fails every translation.
+
+The plan of record called for zustand's `version` + `migrate`, on the stated
+assumption that a stored blob with no version is treated as version 0. **That
+assumption is wrong for zustand v5.** `middleware.js` guards the call with
+`typeof deserializedStorageValue.version === "number" && ... !== options.version`,
+and every blob written before this release has no `version` field at all — so
+`migrate` would never fire for exactly the users who need it. Caught by seeding
+a real v0 blob in the browser and observing `provider` survive as `'gemini'`
+while the version stamp and key-dropping (both the work of `partialize`) made
+it look like the migration had run.
+
+**Decision**: do the coercion in `merge`, which zustand calls on every
+rehydrate regardless of version. It drops the four removed fields and resets
+`provider` to `DEFAULT_SETTINGS.provider` (`'google'`, which needs no key, so
+the app translates immediately after the upgrade) whenever the persisted id is
+not in `PROVIDER_IDS`. It is pure and idempotent, so the repeated cross-window
+`persist.rehydrate()` calls are harmless. `version: 1` is kept so a future
+v1 → v2 migration can use `migrate` properly, with a comment explaining why it
+is not what fixes this. Belt and braces: the dispatch in `translateText` now
+falls through to the key-free Google endpoint for any unrecognized id rather
+than throwing.
+
+Verified against a seeded v0 blob: provider coerced to `google`, dead keys
+dropped, and everything else (`customSystemInstruction`, DeepL/Microsoft keys,
+shortcut) untouched. A blob already on `openai` keeps its base URL, key and
+model exactly as they were.
+
+## 0016 — 2026-09-20 — AGENTS.md: repo layout and the limit of the parity rule
+
+**Context**: Guardrails require a diff, explicit approval and a DECISIONS record
+for AGENTS.md edits; 0009 is the precedent. Two problems surfaced during 0014.
+First, two independent codebase searches this session both started in `src/` and
+came back empty — the React app lives at the repo root, and `src/` holds only
+`src/lib/platform.ts`. Second, an agent reading "backend changes land in BOTH"
+while editing providers would go hunting for a Rust counterpart that does not
+exist; DECISIONS 0007 already says "UI, providers and settings work stays
+single-cost", but that line is buried in a decision record rather than in the
+file agents read first.
+
+**Decision**: with the user's approval, added a **Repo layout** bullet to
+Conventions, extended the **Dual backend** bullet to state that both backends
+are provider-agnostic and that provider/UI/settings work is frontend-only, and
+refreshed the one-line stack summary now that the LLM side is a single
+OpenAI-compatible interface. The `Commands` table was left alone: `| Test |
+TODO |` is still honest.
+
+**Consequences**: the next session is told where the code is by the file it
+reads first, and knows when the parity rule does and does not bite.

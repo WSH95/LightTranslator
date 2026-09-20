@@ -9,11 +9,14 @@ LightTranslator is a high-performance, lightweight translation tool built with *
 ## Key Features
 
 *   **Multi-Engine Support**:
-    *   **Google Gemini** (Default): High-quality, context-aware translation.
-    *   **OpenAI**: Support for GPT-3.5 and GPT-4 models.
-    *   **OpenRouter**: Access to multiple AI models through a single API.
+    *   **OpenAI Compatible**: one interface for any endpoint that serves
+        `/chat/completions` — OpenAI, Google Gemini (via its OpenAI-compatible
+        endpoint), OpenRouter, DeepSeek, or a local Ollama / llama.cpp / LM Studio
+        server. One-click presets fill in the base URL and a sample model, and
+        local servers that need no API key are supported.
     *   **DeepL**: Professional-grade translation.
-    *   **Microsoft Translator** & **Google Translate**: Robust traditional options.
+    *   **Microsoft Translator**: Azure Cognitive Services.
+    *   **Google Translate** (Default): no API key required.
 *   **Ultra Lightweight**: Powered by Tauri 2 (Rust) for minimal memory usage and instant startup.
 *   **Quick Translate**: Global hotkey (Ctrl+Shift+X) for instant translation of selected text, with its own language pair independent of the main panel.
 *   **Silent Autostart**: Supports starting silently in the background (`--hidden` flag).
@@ -148,10 +151,17 @@ There is no automated test suite yet.
 ## Configuration
 
 ### Setting Up API Keys
+Google Translate is the default and needs no key at all. To use an LLM instead:
+
 1.  Launch the application.
 2.  Click the **Settings** (gear icon) in the title bar.
-3.  Select your preferred **Provider**.
-4.  Enter your **API Key**.
+3.  On the **Translation** tab, pick **OpenAI Compatible**.
+4.  Click a preset (OpenAI, Gemini, OpenRouter, DeepSeek, Ollama) to fill the
+    **Base URL** and a sample **Model Name**, then enter your **API Key**.
+    Leave the key empty for a local server that does not require one.
+
+Translating a pasted image needs a vision-capable model (for example
+`gpt-4o-mini`, `gemini-3-flash-preview`, or `qwen2.5vl`).
 
 ### Quick Translate Shortcut
 The default shortcut is `Ctrl+Shift+X`; you can change it in Settings. Select

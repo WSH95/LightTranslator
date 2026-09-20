@@ -1,8 +1,8 @@
 # LightTranslator
 
 Lightweight cross-platform translation tool built with React + two
-interchangeable native backends: quick-translate hotkey, OCR, multi-engine
-LLM translation
+interchangeable native backends: quick-translate hotkey, OCR, and translation
+via one OpenAI-compatible LLM endpoint or a cloud MT provider
 
 Primary language/stack: TypeScript (shared React frontend) with a Rust/Tauri
 backend for Ubuntu 22.04+ and an Electron backend for Ubuntu 18.04-20.04.
@@ -21,12 +21,19 @@ backend for Ubuntu 22.04+ and an Electron backend for Ubuntu 18.04-20.04.
 
 - Keep this file concise (< 300 lines). It is instructions, not a log.
 - Volatile state belongs under `.project-steward/`, never here.
+- **Repo layout**: the React app lives at the **repo root** — `App.tsx`,
+  `types.ts`, `constants.ts`, and `components/`, `services/`, `store/`,
+  `hooks/`, `utils/`. `src/` holds only `src/lib/platform.ts`. Searching
+  `src/` for application code finds nothing.
 - **Dual backend**: the React UI is shared, but `src-tauri/src/lib.rs` and
   `electron/main.js` implement the same commands twice. Backend changes land
   in BOTH in the same commit, and are checked against the parity list in
   `.project-steward/VERIFY.md`. `PlatformBackend` in `src/lib/platform.ts`
   is derived from the Tauri backend, so `npm run typecheck` catches a missing
-  Electron method but not a behavioral difference.
+  Electron method but not a behavioral difference. Both backends are
+  provider-agnostic — they expose one HTTP primitive (`proxy_request`) and
+  know nothing about translation engines, so provider, UI and settings work
+  is frontend-only and the parity rule does not apply to it.
 
 ## Git policy
 

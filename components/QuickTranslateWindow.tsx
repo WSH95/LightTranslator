@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { X, Loader2, ChevronDown } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { translateText } from '../services/geminiService';
+import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
@@ -129,30 +129,22 @@ export const QuickTranslateWindow: React.FC = () => {
         quickSourceLang,
         quickTargetLang,
         provider,
-        modelId,
         customSystemInstruction,
         systemPromptEnabled,
-        geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
-        openrouterApiKey,
-        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion
       } = useAppStore.getState();
       const result = await translateText(inputText, quickSourceLang, quickTargetLang, {
         provider,
-        modelId,
         customSystemInstruction,
         systemPromptEnabled,
-        geminiApiKey,
         openaiApiKey,
         openaiBaseUrl,
         openaiModel,
-        openrouterApiKey,
-        openrouterModel,
         deeplApiKey,
         microsoftSubscriptionKey,
         microsoftRegion

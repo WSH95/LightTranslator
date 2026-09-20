@@ -1,4 +1,4 @@
-import { Language, TranslationProvider } from './types';
+import { Language, LlmPreset, TranslationProvider, TranslationProviderId } from './types';
 
 export const DEFAULT_SYSTEM_PROMPT = "Based on the source text to be translated, use relevant professional knowledge to translate, achieving professional and accurate translation.";
 
@@ -16,56 +16,44 @@ export const LANGUAGES: Language[] = [
 ];
 
 export const PROVIDERS: TranslationProvider[] = [
-  // LLM Providers
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    category: 'llm',
-    enabled: true,
-    requiresKey: true,
-    description: 'Multimodal, High speed.'
-  },
   {
     id: 'openai',
     name: 'OpenAI Compatible',
-    category: 'llm',
-    enabled: true,
-    requiresKey: true,
-    description: 'DeepSeek, GPT-4, Ollama.'
+    description: 'Any /chat/completions endpoint — OpenAI, Gemini, OpenRouter, DeepSeek, Ollama.'
   },
-  {
-    id: 'openrouter',
-    name: 'OpenRouter',
-    category: 'llm',
-    enabled: true,
-    requiresKey: true,
-    description: 'GPT-4, Claude, Llama, etc.'
-  },
-  // Cloud Providers
   {
     id: 'deepl',
     name: 'DeepL Translate',
-    category: 'cloud',
-    enabled: true,
-    requiresKey: true,
     description: 'High accuracy'
   },
   {
     id: 'google',
     name: 'Google Translate',
-    category: 'cloud',
-    enabled: true,
-    requiresKey: false,
     description: 'No-key web endpoints'
   },
   {
     id: 'microsoft',
     name: 'Microsoft Translator',
-    category: 'cloud',
-    enabled: true,
-    requiresKey: true,
     description: 'Azure Cognitive Services'
   },
+];
+
+export const PROVIDER_IDS: TranslationProviderId[] = PROVIDERS.map(p => p.id);
+
+/**
+ * One-click endpoints for the OpenAI-compatible provider. Every one of these
+ * speaks the same wire format, which is the whole point of having a single
+ * provider: the only thing that changes is the base URL and the model name.
+ *
+ * Sample models are vision-capable wherever the endpoint offers one, because
+ * this same config also serves paste-an-image translation.
+ */
+export const LLM_PRESETS: LlmPreset[] = [
+  { label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', vision: true },
+  { label: 'Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3-flash-preview', vision: true },
+  { label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4o-mini', vision: true },
+  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', vision: false },
+  { label: 'Ollama', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5vl:7b', vision: true },
 ];
 
 export const DEFAULT_SETTINGS = {
@@ -76,20 +64,12 @@ export const DEFAULT_SETTINGS = {
   provider: 'google' as const,
   useOcrPreProcessing: false,
 
-  // Gemini Defaults
-  modelId: 'gemini-3-flash-preview',
-  customSystemInstruction: '',
-  systemPromptEnabled: true,
-  geminiApiKey: '',
-
-  // OpenAI Defaults
+  // OpenAI-compatible LLM Defaults
   openaiBaseUrl: 'https://api.openai.com/v1',
   openaiApiKey: '',
-  openaiModel: 'gpt-3.5-turbo',
-
-  // OpenRouter Defaults
-  openrouterApiKey: '',
-  openrouterModel: 'openai/gpt-3.5-turbo',
+  openaiModel: 'gpt-4o-mini',
+  customSystemInstruction: '',
+  systemPromptEnabled: true,
 
   // DeepL Defaults
   deeplApiKey: '',
