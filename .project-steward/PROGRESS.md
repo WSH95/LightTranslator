@@ -2,6 +2,14 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T14:55:05Z — codex
+Pushed `main` through `a2f033c`, created and pushed annotated tag v1.6.2, and
+published v1.6.2 as the latest GitHub release with notes covering v1.4.0 through
+v1.6.2. Uploaded the Tauri package for Ubuntu 22.04+ and the Electron package
+for Ubuntu 18.04–20.04. Downloaded both public assets and verified byte-for-byte
+identity and SHA-256 values against the local packages. Release:
+https://github.com/WSH95/LightTranslator/releases/tag/v1.6.2
+
 ### 2026-09-20T14:48:14Z — codex
 The user installed the final 1.6.2 Tauri package in the original Wayland
 problem environment and reported no problems, closing acceptance of the

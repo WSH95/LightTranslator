@@ -109,7 +109,8 @@ The final jammy rebuild after both review fixes produced
 Package metadata is `light-translator` 1.6.2 amd64. The extracted binary requires
 GLIBC_2.34; the desktop entry, icons and GNOME placement extension are included.
 The identical artifact is in the original checkout's release bundle directory.
-It has not been installed, tagged or published.
+The user installed and accepted this package. It is published in v1.6.2 as the
+Ubuntu 22.04-or-newer asset.
 
 `npm run electron:build:deb` produced
 `dist-electron/LightTranslator_1.6.2_amd64.deb`, 92,682,104 bytes, SHA-256
@@ -127,6 +128,19 @@ covered by this task.
 **Not yet established**: manual packaged Tauri X11 and Electron acceptance of
 the complete interaction matrix. The accepted Tauri Wayland package covers the
 original click-to-disappear report.
+
+**Published release v1.6.2.** `main` and annotated tag v1.6.2 resolve to
+`a2f033c444a56be157e1c60dce663b1e2e2fe5d4`. GitHub reports the release as
+Latest, not draft and not prerelease:
+https://github.com/WSH95/LightTranslator/releases/tag/v1.6.2
+
+The two public assets were downloaded after publication and matched the local
+upload files byte for byte:
+
+- `LightTranslator-1.6.2-amd64-ubuntu22.04-or-newer.deb`: 6,041,218 bytes,
+  SHA-256 `8097cd8d1537b3dea779cae16f76252aa141dbc7170fae46098f8257508fcc31`
+- `LightTranslator-1.6.2-amd64-ubuntu20.04-or-older.deb`: 92,682,104 bytes,
+  SHA-256 `9fc30a64487b4b0f6d28e2891a1f5dcd9bbcfeb4d3871628c9b430e37a7ccd19`
 
 **Release artifact 1.6.1** — `LightTranslator_1.6.1_amd64.deb`, 6048522 bytes,
 sha256 `7a582783e313ed1355b2dd72e219817552e468bbe65ed2fbbaf8accd3ab6b62e`.

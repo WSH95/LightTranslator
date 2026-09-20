@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-09-20T14:51:16Z
+updated_at: 2026-09-20T14:55:05Z
 updated_by: codex
 session_status: active
 branch: main
-last_commit: "b6bee54 docs(steward): record popup sizing merge"
+last_commit: "a2f033c fix(steward): repair handoff frontmatter"
 ---
 # Handoff
 
@@ -14,10 +14,10 @@ commit `58dedc7`. The user installed the final 1.6.2 Tauri package in the
 original Wayland problem environment, tested it and reported no problems. This
 closes acceptance of the reported click-to-dismiss issue.
 
-Fresh checks passed before the feature commit and again on merged `main`. The
-user requested a direct push and a latest v1.6.2 GitHub release whose notes
-cover all changes since v1.4.0. The release has not been pushed or published
-yet.
+Fresh checks passed before the feature commit and again on merged `main`.
+Commit `a2f033c` fixed this file's frontmatter by quoting the `last_commit`
+value, then `main` and annotated tag v1.6.2 were pushed. v1.6.2 is the latest
+GitHub release: https://github.com/WSH95/LightTranslator/releases/tag/v1.6.2
 
 The final test package is available in both checkouts at
 `src-tauri/target/release/bundle/deb/LightTranslator_1.6.2_amd64.deb`.
@@ -69,11 +69,11 @@ did not prevent either Debian build.
 
 ## Next steps
 
-1. Commit and push the acceptance/frontmatter records on `main`.
-2. Tag and publish v1.6.2 as the latest GitHub release with both Debian assets
-   and notes covering v1.4.0 through v1.6.2.
-3. Download both published assets and compare their SHA-256 values with the
-   local release packages, then record the release URL.
+1. Treat the 1.6.2 release task as complete. Both published assets were
+   downloaded and matched their local SHA-256 values.
+2. If compatibility work resumes, manually install the packaged Tauri X11 and
+   Electron builds; those paths have automated coverage but no manual package
+   acceptance in this round.
 
 ## Warnings and retained local fixtures
 

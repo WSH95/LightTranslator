@@ -229,7 +229,7 @@ Decision: DECISIONS 0023.
       blocking findings and verify keyboard interaction in the browser
 - [x] A13 Build and inspect the 1.6.2 Electron `.deb` for Ubuntu 18.04–20.04;
       keep manual Tauri X11 and Electron installation coverage explicit
-- [ ] A14 Push `main`, tag v1.6.2 and publish both Debian assets as the latest
+- [x] A14 Push `main`, tag v1.6.2 and publish both Debian assets as the latest
       GitHub release with notes covering all changes since v1.4.0
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
