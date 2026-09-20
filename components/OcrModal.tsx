@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Image as ImageIcon, Loader2, Scissors, AlertTriangle, Copy, Check, RefreshCw } from 'lucide-react';
+import {
+  Check, Copy, LoaderCircle, RefreshCw, Scissors, TriangleAlert, Upload, X,
+} from 'lucide-react';
 import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { useAppStore } from '../store/useAppStore';
@@ -17,6 +19,9 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedCommand, setCopiedCommand] = useState<number | null>(null);
+  // Screenshot and upload used to be two controls stacked on top of each
+  // other; the approved design makes them modes. Same capabilities.
+  const [mode, setMode] = useState<'screenshot' | 'upload'>('screenshot');
 
   // On-demand OCR dependency check: runs when the modal opens, never at
   // app startup. Missing components render as install guidance below.
@@ -148,174 +153,188 @@ export const OcrModal: React.FC<OcrModalProps> = ({ onClose }) => {
     if (file) processFile(file);
   };
 
+  const captureDisabled = isCapturing || !isOcrAvailable;
+
+  // The preview area is the trigger. Selecting a *segment* must never start a
+  // capture: screenshot is the default mode, so that would fire
+  // gnome-screenshot the moment the dialog opens.
+  const activateDropArea = () => {
+    if (preview) return;
+    if (mode === 'screenshot') {
+      if (!captureDisabled) handleScreenCapture();
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4 rounded-[var(--window-radius)]">
-      {/* max-h-full + a scrolling body keep the dialog inside the window at any
-          size; without it the install-guidance block overflows a 680px window */}
-      <div className="bg-white/80 backdrop-blur-3xl border border-white/40 rounded-2xl w-full max-w-md max-h-full shadow-macos-window text-macos-text flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-black/5">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <ImageIcon size={18} className="text-macos-active" />
-            OCR Screenshot/Image
-          </h3>
-          <button onClick={onClose} className="text-macos-muted hover:text-macos-text transition-colors">
-            <X size={18} />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 rounded-[var(--window-radius)]"
+      style={{ background: 'rgba(0,0,0,.3)' }}
+    >
+      {/* max-h-full plus a scrolling body keeps the dependency guidance inside
+          the window — which matters more now the main window is 520px tall. */}
+      <div
+        className="w-[480px] max-h-full bg-bg rounded-xl flex flex-col overflow-hidden"
+        style={{ boxShadow: '0 0 0 1px rgba(0,0,0,.25), 0 16px 40px rgba(0,0,0,.45)' }}
+      >
+        <div className="h-[47px] shrink-0 flex items-center justify-center relative text-[15px] font-bold text-text">
+          OCR Screenshot/Image
+          <button
+            type="button"
+            onClick={onClose}
+            className="win-ctrl absolute right-[10px] top-[11px]"
+            title="Close"
+            aria-label="Close"
+          >
+            <X size={14} />
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-5">
-          {/* Install guidance: OCR components are installed on demand */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-1.5 pb-5 flex flex-col gap-3.5">
+
+          {/* Missing components: a plain boxed list, no amber. */}
           {!isOcrAvailable && ocrStatus.checked && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-700">OCR Components Missing</p>
-                  {guidance && guidance.missing.length > 0 ? (
-                    <p className="text-xs text-amber-700/80 mt-1">
-                      Missing: {guidance.missing.join(' · ')}
-                      {guidance.packageManager ? ` — detected ${guidance.os} (${guidance.packageManager})` : ''}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-amber-700/80 mt-1">
-                      {ocrStatus.message || 'Required OCR components are not installed.'}
-                    </p>
-                  )}
+            <div className="card list overflow-hidden">
+              <div className="p-4 flex items-start gap-3">
+                <TriangleAlert size={18} className="text-text shrink-0 mt-0.5" />
+                <div className="min-w-0 text-[13px] leading-normal">
+                  <div className="text-text font-medium">OCR Components Missing</div>
+                  <div className="text-muted mt-0.5">
+                    {guidance && guidance.missing.length > 0
+                      ? `Missing: ${guidance.missing.join(' · ')}${
+                          guidance.packageManager ? ` — detected ${guidance.os} (${guidance.packageManager})` : ''
+                        }`
+                      : ocrStatus.message || 'Required OCR components are not installed.'}
+                  </div>
+                </div>
+              </div>
 
-                  {guidance && guidance.commands.length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      {guidance.commands.map((command, index) => (
-                        <div key={index} className="flex items-stretch gap-1.5">
-                          <code className="flex-1 text-[11px] leading-relaxed bg-amber-100/60 text-amber-900 rounded px-2 py-1.5 overflow-x-auto whitespace-pre font-mono select-text">
-                            {command}
-                          </code>
-                          <button
-                            onClick={() => copyCommand(command, index)}
-                            className="px-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded transition-colors flex items-center"
-                            title="Copy command"
-                          >
-                            {copiedCommand === index ? <Check size={12} /> : <Copy size={12} />}
-                          </button>
-                        </div>
-                      ))}
-                      <p className="text-[11px] text-amber-700/70">
-                        Run this in a terminal, then click Re-check.
-                      </p>
-                    </div>
-                  )}
-
+              {guidance?.commands.map((command, index) => (
+                <div key={command} className="p-4 flex items-stretch gap-2">
+                  <code className="flex-1 min-w-0 text-xs font-mono bg-pill text-text rounded px-2 py-1.5 overflow-x-auto whitespace-pre select-text">
+                    {command}
+                  </code>
                   <button
-                    onClick={recheck}
-                    disabled={isChecking}
-                    className="mt-2 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-medium rounded transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                    type="button"
+                    onClick={() => copyCommand(command, index)}
+                    className="icon-btn icon-btn-xs shrink-0"
+                    title="Copy command"
                   >
-                    {isChecking ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" />
-                        Checking...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw size={12} />
-                        Re-check
-                      </>
-                    )}
+                    {copiedCommand === index ? <Check size={14} /> : <Copy size={14} />}
                   </button>
                 </div>
+              ))}
+
+              <div className="p-4 flex items-center justify-between gap-3">
+                <span className="text-[13px] text-muted">
+                  {guidance?.commands.length
+                    ? 'Run this in a terminal, then click Re-check.'
+                    : 'Install the OCR components, then click Re-check.'}
+                </span>
+                <button type="button" onClick={recheck} disabled={isChecking} className="btn shrink-0">
+                  {isChecking
+                    ? <><LoaderCircle size={12} className="animate-spin" />Checking...</>
+                    : <><RefreshCw size={12} />Re-check</>}
+                </button>
               </div>
             </div>
           )}
 
           {/* OCR works, but some language packs are absent */}
           {isOcrAvailable && guidance && guidance.missing.length > 0 && (
-            <div className="mb-4 px-3 py-2 bg-black/[0.04] border border-black/10 rounded-lg">
-              <p className="text-[11px] text-macos-muted">
-                Note: {guidance.missing.join(' · ')} not installed — OCR runs with the available languages.
-                {guidance.commands[0] ? ` To add them: ${guidance.commands[0]}` : ''}
-              </p>
-            </div>
+            <p className="text-xs text-muted px-1">
+              Note: {guidance.missing.join(' · ')} not installed — OCR runs with the available languages.
+              {guidance.commands[0] ? ` To add them: ${guidance.commands[0]}` : ''}
+            </p>
           )}
 
-          {!preview ? (
-            <div className="space-y-4">
-              {/* Screenshot Button */}
+          <div className="flex gap-[3px] p-[3px] rounded-[9px] shrink-0" style={{ background: 'var(--ctrl-bg)' }}>
+            {([
+              { id: 'screenshot', label: 'Screenshot Area', icon: Scissors },
+              { id: 'upload', label: 'Upload image', icon: Upload },
+            ] as const).map(({ id, label, icon: Icon }) => (
               <button
-                onClick={handleScreenCapture}
-                disabled={isCapturing || !isOcrAvailable}
-                className="w-full border-2 border-macos-active/50 bg-macos-active/10 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-macos-active hover:bg-macos-active/20 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                key={id}
+                type="button"
+                onClick={() => setMode(id)}
+                aria-pressed={mode === id}
+                className={`flex-1 h-[30px] rounded-[7px] flex items-center justify-center gap-2 text-[13px] text-text transition-colors duration-150 ${
+                  mode === id ? 'font-medium' : ''
+                }`}
+                style={mode === id
+                  ? { background: 'var(--card)', boxShadow: '0 1px 2px rgba(0,0,0,.12)' }
+                  : undefined}
               >
-                <div className="w-12 h-12 rounded-full bg-macos-active/20 group-hover:bg-macos-active/30 flex items-center justify-center mb-3 transition-colors">
-                  {isCapturing ? (
-                    <Loader2 size={24} className="text-macos-active animate-spin" />
-                  ) : (
-                    <Scissors size={24} className="text-macos-active" />
-                  )}
-                </div>
-                <p className="text-sm text-macos-text font-medium">
-                  {isCapturing ? 'Select area to capture...' : 'Screenshot Area'}
-                </p>
-                <p className="text-xs text-macos-muted mt-1">Click and drag to select region</p>
+                <Icon size={14} />
+                {label}
               </button>
+            ))}
+          </div>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-black/5"></div>
-                <span className="text-xs text-macos-muted">or</span>
-                <div className="flex-1 h-px bg-black/5"></div>
-              </div>
-
-              {/* Upload Area */}
-              <div 
-                className="border-2 border-dashed border-black/10 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-macos-active/50 hover:bg-black/[0.03] transition-all group"
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-              >
-                <div className="w-10 h-10 rounded-full bg-black/5 group-hover:bg-macos-active/20 flex items-center justify-center mb-3 transition-colors">
-                  <Upload size={20} className="text-macos-muted group-hover:text-macos-active" />
+          <div
+            onClick={activateDropArea}
+            onDragOver={(e) => { if (mode === 'upload') e.preventDefault(); }}
+            onDrop={handleDrop}
+            className={`h-[200px] shrink-0 rounded-xl relative overflow-hidden flex flex-col items-center justify-center gap-1.5 ${
+              preview || (mode === 'screenshot' && captureDisabled) ? '' : 'cursor-pointer'
+            }`}
+            style={{ border: '1px dashed var(--drop-border)', background: 'var(--stripes)' }}
+          >
+            {preview ? (
+              <>
+                <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setPreview(null); }}
+                  className="win-ctrl absolute top-2 right-2"
+                  title="Remove image"
+                  aria-label="Remove image"
+                >
+                  <X size={14} />
+                </button>
+              </>
+            ) : mode === 'screenshot' ? (
+              <>
+                {isCapturing
+                  ? <LoaderCircle size={26} className="text-muted animate-spin" />
+                  : <Scissors size={26} className="text-muted" />}
+                <div className="text-sm font-medium text-text mt-1">
+                  {isCapturing ? 'Select area to capture...' : 'Click and drag to select region'}
                 </div>
-                <p className="text-sm text-macos-text font-medium">Upload image</p>
-                <p className="text-xs text-macos-muted mt-1">PNG, JPG, WebP</p>
-              </div>
-            </div>
-          ) : (
-            <div className="relative rounded-lg overflow-hidden border border-black/10 bg-black/5">
-               <img src={preview} alt="Preview" className="w-full h-48 object-contain" />
-               <button 
-                onClick={() => setPreview(null)}
-                className="absolute top-2 right-2 p-1 bg-black/60 rounded-full text-white hover:bg-red-500/80 transition-colors"
-               >
-                 <X size={14} />
-               </button>
-            </div>
-          )}
-          
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            className="hidden" 
+                <div className="text-xs font-mono text-muted">preview appears here</div>
+              </>
+            ) : (
+              <>
+                <Upload size={26} className="text-muted" />
+                <div className="text-sm font-medium text-text mt-1">Upload image</div>
+                <div className="text-xs font-mono text-muted">PNG, JPG, WebP</div>
+              </>
+            )}
+          </div>
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
             accept="image/*"
           />
 
-          {error && <div className="mt-4 text-xs text-red-600 bg-red-50 border border-red-100 p-2 rounded">{error}</div>}
-        </div>
+          {error && <p className="text-[13px] text-danger px-1">{error}</p>}
 
-        <div className="shrink-0 px-5 py-4 bg-black/[0.03] border-t border-black/5 flex justify-end gap-2">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-macos-muted hover:text-macos-text transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleAnalyze}
-            disabled={!preview || isProcessing || !isOcrAvailable}
-            className="px-4 py-2 bg-macos-active hover:bg-macos-active/90 text-white text-xs font-medium rounded-md transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isProcessing && <Loader2 size={14} className="animate-spin" />}
-            {!isOcrAvailable ? 'OCR Unavailable' : isProcessing ? 'Processing...' : 'Analyze & Translate'}
-          </button>
+          <div className="flex justify-end gap-2 shrink-0">
+            <button type="button" onClick={onClose} className="btn">Cancel</button>
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={!preview || isProcessing || !isOcrAvailable}
+              className="btn btn-suggested"
+            >
+              {isProcessing && <LoaderCircle size={14} className="animate-spin" />}
+              {!isOcrAvailable ? 'OCR Unavailable' : isProcessing ? 'Processing...' : 'Analyze & Translate'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

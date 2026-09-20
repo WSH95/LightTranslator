@@ -127,6 +127,8 @@ interface ElectronBridge {
   updateShortcut(shortcut: string, gnomeBinding: string | null): Promise<{ success: boolean; message?: string }>;
   getShortcutStatus(): Promise<ShortcutStatus>;
   getSystemAppearance(): Promise<SystemAppearance>;
+  openInMainWindow(text: string): Promise<{ success: boolean }>;
+  onQuickToMain(callback: (text: string) => void): () => void;
   reregisterShortcut(): Promise<{ success: boolean; message?: string; mechanism: string }>;
   setAutoLaunch(enabled: boolean): Promise<{ success: boolean }>;
   getAutoLaunch(): Promise<{ success: boolean; enabled: boolean }>;
@@ -404,6 +406,25 @@ const tauriBackend = {
     return { success: false, error: 'No OCR backend available' };
   },
 
+  /** Hand the pop-up's text to the main window and bring it forward. */
+  async openInMainWindow(text: string): Promise<void> {
+    await initTauri();
+    if (tauriInvoke) {
+      await tauriInvoke('open_in_main_window', { text });
+    }
+  },
+
+  /** Text handed over by the pop-up (main window only). */
+  onQuickToMain(callback: (text: string) => void): () => void {
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('quick-to-main', (event) => {
+        callback(event.payload as string);
+      });
+    });
+  },
+
   /**
    * OCR result callback (from tray menu)
    */
@@ -628,6 +649,14 @@ const electronBackend: PlatformBackend = {
     return makeDisposableListener(async () => bridge().onOcrResult(callback));
   },
 
+  async openInMainWindow(text: string): Promise<void> {
+    await bridge().openInMainWindow(text);
+  },
+
+  onQuickToMain(callback: (text: string) => void): () => void {
+    return makeDisposableListener(async () => bridge().onQuickToMain(callback));
+  },
+
   async setProxy(settings: ProxySettings): Promise<void> {
     await bridge().setProxy(settings);
   },
@@ -703,6 +732,8 @@ export const platform = {
   captureScreen: () => activeBackend().captureScreen(),
   ocrImage: (base64Image: string) => activeBackend().ocrImage(base64Image),
   onOcrResult: (cb: (text: string) => void) => activeBackend().onOcrResult(cb),
+  openInMainWindow: (text: string) => activeBackend().openInMainWindow(text),
+  onQuickToMain: (cb: (text: string) => void) => activeBackend().onQuickToMain(cb),
   onOcrDepsMissing: (cb: () => void) => activeBackend().onOcrDepsMissing(cb),
   setProxy: (settings: ProxySettings) => activeBackend().setProxy(settings),
   updateShortcut: (shortcut: string) => activeBackend().updateShortcut(shortcut),

@@ -744,6 +744,21 @@ async fn quick_window_ready(app: AppHandle, state: State<'_, AppState>) -> Resul
     Ok(())
 }
 
+/// The pop-up's "open in main window" button: hand the text over, bring the
+/// main window forward, and dismiss the pop-up.
+///
+/// PARITY: mirrored by `electron/main.js`.
+#[tauri::command]
+async fn open_in_main_window(app: AppHandle, text: String) -> Result<(), String> {
+    show_main_window(&app);
+    app.emit_to("main", "quick-to-main", text)
+        .map_err(|e| e.to_string())?;
+    if let Some(window) = app.get_webview_window("quick") {
+        window.hide().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 async fn close_quick_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("quick") {
@@ -1151,6 +1166,7 @@ pub fn run() {
             resize_main_window,
             quick_window_ready,
             close_quick_window,
+            open_in_main_window,
         ])
         .setup(|app| {
             let start_hidden = should_start_hidden();

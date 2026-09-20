@@ -928,6 +928,19 @@ ipcMain.on('quick-window-ready', (event) => {
   }
 });
 
+/**
+ * The pop-up's "open in main window" button.
+ * PARITY: mirrors open_in_main_window in src-tauri/src/lib.rs.
+ */
+ipcMain.handle('open-in-main-window', (_event, text) => {
+  showMainWindow();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('quick-to-main', text);
+  }
+  if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
+  return { success: true };
+});
+
 ipcMain.on('close-quick-window', () => {
   if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
 });

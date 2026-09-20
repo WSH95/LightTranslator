@@ -182,6 +182,15 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
     }
   }, [setInputAndTranslateOnce]);
 
+  // Text handed over by the pop-up's "open in main window" button.
+  useEffect(() => {
+    if (platform.isAvailable()) {
+      return platform.onQuickToMain((text: string) => {
+        setInputAndTranslateOnce(cleanTextLineBreaks(text));
+      });
+    }
+  }, [setInputAndTranslateOnce]);
+
   // Clear stale verification state when provider or model changes
   useEffect(() => {
     clearModelVerification();

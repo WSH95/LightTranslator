@@ -25,6 +25,9 @@ contextBridge.exposeInMainWorld('electron', {
     subscribe('quick-translate-text', (_event, text) => callback(text)),
   sendQuickReady: () => ipcRenderer.send('quick-window-ready'),
   closeQuickWindow: () => ipcRenderer.send('close-quick-window'),
+  openInMainWindow: (text) => ipcRenderer.invoke('open-in-main-window', text),
+  onQuickToMain: (callback) =>
+    subscribe('quick-to-main', (_event, text) => callback(text)),
 
   // Settings from tray
   onOpenSettings: (callback) => subscribe('open-settings', () => callback()),

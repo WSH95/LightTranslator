@@ -271,7 +271,7 @@ interface SwitchProps {
   'aria-label'?: string;
 }
 
-/** 44x26 track, 20px knob. Replaces the hand-rolled .toggle-label pair. */
+/** 44x26 track, 20px knob. Replaces the hand-rolled CSS toggle. */
 export const Switch: React.FC<SwitchProps> = ({ checked, onChange, disabled, ...rest }) => (
   <button
     type="button"

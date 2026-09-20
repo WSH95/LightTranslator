@@ -1,22 +1,22 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { X, Loader2, ChevronDown } from 'lucide-react';
+import { AppWindow, Check, Copy, LoaderCircle, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
+import { LanguagePill } from './ui';
 import { LanguageCode } from '../types';
 
-// Window size constraints (min values mirror tauri.conf.json's quick window —
-// the window manager clamps to those anyway)
-const MIN_WIDTH = 300;
+// The pop-up is a fixed 360 column (tauri.conf.json and electron/main.js pin
+// min == max), so only the height ever tracks the content.
+const WIDTH = 360;
 const MIN_HEIGHT = 80;
-const MAX_WIDTH = 600;
 const MAX_HEIGHT = 500;
-const HEADER_HEIGHT = 32;
-const LANG_BAR_HEIGHT = 28;
-const PADDING = 32; // p-4 = 16px * 2
-const DROPDOWN_MIN_HEIGHT = 280; // Minimum window height when dropdown is open
+// Enough for the whole language popover: 46 (its top) + 308 (6 + 9x32 + 8x1
+// + 6, for the nine non-auto languages) + 8 of breathing room. The design
+// sketch showed 300, but it only drew seven languages.
+const MENU_OPEN_HEIGHT = 362;
 
 // Languages available for target selection (exclude 'auto')
 const TARGET_LANGUAGES = LANGUAGES.filter((lang) => lang.code !== 'auto');
@@ -26,9 +26,9 @@ export const QuickTranslateWindow: React.FC = () => {
   const [translated, setTranslated] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const measureRef = useRef<HTMLDivElement>(null);
   // Always-current handleTranslate for the mount-once event listener
   const handleTranslateRef = useRef<(text: string) => void>(() => {});
   // Monotonic token so a slow response can't overwrite a newer request
@@ -36,8 +36,7 @@ export const QuickTranslateWindow: React.FC = () => {
 
   const {
     provider,
-    quickWindowOpacity,
-    quickWindowBorderOpacity,
+    quickSourceLang,
     quickTargetLang,
     setQuickTargetLang,
   } = useAppStore();
@@ -50,18 +49,17 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
-  // Resize window to fit content
+  /**
+   * Measure the whole window body — header, text and footer — rather than
+   * summing constants for each piece. The old version added HEADER_HEIGHT +
+   * LANG_BAR_HEIGHT + PADDING, which silently drifts the moment the chrome
+   * changes. Width is never computed: the window is pinned to 360, so a
+   * content-derived width would grow it on every pass.
+   */
   const resizeToFitContent = useCallback(() => {
-    if (!contentRef.current || !platform.isAvailable()) return;
-
-    const contentEl = contentRef.current;
-    const contentWidth = contentEl.scrollWidth;
-    const contentHeight = contentEl.scrollHeight;
-
-    const desiredWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, contentWidth + PADDING + 16));
-    const desiredHeight = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, contentHeight + HEADER_HEIGHT + LANG_BAR_HEIGHT + PADDING));
-
-    platform.resizeQuickWindow({ width: desiredWidth, height: desiredHeight });
+    if (!measureRef.current || !platform.isAvailable()) return;
+    const height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, measureRef.current.scrollHeight));
+    platform.resizeQuickWindow({ width: WIDTH, height });
   }, []);
 
   // Resize when translation changes
@@ -96,19 +94,6 @@ export const QuickTranslateWindow: React.FC = () => {
       return unlisten;
     }
   }, []);
-
-  // Close dropdown when clicking outside it
-  useEffect(() => {
-    if (!langDropdownOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setLangDropdownOpen(false);
-        setTimeout(resizeToFitContent, 50);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [langDropdownOpen]);
 
   const handleTranslate = async (inputText: string) => {
     if (!inputText.trim()) return;
@@ -163,31 +148,26 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   };
 
-  const toggleDropdown = useCallback(() => {
-    // Side effects stay OUT of the setState updater (React calls updaters
-    // twice in StrictMode, doubling the resize)
-    const next = !langDropdownOpen;
-    setLangDropdownOpen(next);
-    if (next && platform.isAvailable()) {
-      // Expand window to fit dropdown
-      platform.resizeQuickWindow({ width: MAX_WIDTH, height: DROPDOWN_MIN_HEIGHT })
+  // The window grows to hold the popover while it is open, then shrinks back.
+  // Side effects stay OUT of any setState updater (React calls updaters twice
+  // in StrictMode, doubling the resize).
+  const handleMenuOpenChange = useCallback((open: boolean) => {
+    setMenuOpen(open);
+    if (!platform.isAvailable()) return;
+    if (open) {
+      platform.resizeQuickWindow({ width: WIDTH, height: MENU_OPEN_HEIGHT })
         .catch((e) => console.error('Failed to resize quick window:', e));
     } else {
-      // Shrink back after a brief delay for the close to render
       setTimeout(resizeToFitContent, 50);
     }
-  }, [langDropdownOpen, resizeToFitContent]);
+  }, [resizeToFitContent]);
 
   const handleSelectLang = async (code: LanguageCode) => {
-    if (code === quickTargetLang) {
-      setLangDropdownOpen(false);
-      return;
-    }
+    if (code === quickTargetLang) return;
     // Pull the latest persisted snapshot first so this write doesn't clobber
     // settings the main window saved while this window held a stale copy
     await refreshSettings();
     setQuickTargetLang(code);
-    setLangDropdownOpen(false);
     setTimeout(resizeToFitContent, 50);
     // Re-translate with the new target language
     if (sourceText.trim()) {
@@ -195,85 +175,121 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   };
 
-  const currentTargetName = TARGET_LANGUAGES.find((l) => l.code === quickTargetLang)?.name || quickTargetLang;
+  const handleCopy = async () => {
+    if (!translated) return;
+    try {
+      await navigator.clipboard.writeText(translated);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* nothing useful to say in a 360px pop-up */
+    }
+  };
+
+  const handleOpenInMain = () => {
+    if (!platform.isAvailable() || !sourceText.trim()) return;
+    platform.openInMainWindow(sourceText)
+      .catch((e) => console.error('Failed to open the main window:', e));
+  };
+
+  const providerName = PROVIDERS.find((entry) => entry.id === provider)?.name ?? 'Unknown';
+  const sourceName = LANGUAGES.find((language) => language.code === quickSourceLang)?.name ?? quickSourceLang;
 
   return (
     <div
-      className="h-screen w-screen backdrop-blur-3xl rounded-3xl flex flex-col overflow-hidden relative"
+      className="h-screen w-screen rounded-xl overflow-hidden"
       style={{
-        backgroundColor: `rgba(255, 255, 255, ${quickWindowOpacity})`,
-        border: `1px solid rgba(150, 150, 150, ${quickWindowBorderOpacity * 2})`
+        background: 'rgb(var(--bg-rgb) / var(--quick-bg-a))',
+        // Inset, not an outer shadow: #root fills the window, so anything
+        // drawn outside it never composites. quickWindowBorderOpacity feeds
+        // the ring alpha, scaled per theme (see --quick-ring-scale).
+        boxShadow: 'inset 0 0 0 1px rgb(0 0 0 / calc(var(--quick-ring-a) * var(--quick-ring-scale)))',
       }}
     >
-      {/* Header / Drag Area */}
-      <div
-        className="h-8 bg-gray-100/80 flex items-center justify-between px-3 -webkit-app-region-drag border-b border-gray-200/50"
-        data-tauri-drag-region
-      >
-        <span className="text-xs font-medium text-gray-600 pointer-events-none select-none">
-          Powered by {PROVIDERS.find(p => p.id === provider)?.name || 'Unknown'}
-        </span>
-        <button
-          onClick={handleClose}
-          className="p-1 hover:bg-gray-200 rounded-full -webkit-app-region-no-drag transition-colors"
-        >
-          <X size={14} className="text-gray-500" />
-        </button>
-      </div>
+      <div ref={measureRef} className="flex flex-col">
 
-      {/* Language Bar */}
-      <div className="h-7 flex items-center px-3 border-b border-gray-200/30 bg-gray-50/40" ref={dropdownRef}>
-        <span className="text-[11px] text-gray-400 mr-1.5 select-none">Translate to</span>
-        <button
-          onClick={toggleDropdown}
-          className="flex items-center gap-0.5 text-[11px] font-medium text-gray-700 px-2 py-0.5 rounded-full bg-white/70 border border-gray-200/60 hover:bg-white hover:border-gray-300/80 transition-all -webkit-app-region-no-drag"
+        <div
+          className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none -webkit-app-region-drag"
+          data-tauri-drag-region
         >
-          {currentTargetName}
-          <ChevronDown size={10} className={`text-gray-400 transition-transform ${langDropdownOpen ? 'rotate-180' : ''}`} />
-        </button>
+          <LanguagePill
+            value={quickTargetLang}
+            options={TARGET_LANGUAGES}
+            onChange={handleSelectLang}
+            onOpenChange={handleMenuOpenChange}
+            title="Target language"
+          />
 
-        {/* Custom Dropdown */}
-        {langDropdownOpen && (
-          <div className="absolute left-3 top-[60px] z-50 min-w-[140px] max-h-[200px] overflow-y-auto rounded-xl bg-white/95 backdrop-blur-xl border border-gray-200/70 shadow-lg py-1">
-            {TARGET_LANGUAGES.map((lang) => (
+          <div className="flex-1 self-stretch" data-tauri-drag-region />
+
+          {/* While translating the header keeps only the pill and the close. */}
+          {!loading && (
+            <>
               <button
-                key={lang.code}
-                onClick={() => handleSelectLang(lang.code)}
-                className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors ${
-                  lang.code === quickTargetLang
-                    ? 'bg-blue-50 text-blue-600 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
+                type="button"
+                onClick={handleCopy}
+                disabled={!translated}
+                className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
+                title="Copy translation"
+                aria-label="Copy translation"
               >
-                {lang.name}
+                {copied ? <Check size={15} /> : <Copy size={15} />}
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={handleOpenInMain}
+                disabled={!sourceText.trim()}
+                className="icon-btn icon-btn-xs -webkit-app-region-no-drag"
+                title="Open in main window"
+                aria-label="Open in main window"
+              >
+                <AppWindow size={15} />
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={handleClose}
+            className="win-ctrl ml-1 -webkit-app-region-no-drag"
+            title="Close"
+            aria-label="Close"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="px-4 pt-0.5 pb-3.5 flex items-center gap-2.5 text-sm text-muted">
+            <LoaderCircle size={16} className="shrink-0 text-accent animate-spin" />
+            Translating…
           </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div ref={contentRef} className="space-y-2">
-          {loading && <Loader2 size={10} className="animate-spin text-blue-400" />}
-
-          {error ? (
-            <div className="text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">
-              {error}
-            </div>
-          ) : (
-            <div lang={quickTargetLang} className="text-sm text-gray-900 font-medium leading-relaxed break-words">
-              {translated || (
-                <span lang="en" className="text-gray-300 italic">
-                  {loading ? 'Translating…' : 'Select text and press the shortcut'}
-                </span>
+        ) : (
+          <>
+            {/* Dimmed while the language popover is open. */}
+            <div
+              className={`px-4 pt-0.5 pb-3.5 transition-opacity duration-150 ${menuOpen ? 'opacity-40' : ''}`}
+            >
+              {error ? (
+                <div className="text-sm text-danger">{error}</div>
+              ) : (
+                <div lang={quickTargetLang} className="translation-text text-text break-words">
+                  {translated || (
+                    <span lang="en" className="text-placeholder select-none">
+                      Select text and press the shortcut
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+
+            <div className="px-4 pb-2.5 flex items-center gap-2 text-[11px] text-muted">
+              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
+              <span className="truncate">{providerName} · {sourceName}</span>
+            </div>
+          </>
+        )}
       </div>
-
-
     </div>
   );
 };
