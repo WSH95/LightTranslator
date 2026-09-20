@@ -3,7 +3,7 @@ updated_at: 2026-09-20T11:00:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: native verification of both backends (Ubuntu/Yaru refresh)
+last_commit: 9cf7d93 docs(steward): record the 1.5.0 artifact
 ---
 # Handoff
 
@@ -12,8 +12,13 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**The Ubuntu 24.04 / Yaru UI refresh is code-complete and natively verified
-on both backends.** All eight steps of the
+**v1.5.0 is cut and the release `.deb` is built, awaiting the user's test.**
+The Ubuntu 24.04 / Yaru UI refresh is code-complete and natively verified on
+both backends.
+
+Artifact: `src-tauri/target/release/bundle/deb/LightTranslator_1.5.0_amd64.deb`,
+sha256 `85a195b2c9e514d39d2de452323258fb3dee1d199ed477811c1b2908ac045215`,
+GLIBC floor 2.34. Built in the jammy container. Not tagged, not published. All eight steps of the
 plan landed as six feature commits plus two steward commits, all on `main`,
 **unpushed**. Design source: `design_handoff_ubuntu_refresh/` (options 2a + 3a
 + 3b). Rationale: DECISIONS 0018-0020. Task list: PLAN.md "Ubuntu / Yaru UI
@@ -52,16 +57,8 @@ Six things a successor should not re-derive:
 
 ## In flight
 
-Nothing uncommitted in tracked files.
-
-`design_handoff_ubuntu_refresh/` is still **untracked** — ~250KB of design
-reference including a 69KB canvas runtime. Left for the user to decide: the
-decisions and the icon masters reference it, but it is generated vendor HTML.
-
-Eight commits on `main`, none pushed:
-`cf59398` theme tokens · `4370a2a` main window · `e48e199` backend appearance ·
-`5025af9` settings view · `e1c3d63` steward checkpoint · `ada8631` OCR + pop-up
-+ skin removal · `60a73b6` icons · `7dec432` decisions.
+Tree clean. Twelve commits on `main`, **none pushed**, ending at `9cf7d93`.
+The release is built but not tagged and not published.
 
 ## Validation completed
 
@@ -73,20 +70,18 @@ confirmation after installing.
 
 ## Next steps
 
-1. **Three checks a machine could not do.** (a) Drag the window by its title —
-   a synthetic xdotool pointer cannot start a compositor-side interactive move,
-   so only the markup was verified. (b) Look at the tray icon in the GNOME
-   panel — the panel is not capturable here. (c) Decide on the WebKitGTK text
-   antialiasing finding in RISKS.md; the one-line fix is a typography call.
-2. Behaviour regression pass — none of this changed, but none of it has been
-   exercised end to end: auto-translate debounce, Ctrl+Enter, paste-image OCR,
-   clipboard translate, tray OCR result **while Settings is open**, shortcut
-   registration and Re-register, proxy apply, launch-at-startup, settings sync
-   between the two windows, and the pop-up's new "open in main window" button.
-3. Decide the Yaru Orange contrast question in QUESTIONS.md before release.
-4. Decide whether `design_handoff_ubuntu_refresh/` belongs in the repo.
-5. Version bump + release only after 1 and 2. Remember: release `.deb`s go
-   through `npm run app:docker:build`, never a native build.
+1. **The user is testing the installed 1.5.0 package.** Wait for their report
+   before tagging or publishing.
+2. Three checks a machine could not do: drag the window by its title (a
+   synthetic pointer cannot start a compositor-side interactive move, so only
+   the markup was verified), look at the tray icon in the GNOME panel, and
+   decide the WebKitGTK text-antialiasing finding in RISKS.md — the one-line
+   fix is a typography call, not a bug fix.
+3. Electron `.deb` not built this session (`npm run electron:build:deb`).
+   Note Electron will not start on this host without `--no-sandbox`; see
+   RISKS.md.
+4. Decide the Yaru Orange contrast question in QUESTIONS.md before publishing.
+5. Then tag and publish with release notes covering the refresh.
 
 ## Blockers
 

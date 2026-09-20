@@ -2,6 +2,9 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T12:10:00Z — claude
+[auto-checkpoint] Cut 1.5.0 (05a0656) and built the release .deb in the jammy container. GLIBC floor 2.34 so it starts on Ubuntu 22.04; packaged icons byte-identical to the rebuilt artwork. Had to reclaim a container-owned Cargo.lock via `podman unshare chown` first. Awaiting the user's acceptance test; not tagged, not published.
+
 ### 2026-09-20T11:45:00Z — claude
 Native verification of the refresh on both backends. Tauri under GDK_BACKEND=x11
 (a native Wayland surface is not capturable and GNOME's screenshot D-Bus is
