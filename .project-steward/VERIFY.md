@@ -12,6 +12,8 @@ How to check the project is healthy. Agents run these before claiming
 | Rust unit | `cargo test` (in `src-tauri/`) | all pass |
 | Rust | `cargo check` (in `src-tauri/`) | clean |
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
+| Tauri release .deb | `npm run app:docker:build` | produces `src-tauri/target/release/bundle/deb/*.deb` in a jammy container. **Never ship a natively-built one** — on a 24.04 host it requires GLIBC_2.39 and cannot start on Ubuntu 22.04 (DECISIONS 0017). Needs `docker`, or rootless `podman` + `podman-docker`, which runs the script unchanged |
+| Release artifact glibc floor | `objdump -T usr/bin/lighttranslator \| grep -oP 'GLIBC_\K[0-9.]+' \| sort -V \| tail -1` | `2.34` or lower (Ubuntu 22.04 ships 2.35) |
 | Lockfile | `npm ci` | resolves without lock/manifest mismatch |
 
 Last verified: 2026-09-20T01:00Z — provider collapse (DECISIONS 0014-0016).

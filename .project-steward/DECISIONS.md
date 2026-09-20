@@ -404,3 +404,42 @@ TODO |` is still honest.
 
 **Consequences**: the next session is told where the code is by the file it
 reads first, and knows when the parity rule does and does not bite.
+
+## 0017 — 2026-09-20 — Release .debs must be built in the jammy container; podman replaces Docker
+
+**Context**: Preparing the 1.4.0 release on an Ubuntu 24.04 host (glibc 2.39)
+with no container runtime installed. The handoff said Tauri "builds natively
+here", which is true for development but was nearly taken as licence to build
+the release artifact natively too.
+
+Measured on a natively-built package before publishing anything:
+
+```
+$ objdump -T usr/bin/lighttranslator | grep 'GLIBC_2.3[5-9]'
+(GLIBC_2.39) pidfd_getpid
+(GLIBC_2.39) pidfd_spawnp
+```
+
+Rust's `std::process` picks up pidfd support from the *build host's* glibc, so a
+24.04 build hard-requires GLIBC_2.39. Ubuntu 22.04 ships 2.35, so that package
+cannot start there — and it would have shipped under the existing
+`ubuntu22.04-or-newer` asset name. glibc is the only blocker: everything else
+the binary needs (`OPENSSL_3.0.0`, `GCC_3.x`, and every `NEEDED` library —
+webkit2gtk-4.1, gtk-3, libsoup-3.0, libssl/libcrypto.so.3) is present on 22.04.
+
+**Decision**: release `.deb` artifacts are always built with
+`npm run app:docker:build` in the jammy container, never natively, regardless of
+what the host can compile. Native builds stay a development convenience.
+
+**Docker itself is no longer required**: `podman` + `podman-docker` provide a
+rootless `docker` shim with no daemon and no group membership, and
+`scripts/docker-build-deb.sh` runs through it unchanged (verified end to end for
+1.4.0, ~5.5 min cold). `sudo apt install -y podman podman-docker` is the whole
+setup. This is the recommended path on hosts without Docker.
+
+**Verified for 1.4.0**: the container build floors at GLIBC_2.34 with nothing
+above 2.35, and `apt-get install --simulate` on the 24.04 host resolved every
+dependency and upgraded the installed 1.3.0 cleanly — so one jammy artifact
+genuinely serves 22.04 through 24.04+, as the asset name claims. glibc is
+backward compatible, so building low and running high is always the safe
+direction.

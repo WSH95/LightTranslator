@@ -178,5 +178,9 @@ release is v1.2.2.
       two — only the project's own entries may change; the rest are
       dependencies (es-errors, get-intrinsic, tiny-async-pool, any-promise,
       shlex) that happen to share the number.
-- [ ] V2 Tag `v1.4.0` on `main` and publish a GitHub release
-- [ ] V3 Build both `.deb` artifacts and attach them (the 1.2.0 / 1.2.2 pattern)
+- [x] V2 Tag `v1.4.0` on `main` and publish a GitHub release
+- [x] V3 Build both `.deb` artifacts and attach them (the 1.2.0 / 1.2.2 pattern).
+      Tauri built in the jammy container via podman (DECISIONS 0017) — a native
+      24.04 build needs GLIBC_2.39 and would not run on 22.04.
+- [x] V4 Release published with both packages, checksums verified by download
+      round-trip: https://github.com/WSH95/LightTranslator/releases/tag/v1.4.0

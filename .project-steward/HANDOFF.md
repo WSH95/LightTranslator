@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-09-20T01:03:00Z
+updated_at: 2026-09-20T01:45:00Z
 updated_by: claude
 session_status: active
 branch: main
-last_commit: 1ed2403 chore(release): 1.3.0 — provider refactor is UNCOMMITTED on top of it
+last_commit: 4af6f79 refactor(providers): … (tagged v1.4.0, released)
 ---
 # Handoff
 
@@ -12,36 +12,37 @@ device). Keep every section current at wrap-up.
 
 ## Now
 
-**Uncommitted on `main`: the generative-AI providers were collapsed into one
-OpenAI-format interface.** 16 files changed, net -212 lines. `gemini` +
-`openai` + `openrouter` became a single "OpenAI Compatible" provider reachable
-at any base URL with five presets (OpenAI, Gemini, OpenRouter, DeepSeek,
-Ollama) and keyless local servers supported; DeepL/Google/Microsoft untouched.
-`ProviderCategory` is gone and the two Settings tabs merged into one
-**Translation** tab. `services/geminiService.ts` was renamed to
-`services/translationService.ts` (660 -> 424 lines). Decisions: DECISIONS
-0014-0016. Plan of record:
-`~/.claude/plans/pasted-content-id-b643-the-generative-curious-quokka.md`.
+**v1.4.0 is released**: https://github.com/WSH95/LightTranslator/releases/tag/v1.4.0
+Both `.deb` packages attached, checksums verified by download round-trip. This
+release carries two things — the provider collapse, and the Wayland work that
+was merged as 1.3.0 but never published (so 1.3.0 has a tag on nothing; the
+previous public release was 1.2.2).
 
-Two things a successor should not re-derive:
+The generative-AI providers are now one **OpenAI Compatible** entry reachable at
+any `/chat/completions` base URL, with five presets and keyless local servers
+supported. DeepL/Google/Microsoft unchanged. Decisions: DECISIONS 0014-0017.
 
-- **No backend code changed.** Both backends are provider-agnostic (one
-  `proxy_request` primitive), so the AGENTS.md parity rule did not apply. This
-  is now stated in AGENTS.md itself, along with the fact that the React app
+Three things a successor should not re-derive:
+
+- **Release `.deb`s must be built in the jammy container, never natively.** A
+  native build on this 24.04 host hard-requires GLIBC_2.39 (Rust std picks up
+  `pidfd_spawnp`/`pidfd_getpid` from the build host) and will not start on
+  Ubuntu 22.04, which ships 2.35 — under an asset name that promises 22.04.
+  Docker is no longer needed for this: `podman` + `podman-docker` give a
+  rootless `docker` shim and `scripts/docker-build-deb.sh` runs through it
+  unchanged (~5.5 min cold). See DECISIONS 0017.
+- **No backend code changed in the provider work.** Both backends are
+  provider-agnostic (one `proxy_request` primitive), so the AGENTS.md parity
+  rule did not apply. AGENTS.md now says so, and also records that the React app
   lives at the **repo root**, not under `src/`.
 - **The stale-provider guard is in zustand `merge`, not `migrate`.** zustand v5
   only calls `migrate` when the stored blob carries a *numeric* version, and
-  pre-upgrade blobs have none — so `migrate` never fires for the users who need
-  it. Do not "fix" this back to `migrate`. See DECISIONS 0015.
-
-v1.3.0 itself is still released and pushed; that work is unchanged.
+  pre-upgrade blobs have none. Do not "fix" it back. See DECISIONS 0015.
 
 ## In flight
 
-The whole provider change is staged in the working tree and **not committed**.
-`git status` should show 16 modified files plus the
-`services/geminiService.ts -> services/translationService.ts` rename. A commit
-message was proposed to the user and not yet run; nothing is pushed.
+Nothing. Working tree clean apart from the steward records for this release,
+`main` pushed, `v1.4.0` tagged and published.
 
 ## Validation completed
 
@@ -53,18 +54,17 @@ confirmation after installing.
 
 ## Next steps
 
-1. Commit the provider work (Conventional Commits, include
-   `.project-steward/`). The user was given a `refactor(providers):` message and
-   has not yet said to run it. Do not push without explicit approval.
-2. Optional coverage gaps, listed in VERIFY.md's "Not covered": DeepL and
-   Microsoft were refactored onto the shared `httpJson` helper but never
-   exercised against live keys, and neither packaged app was rebuilt (the
-   installed v1.3.0 was running on the host, so a Tauri dev instance would have
-   forwarded into it).
-3. Pre-existing nit, untouched on purpose: `Cpu`, `Image` and `Save` are dead
-   imports in `components/SettingsModal.tsx`.
-4. Earlier backlog still open: tag/publish v1.3.0 if a release is wanted, and
-   verify the Electron Wayland path as an installed package on 20.04.
+1. Watch for upgrade reports. The release is **breaking for Gemini/OpenRouter
+   users**: their keys are not migrated and those installs land on Google
+   Translate until they reconfigure via Settings → Translation → OpenAI
+   Compatible. The release notes lead with this.
+2. Coverage gaps from VERIFY.md's "Not covered": DeepL and Microsoft were
+   refactored onto the shared `httpJson` helper but never exercised against live
+   keys.
+3. The Electron backend's Wayland path is still only verified in dev, never as
+   an installed package on a 20.04 Wayland session.
+4. Pre-existing nit: `Cpu`, `Image` and `Save` are dead imports in
+   `components/SettingsModal.tsx`.
 
 ## Blockers
 
@@ -82,6 +82,8 @@ None.
   on the distributions the Electron build targets.
 - On GNOME the shortcut does not fire on the lock screen, in the Activities
   overview, or over a system-modal dialog (`GSD_ACTION_MODE_LAUNCHER`).
-- The WebKitGTK build dependencies are now installed on this host, so Tauri
-  builds natively here (supersedes DECISIONS 0005). Release packaging for
-  Ubuntu 22.04 compatibility still belongs in the jammy Docker builder.
+- The WebKitGTK build dependencies are installed on this host, so Tauri builds
+  natively here for development (supersedes DECISIONS 0005). **Never ship a
+  natively-built `.deb`**: on 24.04 it requires GLIBC_2.39 and cannot start on
+  Ubuntu 22.04. Release packaging goes through `npm run app:docker:build`,
+  which now runs on rootless podman via the `podman-docker` shim. DECISIONS 0017.

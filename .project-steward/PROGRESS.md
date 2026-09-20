@@ -107,3 +107,14 @@ Project initialized as a Project Steward managed project.
   over the native transport against a mock server and the real Google endpoint;
   see VERIFY.md rows 28-31. DECISIONS 0014-0016.
 - [auto-checkpoint] 2026-09-20 ~01:03Z — Provider collapse complete and verified (typecheck/build/15 tests, live browser + native-transport checks); 16 files uncommitted on main, commit proposed to the user, nothing pushed.
+- 2026-09-20 ~01:45Z — v1.4.0 released with both `.deb` packages:
+  https://github.com/WSH95/LightTranslator/releases/tag/v1.4.0 — carries the
+  provider collapse plus the Wayland work merged as 1.3.0 but never published.
+  Caught before publishing: a natively-built Tauri `.deb` on this 24.04 host
+  hard-requires GLIBC_2.39 (Rust std picks up pidfd from the build host) and
+  cannot start on Ubuntu 22.04, which is exactly what the `ubuntu22.04-or-newer`
+  asset promises. Built in the jammy container instead — floors at GLIBC_2.34,
+  and `apt-get install --simulate` on the 24.04 host upgraded the installed
+  1.3.0 cleanly, so one artifact genuinely covers 22.04 through 24.04+. Docker
+  is no longer required: rootless podman + podman-docker runs the existing
+  build script unchanged. DECISIONS 0017.
