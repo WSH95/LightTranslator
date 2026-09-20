@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, ChevronUp, Minus, Square, X } from 'lucide-react';
-import { platform, type ResizeDirection, type ResizePointer } from '../src/lib/platform';
+import { platform, type ResizeDirection } from '../src/lib/platform';
 import type { Language, LanguageCode } from '../types';
 
 /* ------------------------------------------------------------------ */
@@ -67,22 +67,8 @@ const HANDLES: { dir: ResizeDirection; cursor: string; style: React.CSSPropertie
   { dir: 'SouthEast', cursor: 'se-resize', style: { bottom: 0, right: 0, width: CORNER, height: CORNER } },
 ];
 
-interface ResizeHandlesProps {
-  /** Defaults to all eight. The quick pop-up asks for `['East']` only. */
-  directions?: ResizeDirection[];
-  onResizeStart?: () => void;
-  /**
-   * Override how a resize starts.
-   *
-   * The quick pop-up routes through a backend command that first suppresses
-   * its hide-on-blur, because a resize grab clears the window's focus exactly
-   * like a move grab does.
-   */
-  onBeginResize?: (direction: ResizeDirection, pointer: ResizePointer) => void;
-}
-
 /**
- * Invisible grips around the window edge.
+ * Invisible grips around the resizable main-window edge.
  *
  * Frameless windows get no resize border of their own, so the app draws one.
  * Portalled to <body> because `backdrop-filter` makes an element a containing
@@ -94,18 +80,9 @@ interface ResizeHandlesProps {
  * drag region above its own resize hit test. The grips carry no
  * `data-tauri-drag-region`, so Tauri's drag shim ignores them.
  */
-export const ResizeHandles: React.FC<ResizeHandlesProps> = ({
-  directions,
-  onResizeStart,
-  onBeginResize,
-}) => {
-  const shown = directions
-    ? HANDLES.filter((handle) => directions.includes(handle.dir))
-    : HANDLES;
-
-  return createPortal(
+export const ResizeHandles: React.FC = () => createPortal(
     <>
-      {shown.map(({ dir, cursor, style }) => (
+      {HANDLES.map(({ dir, cursor, style }) => (
         <div
           key={dir}
           aria-hidden
@@ -114,11 +91,6 @@ export const ResizeHandles: React.FC<ResizeHandlesProps> = ({
           onPointerDown={(event) => {
             if (event.button !== 0) return;
             event.preventDefault();
-            onResizeStart?.();
-            if (onBeginResize) {
-              onBeginResize(dir, event);
-              return;
-            }
             void platform.startResize(dir, event);
           }}
         />
@@ -126,7 +98,6 @@ export const ResizeHandles: React.FC<ResizeHandlesProps> = ({
     </>,
     document.body,
   );
-};
 
 /* ------------------------------------------------------------------ */
 /* Language pill + popover                                             */
@@ -142,6 +113,8 @@ interface LanguagePillProps {
   onChange: (code: LanguageCode) => void;
   /** Lets the quick window grow itself while the menu is open. */
   onOpenChange?: (open: boolean) => void;
+  /** Exposes the portalled menu for an owning window's layout measurement. */
+  onMenuElementChange?: (element: HTMLDivElement | null) => void;
   /** Which pill edge the menu lines up with. */
   align?: 'left' | 'right';
   disabled?: boolean;
@@ -157,7 +130,8 @@ interface LanguagePillProps {
  * overflow:hidden, and the settings column scrolls.
  */
 export const LanguagePill: React.FC<LanguagePillProps> = ({
-  value, options, onChange, onOpenChange, align = 'left', disabled, title,
+  value, options, onChange, onOpenChange, onMenuElementChange,
+  align = 'left', disabled, title,
 }) => {
   const [open, setOpen] = useState(false);
   // activeIndex is mirrored in a ref because Enter has to read the value the
@@ -175,6 +149,10 @@ export const LanguagePill: React.FC<LanguagePillProps> = ({
 
   const pillRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const setMenuRef = useCallback((element: HTMLDivElement | null) => {
+    menuRef.current = element;
+    onMenuElementChange?.(element);
+  }, [onMenuElementChange]);
   const listId = useId();
 
   const selectedIndex = Math.max(0, options.findIndex((option) => option.code === value));
@@ -312,7 +290,7 @@ export const LanguagePill: React.FC<LanguagePillProps> = ({
 
       {open && position && createPortal(
         <div
-          ref={menuRef}
+          ref={setMenuRef}
           id={listId}
           role="listbox"
           aria-label={title ?? 'Language'}

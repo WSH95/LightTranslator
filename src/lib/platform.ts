@@ -167,7 +167,7 @@ const bridge = (): ElectronBridge => (window as unknown as { electron: ElectronB
 
 // Platform-specific imports for Tauri (lazy loaded)
 let tauriInvoke: ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null = null;
-let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; isMaximized: () => Promise<boolean>; onFocusChanged: (handler: (event: { payload: boolean }) => void) => Promise<() => void>; onResized: (handler: () => void) => Promise<() => void>; startResizeDragging: (direction: ResizeDirection) => Promise<void> } } | null = null;
+let tauriWindow: { getCurrentWindow: () => { label: string; minimize: () => Promise<void>; toggleMaximize: () => Promise<void>; close: () => Promise<void>; hide: () => Promise<void>; isMaximized: () => Promise<boolean>; onResized: (handler: () => void) => Promise<() => void>; startResizeDragging: (direction: ResizeDirection) => Promise<void> } } | null = null;
 let tauriEvent: { listen: (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>; emitTo: (target: string, event: string, payload?: unknown) => Promise<void> } | null = null;
 
 // Initialize Tauri APIs if available
@@ -340,21 +340,6 @@ const tauriBackend = {
     });
   },
 
-  /**
-   * Listen for window blur (focus lost) events
-   */
-  onWindowBlur(callback: () => void): () => void {
-    return makeDisposableListener(async () => {
-      await initTauri();
-      if (!tauriWindow) return null;
-      return tauriWindow.getCurrentWindow().onFocusChanged((event) => {
-        if (!event.payload) {
-          callback();
-        }
-      });
-    });
-  },
-
   async resizeQuickWindow(dimensions: WindowDimensions): Promise<void> {
     await initTauri();
     if (tauriInvoke) {
@@ -453,36 +438,6 @@ const tauriBackend = {
     if (tauriInvoke) {
       await tauriInvoke('open_in_main_window', { text });
     }
-  },
-
-  /**
-   * Move the quick pop-up by its header.
-   *
-   * Not `data-tauri-drag-region`: that routes to the built-in `start_dragging`
-   * and would bypass the backend flag that stops the pop-up hiding itself
-   * mid-drag. The backend command sets the flag and starts the grab together.
-   */
-  async startQuickDrag(): Promise<void> {
-    await initTauri();
-    if (tauriInvoke) {
-      await tauriInvoke('start_quick_drag');
-    }
-  },
-
-  /**
-   * Resize the pop-up from its right edge.
-   *
-   * Awaiting the flag before starting the grab is what keeps the pop-up from
-   * hiding itself: a resize grab clears focus just like a move grab. The grab
-   * is started from the JS window API rather than a single Rust command
-   * because `start_resize_dragging` is only on `Window`, which sits behind
-   * Tauri's `unstable` feature.
-   */
-  async startQuickResize(direction: ResizeDirection, _pointer: ResizePointer): Promise<void> {
-    await initTauri();
-    if (!tauriInvoke || !tauriWindow) return;
-    await tauriInvoke('set_quick_drag_active', { active: true });
-    await tauriWindow.getCurrentWindow().startResizeDragging(direction);
   },
 
   /** Text handed over by the pop-up (main window only). */
@@ -677,13 +632,6 @@ const electronBackend: PlatformBackend = {
     bridge().closeQuickWindow();
   },
 
-  onWindowBlur(callback: () => void): () => void {
-    // Electron delivers focus loss to the renderer as a DOM event
-    const handler = () => callback();
-    window.addEventListener('blur', handler);
-    return () => window.removeEventListener('blur', handler);
-  },
-
   async resizeQuickWindow(dimensions: WindowDimensions): Promise<void> {
     await bridge().resizeQuickWindow(dimensions);
   },
@@ -722,24 +670,6 @@ const electronBackend: PlatformBackend = {
 
   async openInMainWindow(text: string): Promise<void> {
     await bridge().openInMainWindow(text);
-  },
-
-  /**
-   * No-op: Chromium already drags the window from `-webkit-app-region: drag`,
-   * and the main process brackets the move with will-move/moved.
-   */
-  /** Chromium already drags the window from `-webkit-app-region: drag`. */
-  async startQuickDrag(): Promise<void> {
-    /* handled natively */
-  },
-
-  /**
-   * Reuses the manual bounds drag, which works here because Chromium supports
-   * pointer capture — the thing WebKitGTK is missing, and the reason the Tauri
-   * side hands resizes to the compositor instead.
-   */
-  async startQuickResize(direction: ResizeDirection, pointer: ResizePointer): Promise<void> {
-    await electronBackend.startResize(direction, pointer);
   },
 
   /**
@@ -851,7 +781,6 @@ export const platform = {
     activeBackend().onQuickTranslate(cb, onRegistered),
   sendQuickReady: () => activeBackend().sendQuickReady(),
   closeQuickWindow: () => activeBackend().closeQuickWindow(),
-  onWindowBlur: (cb: () => void) => activeBackend().onWindowBlur(cb),
   resizeQuickWindow: (dimensions: WindowDimensions) => activeBackend().resizeQuickWindow(dimensions),
   resizeMainWindow: (dimensions: WindowDimensions) => activeBackend().resizeMainWindow(dimensions),
   onOpenSettings: (cb: () => void) => activeBackend().onOpenSettings(cb),
@@ -861,9 +790,6 @@ export const platform = {
   ocrImage: (base64Image: string) => activeBackend().ocrImage(base64Image),
   onOcrResult: (cb: (text: string) => void) => activeBackend().onOcrResult(cb),
   openInMainWindow: (text: string) => activeBackend().openInMainWindow(text),
-  startQuickDrag: () => activeBackend().startQuickDrag(),
-  startQuickResize: (direction: ResizeDirection, pointer: ResizePointer) =>
-    activeBackend().startQuickResize(direction, pointer),
   startResize: (direction: ResizeDirection, pointer: ResizePointer) =>
     activeBackend().startResize(direction, pointer),
   onQuickToMain: (cb: (text: string) => void) => activeBackend().onQuickToMain(cb),

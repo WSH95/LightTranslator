@@ -15,6 +15,19 @@ mod gnome_shortcut;
 
 use gnome_shortcut::{Mechanism, SessionKind};
 
+fn quick_window_diagnostics_enabled() -> bool {
+    cfg!(debug_assertions)
+        || std::env::var("LIGHTTRANSLATOR_QUICK_DEBUG")
+            .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+            .unwrap_or(false)
+}
+
+fn log_quick_window_event(action: &str, reason: &str) {
+    if quick_window_diagnostics_enabled() {
+        log::info!(target: "quick_window", "action={} reason={}", action, reason);
+    }
+}
+
 // --- Types ---
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,10 +123,6 @@ struct AppState {
     /// Kept open so the selection backend is initialised once instead of on
     /// every hotkey press (arboard probes Wayland, then falls back to X11).
     selection_clipboard: Mutex<Option<arboard::Clipboard>>,
-    /// True while a compositor move grab we started is in progress. The grab
-    /// clears the pop-up's keyboard focus, which is indistinguishable from the
-    /// user clicking another window, so the hide-on-blur below consults this.
-    quick_drag_active: AtomicBool,
 }
 
 impl Default for AppState {
@@ -124,7 +133,6 @@ impl Default for AppState {
             quick_ready: AtomicBool::new(false),
             pending_quick_text: Mutex::new(None),
             selection_clipboard: Mutex::new(None),
-            quick_drag_active: AtomicBool::new(false),
         }
     }
 }
@@ -714,6 +722,42 @@ async fn get_auto_launch(app: AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 async fn resize_quick_window(app: AppHandle, dimensions: WindowDimensions) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        use gtk::prelude::{GtkWindowExt, WidgetExt};
+
+        let to_gtk_dimension = |name: &str, value: f64| -> Result<i32, String> {
+            if !value.is_finite() || value < 1.0 || value > i32::MAX as f64 {
+                return Err(format!("Invalid quick-window {}: {}", name, value));
+            }
+            Ok(value.round() as i32)
+        };
+        let width = to_gtk_dimension("width", dimensions.width)?;
+        let height = to_gtk_dimension("height", dimensions.height)?;
+        let app_for_resize = app.clone();
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        app.run_on_main_thread(move || {
+            let result = (|| -> Result<(), String> {
+                let Some(window) = app_for_resize.get_webview_window("quick") else {
+                    return Ok(());
+                };
+                let gtk_window = window.gtk_window().map_err(|error| error.to_string())?;
+                // GTK treats a non-resizable window's initial default size as
+                // its minimum. Updating the size request first lets the app
+                // shrink as well as grow while user edge resizing stays off.
+                gtk_window.set_size_request(width, height);
+                gtk_window.resize(width, height);
+                Ok(())
+            })();
+            let _ = sender.send(result);
+        })
+        .map_err(|error| error.to_string())?;
+        receiver
+            .await
+            .map_err(|_| "Quick-window resize task was cancelled".to_string())??;
+    }
+
+    #[cfg(not(target_os = "linux"))]
     if let Some(window) = app.get_webview_window("quick") {
         let size = tauri::LogicalSize::new(dimensions.width, dimensions.height);
         window.set_size(size).map_err(|e| e.to_string())?;
@@ -759,77 +803,16 @@ async fn open_in_main_window(app: AppHandle, text: String) -> Result<(), String>
     app.emit_to("main", "quick-to-main", text)
         .map_err(|e| e.to_string())?;
     if let Some(window) = app.get_webview_window("quick") {
+        log_quick_window_event("hide", "open-in-main-window");
         window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
-/// Start a compositor-driven move of the quick pop-up.
-///
-/// Wayland forbids a client from moving its own window, so this has to be an
-/// `xdg_toplevel.move` grab — and mutter clears the client's keyboard focus
-/// for the grab's duration, which arrives as a plain `Focused(false)`. Setting
-/// the flag and starting the drag in ONE command is what removes the race:
-/// there is no window in which the blur can reach the handler unguarded.
-///
-/// PARITY: `electron/main.js` brackets the same state with will-move/moved,
-/// because its drag is CSS-driven and has no JS entry point.
-#[tauri::command]
-async fn start_quick_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let Some(window) = app.get_webview_window("quick") else {
-        return Ok(());
-    };
-    state.quick_drag_active.store(true, Ordering::SeqCst);
-    window.start_dragging().map_err(|e| e.to_string())?;
-    arm_quick_drag_watchdog(app);
-    Ok(())
-}
-
-/// Suppress the pop-up's hide-on-blur around a grab this process cannot start
-/// itself.
-///
-/// A resize grab clears focus exactly like a move grab, but
-/// `start_resize_dragging` lives on `Window`, which is behind Tauri's
-/// `unstable` feature — not a flag worth enabling for one call. The frontend
-/// awaits this, then starts the grab through the JS window API, which gives
-/// the same ordering guarantee without it.
-#[tauri::command]
-async fn set_quick_drag_active(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    active: bool,
-) -> Result<(), String> {
-    state.quick_drag_active.store(active, Ordering::SeqCst);
-    if active {
-        arm_quick_drag_watchdog(app);
-    }
-    Ok(())
-}
-
-/// Clear the suppression shortly after it is armed.
-///
-/// The flag only has to bridge the instant between asking for a grab and the
-/// grab-induced blur arriving — a few milliseconds. Once that blur has been
-/// swallowed the window stays unfocused for the rest of the drag, so no
-/// further blur can fire and the flag has nothing left to protect.
-///
-/// Keeping it short bounds the damage when a grab never actually starts (a
-/// stale serial, or a compositor that ignored the request): the pop-up goes
-/// back to dismissing normally a second later instead of ignoring click-away
-/// until the timeout. It is a bound on a known risk, not a fix for an
-/// observed failure.
-fn arm_quick_drag_watchdog(app: AppHandle) {
-    std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(1000));
-        app.state::<AppState>()
-            .quick_drag_active
-            .store(false, Ordering::SeqCst);
-    });
-}
-
 #[tauri::command]
 async fn close_quick_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("quick") {
+        log_quick_window_event("hide", "explicit-close");
         window.hide().map_err(|e| e.to_string())?;
     }
     Ok(())
@@ -986,9 +969,11 @@ fn trigger_quick_translate(app: &AppHandle) {
             // and a background app has no activation token, so it would never
             // take focus. Unmapping first makes the next show a fresh map,
             // which mutter does focus — and which the placement extension sees.
+            log_quick_window_event("hide", "wayland-remap");
             let _ = window.hide();
         }
 
+        log_quick_window_event("show", "quick-translate-trigger");
         let _ = window.show();
         let _ = window.set_focus();
     });
@@ -1235,8 +1220,6 @@ pub fn run() {
             quick_window_ready,
             close_quick_window,
             open_in_main_window,
-            start_quick_drag,
-            set_quick_drag_active,
         ])
         .setup(|app| {
             let start_hidden = should_start_hidden();
@@ -1277,6 +1260,7 @@ pub fn run() {
 
             // Hide quick window on startup (it starts hidden anyway)
             if let Some(quick) = app.get_webview_window("quick") {
+                log_quick_window_event("hide", "startup");
                 let _ = quick.hide();
             }
 
@@ -1307,29 +1291,16 @@ pub fn run() {
                     api.prevent_close();
                 }
             }
-            // Hide the quick window on blur. This is the SOLE owner of that
-            // decision — the renderer used to hide it too, and two independent
-            // hiders made the drag suppression below impossible to honour.
+            // The backend is the sole owner of focus-loss dismissal.
             if window.label() == "quick" {
                 match event {
-                    tauri::WindowEvent::Focused(false) => {
-                        let dragging = window
-                            .app_handle()
-                            .state::<AppState>()
-                            .quick_drag_active
-                            .load(Ordering::SeqCst);
-                        if !dragging {
-                            let _ = window.hide();
-                        }
-                    }
-                    // Mutter restores input focus when the grab op ends, so
-                    // this is the natural end-of-drag signal.
                     tauri::WindowEvent::Focused(true) => {
-                        window
-                            .app_handle()
-                            .state::<AppState>()
-                            .quick_drag_active
-                            .store(false, Ordering::SeqCst);
+                        log_quick_window_event("focus", "gained");
+                    }
+                    tauri::WindowEvent::Focused(false) => {
+                        log_quick_window_event("focus", "lost");
+                        log_quick_window_event("hide", "focus-lost");
+                        let _ = window.hide();
                     }
                     _ => {}
                 }

@@ -41,6 +41,17 @@ let lastHealAt = 0;
 
 const isDev = () => !app.isPackaged;
 
+function quickWindowDiagnosticsEnabled() {
+  const configured = (process.env.LIGHTTRANSLATOR_QUICK_DEBUG || '').toLowerCase();
+  return isDev() || configured === '1' || configured === 'true';
+}
+
+function logQuickWindowEvent(action, reason) {
+  if (quickWindowDiagnosticsEnabled()) {
+    console.info(`[quick-window] action=${action} reason=${reason}`);
+  }
+}
+
 const isWayland = () => gnomeShortcut.sessionKind() === 'wayland';
 
 /**
@@ -263,25 +274,17 @@ function createMainWindow({ startHidden = false } = {}) {
 
 function createQuickWindow() {
   if (quickWindow) return;
-  // Sizes mirror tauri.conf.json's "quick" window
+  // Initial dimensions only; the renderer sizes the pop-up to its content.
   quickWindow = new BrowserWindow({
     title: 'Quick Translate',
     width: 360,
     height: 200,
-    // 360 is the design's default width, not a pin: the user can drag the
-    // pop-up wider and that size is persisted. maxHeight is deliberately
-    // above the renderer's MAX_HEIGHT auto-grow cap, so the window can be
-    // dragged taller than it will ever size itself.
-    minWidth: 300,
-    minHeight: 80,
-    maxWidth: 600,
-    maxHeight: 600,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: true,
-    movable: true,
+    resizable: false,
+    movable: false,
     show: false,
     webPreferences: webPreferences(),
   });
@@ -290,19 +293,16 @@ function createQuickWindow() {
 
   quickWindow.loadURL(rendererUrl('?mode=quick'));
 
-  // Hide-on-blur, and the drag suppression that has to ride along with it.
-  // Chromium drives this window's drag from CSS (-webkit-app-region), so
-  // there is no JS entry point to flag — but will-move/moved bracket a native
-  // move precisely, which is the same information.
-  //
-  // PARITY: mirrors the quick_drag_active flag in src-tauri/src/lib.rs.
-  let quickDragActive = false;
-  quickWindow.on('will-move', () => { quickDragActive = true; });
-  quickWindow.on('moved', () => { quickDragActive = false; });
-
+  // The backend is the sole owner of focus-loss dismissal.
+  quickWindow.on('focus', () => {
+    logQuickWindowEvent('focus', 'gained');
+  });
   quickWindow.on('blur', () => {
-    if (quickDragActive) return;
-    if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
+    if (quickWindow && !quickWindow.isDestroyed()) {
+      logQuickWindowEvent('focus', 'lost');
+      logQuickWindowEvent('hide', 'focus-lost');
+      quickWindow.hide();
+    }
   });
 
   quickWindow.on('closed', () => {
@@ -381,7 +381,10 @@ async function triggerQuickTranslate() {
     // cannot place its own window; the bundled GNOME extension moves the popup
     // to the pointer. Re-mapping the window is what lets the compositor focus
     // it again, and what the extension watches for.
-    if (quickWindow.isVisible()) quickWindow.hide();
+    if (quickWindow.isVisible()) {
+      logQuickWindowEvent('hide', 'wayland-remap');
+      quickWindow.hide();
+    }
   } else {
     // Clamp so the popup stays on the display under the cursor
     const { x: cursorX, y: cursorY } = await cursorPosition();
@@ -393,6 +396,7 @@ async function triggerQuickTranslate() {
     quickWindow.setPosition(Math.floor(x), Math.floor(y));
   }
 
+  logQuickWindowEvent('show', 'quick-translate-trigger');
   quickWindow.show();
   quickWindow.setAlwaysOnTop(true, 'floating');
   quickWindow.focus();
@@ -950,7 +954,10 @@ ipcMain.handle('open-in-main-window', (_event, text) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('quick-to-main', text);
   }
-  if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
+  if (quickWindow && !quickWindow.isDestroyed()) {
+    logQuickWindowEvent('hide', 'open-in-main-window');
+    quickWindow.hide();
+  }
   return { success: true };
 });
 
@@ -996,7 +1003,10 @@ ipcMain.on('update-window-resize', (_event, direction, dx, dy) => {
 });
 
 ipcMain.on('close-quick-window', () => {
-  if (quickWindow && !quickWindow.isDestroyed()) quickWindow.hide();
+  if (quickWindow && !quickWindow.isDestroyed()) {
+    logQuickWindowEvent('hide', 'explicit-close');
+    quickWindow.hide();
+  }
 });
 
 ipcMain.on('window-minimize', () => mainWindow?.minimize());

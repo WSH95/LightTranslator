@@ -585,3 +585,58 @@ The 1.6.0 round proved the resize on Electron and inferred Tauri was fine; that
 test could not have failed, so it proved nothing. Verify pop-up behaviour on
 Tauri, with a real mouse.
 
+## 0023 — 2026-09-20 — The quick pop-up sizes itself and has no move/resize gesture
+
+**Context**: The 1.6.1 fix made compositor move/resize grabs a special case in
+focus-loss dismissal, but the user wants the pop-up to fit its translation
+automatically and does not need to position or resize it by hand. A native
+`resizable: false` GTK window introduced a separate constraint: ordinary
+`gtk_window_resize` could grow it, but could not shrink below its initial
+360x200 default size.
+
+**Decision**: `quickWindowMaxWidth` is a 300–600 whole-pixel setting with a
+480px default. It is a cap, not a fixed width. The renderer clones the current
+header, body and footer into an offscreen unconstrained host, measures actual
+max-content width in the active font, floors that result by the toolbar (and an
+open menu), caps it by the setting, then measures the wrapped height at the
+chosen width. One coordinator coalesces every content, settings, font and menu
+invalidation, serializes resize IPC and suppresses unchanged dimensions.
+
+Both native pop-ups are non-resizable; Electron is also non-movable. The popup
+header drag region, edge handle, popup-only platform methods/commands,
+suppression flags and watchdog are removed. Main-window drag and edge resizing
+remain. On Linux, Tauri performs `GtkWindow::set_size_request(width, height)`
+then `GtkWindow::resize(width, height)` on the GTK main thread. Other Tauri
+targets retain `set_size`, and Electron retains programmatic `setSize`.
+Focus-loss dismissal remains backend-owned and unconditional. Debug builds, or
+release builds launched with `LIGHTTRANSLATOR_QUICK_DEBUG=1`, log focus,
+show and hide actions with explicit reasons and no translated text.
+
+**Consequences**: Short results can be narrower than 300px; long results wrap
+at the configured cap and scroll vertically after 500px. Newlines, CJK, emoji
+and unbroken URLs use browser layout rather than character estimates. Opening
+the portalled language menu reserves its measured width and height; closing it
+restores content sizing. Legacy unversioned blobs take a valid new field first,
+then a valid `quickWindowWidth`, then 480, and new snapshots omit the retired
+field. Because Zustand v5 does not write after an unversioned `merge`, successful
+hydration compares the raw stored state with the canonical partialized state
+and performs one same-state persistence write only when they differ. That write
+does not notify subscribers or broadcast across windows; a canonical restart
+does not write again. The project version is 1.6.2 so local acceptance installs
+cannot be confused with 1.6.1.
+
+**Evidence boundary**: GTK probes passed exact grow/shrink requests on Wayland,
+X11 and Wayland with a real WebKit2 child. A native GTK/WebKit integration
+fixture passed content sizing cases. Near-edge X11 probes also showed Mutter
+repositioning both a GTK window and an Electron BrowserWindow after growth so
+they remained inside the work area; no duplicate client clamp was added. Those
+results establish toolkit and renderer behavior; they do not substitute for
+packaged Tauri/Electron focus and interaction acceptance, which remains open in
+PLAN A7.
+
+**Review follow-up**: restore the existing shared keyboard-focus outline by
+removing the range-specific suppression. Keep duplicate hide-reason logging
+as a deferred diagnostics-only issue: an explicit cause remains in the log and
+the repeated hide is idempotent. No new blur delay or dismissal-state machinery
+is justified by that Minor finding. Source integration is ready; packaged
+physical-input acceptance remains open.

@@ -8,7 +8,7 @@ How to check the project is healthy. Agents run these before claiming
 | Build | `npm run build` | exits 0 |
 | Tests | `TODO` | all pass |
 | Lint | `npm run typecheck` | clean (also proves backend surface parity) |
-| Unit | `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js src/lib/accents.test.ts` | all pass (pass files, not directories: `node --test <dir>` executes non-test files too) |
+| Unit | `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js src/lib/accents.test.ts utils/quickWindowSizing.test.ts store/settingsPersistence.test.ts` | all pass (pass files, not directories: `node --test <dir>` executes non-test files too) |
 | Rust unit | `cargo test` (in `src-tauri/`) | all pass. `interface_schema_reads_are_guarded` is the canary for `get_system_appearance`: reading a key a schema does not declare **aborts the process**, so a regression takes the whole runner down rather than failing a assertion |
 | Rust | `cargo check` (in `src-tauri/`) | clean |
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |
@@ -25,15 +25,96 @@ unguarded read aborts. Electron: `electron/main.js` via `execFile('gsettings')`,
 exposed in `electron/preload.cjs`. `npm run typecheck` proves the Electron side
 implements it, because `PlatformBackend` is derived from the Tauri object.
 
+**Automatic quick-pop-up sizing source verification (1.6.2, 2026-09-20).**
+Automated/source checks are green:
+
+- `npm run typecheck`; `npm run build`; `node --check electron/main.js` and
+  `node --check electron/preload.cjs` all exit 0.
+- The five-file Node command above exits 0. Direct focused runs expose 7/7
+  sizing/coordinator cases and 7/7 settings migration/persistence cases. The
+  coordinator coverage includes coalescing, sequential IPC, latest-pending
+  sizing, unchanged-size suppression and disposal during queued/in-flight work.
+- The settings suite uses actual Zustand v5 persistence over counted storage.
+  An unversioned `{ quickWindowWidth: 455 }` hydrates to the new field and
+  writes one version-1 canonical snapshot; other stored settings survive. The
+  same-state cleanup adds no subscriber notification, and a new store instance
+  over the canonical blob performs zero writes.
+- Browser restart QA seeded the same unversioned legacy width: hydration saved
+  `{ version: 1, maximum: 455, hasLegacy: false }`; restarting the renderer
+  without reseeding retained 455 and started zero translation requests.
+- `cargo check --all-targets` exits 0; `cargo test` passes 5/5. The shared
+  target directory was reused only for development validation.
+- Browser Settings QA: Maximum width starts at 480, accepts 300, Reset restores
+  480 and disables itself. Cross-window max-width changes resize the fixture
+  without starting another translation request.
+- Final-review accessibility check: the later
+  `input[type="range"]:focus { outline: none; }` suppression was removed, so the
+  shared `:focus-visible` outline now applies to Maximum width. Typecheck,
+  the production build and browser Tab/arrow-key verification pass.
+- Browser menu/font QA: short English content measured 203x111; opening the
+  language menu grew it to 236x250 around a measured 220x196 menu, fully inside
+  the window, and closing restored 203x111. Medium/large/small text changed
+  348x111 → 411x116 → 306x108. Translation request counts did not change.
+
+Independent task review and whole-branch review passed after two fixes:
+canonical persistence immediately after unversioned hydration, and restoring
+visible keyboard focus on range controls. No blocking source findings remain.
+A duplicate `focus-lost` hide log after an explicit hide is deferred as Minor:
+the original reason remains recorded and hiding twice is idempotent.
+
+Browser keyboard QA verified Tab focuses Maximum width with a visible 2px
+accent outline and 2px offset; Right changes 480 to 481; Tab/Enter on Reset
+restores 480 and disables Reset. The legacy-restart fixture also rendered long
+content at its restored 455px cap (455x500), without retranslation on restart.
+
+Toolkit/native-adapter evidence, still short of packaged acceptance:
+
+- With `resizable=false`, a standalone GTK3 probe produced the exact requested
+  480x160, 240x80, 600x500 and 260x100 sizes on both `GdkWaylandDisplay` and
+  `GdkX11Display` when `set_size_request` precedes `resize`. The same sequence
+  passed on Wayland with a real WebKit2.WebView child.
+- A real GTK/WebKit integration fixture exercising the current renderer passed
+  on Wayland, X11 and Wayland with `GDK_SCALE=2` (the same logical dimensions).
+  Its nine cases include short 279x110, medium 348x110, long 480x500; 300 and 600
+  caps applied without extra translation requests; short-after-long returned
+  to 279x110; explicit newlines remained and measured 279x158; CJK reached
+  600x500; a long URL wrapped at 600x278 with no horizontal overflow. The
+  native window remained non-resizable.
+- Screen-edge toolkit probes on Mutter/X11 started non-resizable 240x100
+  windows at 1680,980 in work area 0,32,1920,1048, then requested 600x500.
+  GTK and Electron both ended at 1320,580 with the requested size, fully
+  inside the work area and still non-resizable. The compositor already handles
+  post-growth clamping, so no client-side repositioning path was added.
+
+The final jammy rebuild after both review fixes produced
+`src-tauri/target/release/bundle/deb/LightTranslator_1.6.2_amd64.deb`,
+6,041,218 bytes, SHA-256 `8097cd8d1537b3dea779cae16f76252aa141dbc7170fae46098f8257508fcc31`.
+Package metadata is `light-translator` 1.6.2 amd64. The extracted binary requires
+GLIBC_2.34; the desktop entry, icons and GNOME placement extension are included.
+The identical artifact is in the original checkout's release bundle directory.
+It has not been installed, tagged or published.
+
+The build has pre-existing notices about old Browserslist data, the `.app`
+bundle identifier suffix, and an unavailable `__TAURI_BUNDLE_TYPE` marker.
+These did not prevent the Debian bundle; automatic updater behavior is not
+covered by this task.
+
+**Not yet established**: packaged Tauri Wayland/X11 and Electron acceptance of
+interior/edge clicks, selection/copy, scrolling, the language menu, repeated
+opening, external-focus/Escape/Close/Open-main dismissal, scaling and
+screen-edge placement. Do not describe the click-to-disappear report as fixed
+until that native acceptance passes.
+
 **Release artifact 1.6.1** — `LightTranslator_1.6.1_amd64.deb`, 6048522 bytes,
 sha256 `7a582783e313ed1355b2dd72e219817552e468bbe65ed2fbbaf8accd3ab6b62e`.
 Jammy container; GLIBC floor **2.34**.
 
-Verified natively on **Tauri** (`GDK_BACKEND=x11`), which is the backend that
-can actually exhibit the bug:
+Historical 1.6.1 checks used **Tauri with `GDK_BACKEND=x11`**. They did not
+establish native Wayland input behavior; the user's subsequent report means
+these observations must not be treated as general closure of the bug:
 
 - Pressing the header, pressing the right edge, and clicking the body all leave
-  the pop-up **visible** — the dismiss-on-click bug is fixed.
+  the pop-up **visible** — as observed in that X11 check only.
 - A real focus change (`xdotool windowactivate` on another window) still
   dismisses it, so the suppression does not leak. Note a synthetic *click* on
   another window does not transfer focus here and is not a valid test of this.

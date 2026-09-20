@@ -1,6 +1,6 @@
 [package]
 name = "lighttranslator"
-version = "1.6.1"
+version = "1.6.2"
 description = "A lightweight translation app"
 authors = ["LightTranslator"]
 license = "MIT"
@@ -36,6 +36,11 @@ tokio = { version = "1", features = ["full"] }
 base64 = "0.22"
 tempfile = "3"
 image = { version = "0.25", default-features = false, features = ["png"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Tauri already brings GTK 0.18 transitively; the direct dependency exposes
+# the non-resizable quick window's native size-request API on Linux.
+gtk = "0.18"
 
 [features]
 default = ["custom-protocol"]

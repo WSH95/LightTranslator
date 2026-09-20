@@ -2,6 +2,61 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T14:20:28Z — codex
+Source implementation by GPT-5.6-sol max is complete on
+`codex/auto-popup-sizing`. Independent task and whole-branch review now have no
+blocking source findings. Fixed canonical persistence after unversioned
+hydration and the shared range keyboard-focus suppression; real storage/restart
+and browser Tab/arrow/Reset checks pass. Final jammy package is 6,041,218 bytes,
+GLIBC_2.34, SHA-256 `8097cd8d1537b3dea779cae16f76252aa141dbc7170fae46098f8257508fcc31`;
+the original checkout contains an identical artifact. Changes remain
+uncommitted in the isolated worktree, awaiting the user's integration choice.
+Packaged physical-input acceptance remains PLAN A7; do not claim the original
+Wayland click-dismissal report fixed. No install, tag, push or publication.
+
+### 2026-09-20T14:16:09Z — codex
+Final review found that the range slider's later `:focus { outline: none; }`
+rule overrode the shared visible keyboard-focus treatment on Maximum width.
+Removed that conflicting rule, leaving the slider's pointer, track, thumb and
+active styling intact. Typecheck and production build pass. Browser Tab/arrow
+verification and the final package rebuild remain with the coordinator. The
+review's minor duplicate hide-reason logs are deferred; hide remains
+idempotent and explicit reasons are preserved.
+
+### 2026-09-20T14:03:35Z — codex
+Independent review found that Zustand v5 merges unversioned legacy settings in
+memory but does not write them back, so `quickWindowWidth` could survive every
+read-only restart. Added a guarded post-hydration canonical write that uses the
+same state reference, causing no extra subscriber notification or cross-window
+broadcast. A real Zustand storage test captured the 0-write failure, then
+proved one legacy rewrite, preserved settings, version 1/new-field storage, and
+zero writes on a fresh canonical restart. Focused 7/7, typecheck, build, the
+five-file Node suite, Electron syntax and diff checks pass. The jammy package
+must be rebuilt after this review fix.
+
+### 2026-09-20T13:53:00Z — codex
+Rebuilt the frozen 1.6.2 source in the jammy container and inspected the Debian
+package: `light-translator` 1.6.2 amd64, 6,040,856 bytes, GLIBC floor 2.34,
+SHA-256 `f3307b0a4d547ae889d4521b86af21b6eb5689ea3b4523cb63c689bad4eb49cb`.
+Copied the artifact to the original checkout's ignored release directory.
+Native WebKit layout passed Wayland, X11 and 200% scaling; isolated GTK and
+Electron windows stayed within the screen work area after growth. Independent
+source review is running. Packaged focus/input acceptance remains open and
+no installation, commit, push, tag or publication was performed.
+
+### 2026-09-20T13:35:29Z — codex
+Implemented the approved automatic quick-pop-up sizing source on
+`codex/auto-popup-sizing`. Replaced remembered manual width with a migrated
+480px maximum, added two-pass live-DOM measurement and one serialized resize
+coordinator, removed every popup move/resize gesture and blur-suppression path,
+made both native pop-ups non-resizable, and added the GTK size-request step that
+allows a fixed window to shrink. Version is 1.6.2 for local acceptance.
+Typecheck, build, Electron syntax, focused Node tests, Cargo check and all five
+Rust tests pass. Toolkit probes pass on GTK Wayland/X11 and with a real WebKit2
+child; the native GTK/WebKit fixture passes nine sizing/content cases. The
+jammy 1.6.2 package built successfully; its inspection and packaged
+Tauri/Electron interaction acceptance remain separate.
+
 ### 2026-09-20T12:10:00Z — claude
 [auto-checkpoint] Cut 1.5.0 (05a0656) and built the release .deb in the jammy container. GLIBC floor 2.34 so it starts on Ubuntu 22.04; packaged icons byte-identical to the rebuilt artwork. Had to reclaim a container-owned Cargo.lock via `podman unshare chown` first. Awaiting the user's acceptance test; not tagged, not published.
 

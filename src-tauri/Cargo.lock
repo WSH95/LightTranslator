@@ -2234,11 +2234,12 @@ dependencies = [
 
 [[package]]
 name = "lighttranslator"
-version = "1.6.1"
+version = "1.6.2"
 dependencies = [
  "arboard",
  "base64 0.22.1",
  "gio",
+ "gtk",
  "image",
  "log",
  "reqwest",

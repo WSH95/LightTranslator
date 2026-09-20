@@ -1,23 +1,14 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { AppWindow, Check, Copy, LoaderCircle, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS, LANGUAGES } from '../constants';
 import { platform } from '../src/lib/platform';
-import { LanguagePill, ResizeHandles } from './ui';
+import { LanguagePill } from './ui';
 import { LanguageCode } from '../types';
-
-// 360 is the design's default width, not a pin — the window is resizable
-// between 300 and 600 and the chosen size is persisted. MAX_HEIGHT is the
-// AUTO-GROW cap only; the window's own maxHeight is higher (600), so the user
-// can drag it taller than it will ever size itself.
-const MIN_HEIGHT = 80;
-const MAX_HEIGHT = 500;
-// Enough for the whole language popover: 46 (its top) + 308 (6 + 9x32 + 8x1
-// + 6, for the nine non-auto languages) + 8 of breathing room. The design
-// sketch showed 300, but it only drew seven languages.
-const MENU_OPEN_HEIGHT = 362;
+import { measureQuickWindowLayout } from '../utils/quickWindowDomSizing';
+import { QuickWindowResizeCoordinator } from '../utils/quickWindowSizing';
 
 // Languages available for target selection (exclude 'auto')
 const TARGET_LANGUAGES = LANGUAGES.filter((lang) => lang.code !== 'auto');
@@ -32,9 +23,9 @@ export const QuickTranslateWindow: React.FC = () => {
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
-  // Set when a resize handle takes a pointer down. Without it, every
-  // programmatic auto-fit would be written back as if the user had chosen it.
-  const userResizingRef = useRef(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const resizeCoordinatorRef = useRef<QuickWindowResizeCoordinator | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Always-current handleTranslate for the mount-once event listener
   const handleTranslateRef = useRef<(text: string) => void>(() => {});
   // Monotonic token so a slow response can't overwrite a newer request
@@ -44,8 +35,9 @@ export const QuickTranslateWindow: React.FC = () => {
     provider,
     quickSourceLang,
     quickTargetLang,
+    quickWindowMaxWidth,
+    translationTextSize,
     setQuickTargetLang,
-    updateSettings,
   } = useAppStore();
 
   const refreshSettings = useCallback(async () => {
@@ -56,59 +48,75 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
-  /**
-   * Sum three MEASURED elements rather than a constants table: the body is a
-   * scroll container now, so its own box no longer reveals the content
-   * height. Width is never computed — it is read back from the window, so a
-   * size the user dragged to survives the next translation.
-   */
-  const resizeToFitContent = useCallback(() => {
-    if (!bodyRef.current || !platform.isAvailable()) return;
-    const content =
-      (headerRef.current?.offsetHeight ?? 0) +
-      bodyRef.current.scrollHeight +
-      (footerRef.current?.offsetHeight ?? 0);
-    const height = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, content));
-    platform.resizeQuickWindow({ width: window.innerWidth, height });
-  }, []);
-
-  // Restore a persisted width once, before the window is ever shown. The
-  // height is never restored — it always follows the content.
-  useEffect(() => {
-    const { quickWindowWidth } = useAppStore.getState();
-    if (quickWindowWidth == null || !platform.isAvailable()) return;
-    platform
-      .resizeQuickWindow({ width: quickWindowWidth, height: window.innerHeight })
-      .catch((e) => console.error('Failed to restore the pop-up width:', e));
-  }, []);
-
-  // Remember a width the user dragged to. startResizeDragging hands off to the
-  // compositor and never calls back, so the window's own resize event is the
-  // only signal — gated on userResizingRef so auto-fits are not recorded.
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const onResize = () => {
-      if (!userResizingRef.current) return;
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        userResizingRef.current = false;
-        updateSettings({ quickWindowWidth: window.innerWidth });
-      }, 250);
-    };
-    window.addEventListener('resize', onResize);
+  // One coordinator owns every layout-triggered resize. It measures clones
+  // outside the viewport-sized root, coalesces invalidations into one frame,
+  // serializes IPC, and ignores dimensions already applied.
+  useLayoutEffect(() => {
+    if (!platform.isAvailable()) return;
+    const coordinator = new QuickWindowResizeCoordinator({
+      measure: () => {
+        const header = headerRef.current;
+        const body = bodyRef.current;
+        if (!header || !body) return null;
+        return measureQuickWindowLayout({
+          header,
+          body,
+          footer: footerRef.current,
+          menu: menuRef.current,
+          maximumWidth: useAppStore.getState().quickWindowMaxWidth,
+        });
+      },
+      resize: (dimensions) => platform.resizeQuickWindow(dimensions),
+    });
+    resizeCoordinatorRef.current = coordinator;
+    coordinator.request();
     return () => {
-      window.removeEventListener('resize', onResize);
-      if (timer) clearTimeout(timer);
+      coordinator.dispose();
+      if (resizeCoordinatorRef.current === coordinator) resizeCoordinatorRef.current = null;
     };
-  }, [updateSettings]);
+  }, []);
 
-  // Resize when translation changes
+  // State, settings and font changes all feed the same coordinator. A
+  // ResizeObserver catches late glyph/font geometry without deriving width
+  // from the viewport or starting a second sizing path.
+  useLayoutEffect(() => {
+    resizeCoordinatorRef.current?.request();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => resizeCoordinatorRef.current?.request());
+    [headerRef.current, bodyRef.current, footerRef.current]
+      .filter((element): element is HTMLElement => element !== null)
+      .forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [
+    translated,
+    error,
+    loading,
+    menuOpen,
+    quickWindowMaxWidth,
+    translationTextSize,
+    provider,
+    quickSourceLang,
+    quickTargetLang,
+  ]);
+
   useEffect(() => {
-    if (translated || error) {
-      setTimeout(resizeToFitContent, 50);
-    }
-  }, [translated, error, resizeToFitContent]);
+    const fonts = document.fonts;
+    let cancelled = false;
+    const requestLayout = () => {
+      if (!cancelled) resizeCoordinatorRef.current?.request();
+    };
+    void fonts.ready.then(requestLayout);
+    fonts.addEventListener('loadingdone', requestLayout);
+    return () => {
+      cancelled = true;
+      fonts.removeEventListener('loadingdone', requestLayout);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    requestSeq.current += 1;
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (platform.isAvailable()) {
@@ -126,10 +134,7 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
-  // Hide-on-blur lives in the backend now — it is the only side that can see
-  // whether a compositor drag is in progress, and two independent hiders made
-  // that suppression impossible to honour. Escape is the guaranteed way out if
-  // the compositor ever fails to hand focus back.
+  // Hide-on-blur lives in the backend; Escape remains an explicit dismissal.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && platform.isAvailable()) {
@@ -193,22 +198,14 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   };
 
-  // The window grows to hold the popover while it is open, then shrinks back.
-  // Side effects stay OUT of any setState updater (React calls updaters twice
-  // in StrictMode, doubling the resize).
   const handleMenuOpenChange = useCallback((open: boolean) => {
     setMenuOpen(open);
-    if (!platform.isAvailable()) return;
-    if (open) {
-      // Only grow: a window the user already made tall enough is left alone.
-      if (window.innerHeight < MENU_OPEN_HEIGHT) {
-        platform.resizeQuickWindow({ width: window.innerWidth, height: MENU_OPEN_HEIGHT })
-          .catch((e) => console.error('Failed to resize quick window:', e));
-      }
-    } else {
-      setTimeout(resizeToFitContent, 50);
-    }
-  }, [resizeToFitContent]);
+  }, []);
+
+  const handleMenuElementChange = useCallback((element: HTMLDivElement | null) => {
+    menuRef.current = element;
+    resizeCoordinatorRef.current?.request();
+  }, []);
 
   const handleSelectLang = async (code: LanguageCode) => {
     if (code === quickTargetLang) return;
@@ -216,10 +213,9 @@ export const QuickTranslateWindow: React.FC = () => {
     // settings the main window saved while this window held a stale copy
     await refreshSettings();
     setQuickTargetLang(code);
-    setTimeout(resizeToFitContent, 50);
     // Re-translate with the new target language
     if (sourceText.trim()) {
-      setTimeout(() => handleTranslate(sourceText), 100);
+      void handleTranslate(sourceText);
     }
   };
 
@@ -228,7 +224,11 @@ export const QuickTranslateWindow: React.FC = () => {
     try {
       await navigator.clipboard.writeText(translated);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => {
+        copiedTimerRef.current = null;
+        setCopied(false);
+      }, 2000);
     } catch {
       /* nothing useful to say in a 360px pop-up */
     }
@@ -261,22 +261,14 @@ export const QuickTranslateWindow: React.FC = () => {
     >
       <div
         ref={headerRef}
-        className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none -webkit-app-region-drag"
-        onPointerDown={(event) => {
-          // NOT data-tauri-drag-region: that routes to the built-in
-          // start_dragging and would bypass the backend flag that stops the
-          // pop-up hiding itself mid-drag. Electron still drags from the CSS
-          // app-region above, where this call is a no-op.
-          if (event.button !== 0) return;
-          if ((event.target as HTMLElement).closest('button')) return;
-          void platform.startQuickDrag();
-        }}
+        className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none"
       >
         <LanguagePill
           value={quickTargetLang}
           options={TARGET_LANGUAGES}
           onChange={handleSelectLang}
           onOpenChange={handleMenuOpenChange}
+          onMenuElementChange={handleMenuElementChange}
           title="Target language"
         />
 
@@ -321,7 +313,7 @@ export const QuickTranslateWindow: React.FC = () => {
 
       {/* The scroll container. Its absence was the regression: a translation
           past the window's max height was clipped with no way to reach it. */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div ref={bodyRef} className="px-4 pt-0.5 pb-3.5 flex items-center gap-2.5 text-sm text-muted">
             <LoaderCircle size={16} className="shrink-0 text-accent animate-spin" />
@@ -334,9 +326,12 @@ export const QuickTranslateWindow: React.FC = () => {
             className={`px-4 pt-0.5 pb-3.5 transition-opacity duration-150 ${menuOpen ? 'opacity-40' : ''}`}
           >
             {error ? (
-              <div className="text-sm text-danger">{error}</div>
+              <div className="text-sm text-danger whitespace-pre-wrap [overflow-wrap:anywhere]">{error}</div>
             ) : (
-              <div lang={quickTargetLang} className="translation-text text-text break-words">
+              <div
+                lang={quickTargetLang}
+                className="translation-text text-text whitespace-pre-wrap [overflow-wrap:anywhere]"
+              >
                 {translated || (
                   <span lang="en" className="text-placeholder select-none">
                     Select text and press the shortcut
@@ -355,15 +350,6 @@ export const QuickTranslateWindow: React.FC = () => {
         </div>
       )}
 
-      {/* East only. Routed through the backend so the same flag that keeps a
-          header drag from dismissing the window covers the resize grab too. */}
-      <ResizeHandles
-        directions={['East']}
-        onResizeStart={() => { userResizingRef.current = true; }}
-        onBeginResize={(direction, pointer) => {
-          void platform.startQuickResize(direction, pointer);
-        }}
-      />
     </div>
   );
 };

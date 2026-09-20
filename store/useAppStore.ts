@@ -1,8 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppSettings, LanguageCode, TranslationProviderId, ModelVerificationState } from '../types';
-import { DEFAULT_SETTINGS, PROVIDER_IDS } from '../constants';
+import { DEFAULT_SETTINGS } from '../constants';
 import { platform } from '../src/lib/platform';
+import {
+  createSettingsPersistenceHooks,
+  persistedSettingsFromState,
+  sanitizeQuickWindowMaxWidth,
+} from './settingsPersistence';
 
 // Cross-window sync: each window runs its own store instance over one shared
 // localStorage. After a persisted settings write, nudge the other window to
@@ -47,6 +52,8 @@ interface AppState extends AppSettings {
   setProvider: (id: TranslationProviderId) => void;
   toggleAutoTranslate: () => void;
   updateSettings: (settings: Partial<AppSettings>) => void;
+  /** Internal hydration cleanup; persists without changing or broadcasting state. */
+  persistCanonicalSettings: () => void;
 
   // UI State (not persisted)
   inputText: string;
@@ -67,6 +74,8 @@ interface AppState extends AppSettings {
   setModelVerification: (state: Partial<ModelVerificationState>) => void;
   clearModelVerification: () => void;
 }
+
+const settingsPersistenceHooks = createSettingsPersistenceHooks<AppState>();
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -104,7 +113,25 @@ export const useAppStore = create<AppState>()(
       setQuickTargetLang: (lang) => { set({ quickTargetLang: lang }); broadcastSettingsChanged(); },
       setProvider: (id) => { set({ provider: id }); broadcastSettingsChanged(); },
       toggleAutoTranslate: () => { set((state) => ({ autoTranslate: !state.autoTranslate })); broadcastSettingsChanged(); },
-      updateSettings: (newSettings) => { set((state) => ({ ...state, ...newSettings })); broadcastSettingsChanged(); },
+      updateSettings: (newSettings) => {
+        const normalized = 'quickWindowMaxWidth' in newSettings
+          ? {
+              ...newSettings,
+              quickWindowMaxWidth: sanitizeQuickWindowMaxWidth(newSettings.quickWindowMaxWidth),
+            }
+          : newSettings;
+        set((state) => ({ ...state, ...normalized }));
+        broadcastSettingsChanged();
+      },
+      persistCanonicalSettings: () => {
+        try {
+          // Persist middleware still calls setItem, while Zustand sees the
+          // identical state reference and does not notify subscribers.
+          set((state) => state, true);
+        } catch (error) {
+          console.warn('Failed to canonicalize persisted settings:', error);
+        }
+      },
 
       setInputText: (text) => set({ inputText: text }),
       setTranslatedText: (text) => set({ translatedText: text }),
@@ -143,67 +170,16 @@ export const useAppStore = create<AppState>()(
       // default and drop the dead credentials rather than carrying them over.
       // Anyone already on 'openai' keeps their config untouched.
       //
-      // This runs on every rehydrate (including the cross-window ones), which is
-      // fine: it is pure and idempotent, and once partialize rewrites the blob
-      // without the dead keys it is a no-op.
+      // This runs on every rehydrate (including the cross-window ones). The
+      // paired hydration callback persists once only when the canonical
+      // partialized snapshot differs; later reads are pure no-ops.
       //
       // Typed loosely on purpose: the removed ids are gone from
       // TranslationProviderId, so comparing a typed value against them would be
       // a TS2367 "no overlap" error.
-      merge: (persisted: unknown, current) => {
-        if (!persisted || typeof persisted !== 'object') return current;
-        const { geminiApiKey, openrouterApiKey, openrouterModel, modelId, ...rest } =
-          persisted as Record<string, unknown>;
-        if (!PROVIDER_IDS.includes(rest.provider as never)) {
-          rest.provider = DEFAULT_SETTINGS.provider;
-        }
-        return { ...current, ...rest };
-      },
-      partialize: (state) => ({
-        // Only persist settings
-        autoTranslate: state.autoTranslate,
-        debounceMs: state.debounceMs,
-        sourceLang: state.sourceLang,
-        targetLang: state.targetLang,
-        provider: state.provider,
-        useOcrPreProcessing: state.useOcrPreProcessing,
-        // OpenAI-compatible LLM
-        openaiBaseUrl: state.openaiBaseUrl,
-        openaiApiKey: state.openaiApiKey,
-        openaiModel: state.openaiModel,
-        customSystemInstruction: state.customSystemInstruction,
-        systemPromptEnabled: state.systemPromptEnabled,
-        // DeepL
-        deeplApiKey: state.deeplApiKey,
-        // Microsoft
-        microsoftSubscriptionKey: state.microsoftSubscriptionKey,
-        microsoftRegion: state.microsoftRegion,
-        // Proxy
-        proxyEnabled: state.proxyEnabled,
-        proxyProtocol: state.proxyProtocol,
-        proxyHost: state.proxyHost,
-        proxyPort: state.proxyPort,
-        proxyUsername: state.proxyUsername,
-        proxyPassword: state.proxyPassword,
-        // Shortcut
-        selectionShortcut: state.selectionShortcut,
-        // Startup
-        launchAtStartup: state.launchAtStartup,
-        // Quick Window Appearance
-        quickWindowOpacity: state.quickWindowOpacity,
-        quickWindowBorderOpacity: state.quickWindowBorderOpacity,
-        quickWindowWidth: state.quickWindowWidth,
-        // Quick Window Language
-        quickSourceLang: state.quickSourceLang,
-        quickTargetLang: state.quickTargetLang,
-        // Appearance
-        appearanceTheme: state.appearanceTheme,
-        accentColor: state.accentColor,
-        followSystemAccent: state.followSystemAccent,
-        translationTextSize: state.translationTextSize,
-        surfaceStyle: state.surfaceStyle,
-        glassOpacity: state.glassOpacity,
-      }),
+      merge: settingsPersistenceHooks.merge,
+      onRehydrateStorage: settingsPersistenceHooks.onRehydrateStorage,
+      partialize: (state) => persistedSettingsFromState(state),
     }
   )
 );

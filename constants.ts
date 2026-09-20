@@ -86,6 +86,10 @@ export type Accent = (typeof ACCENTS)[number];
 
 export const DEFAULT_ACCENT: Accent = ACCENTS[4]; // Viridian
 
+export const QUICK_WINDOW_MAX_WIDTH_MIN = 300;
+export const QUICK_WINDOW_MAX_WIDTH_MAX = 600;
+export const QUICK_WINDOW_MAX_WIDTH_DEFAULT = 480;
+
 export const DEFAULT_SETTINGS = {
   autoTranslate: true,
   debounceMs: 500,
@@ -125,7 +129,7 @@ export const DEFAULT_SETTINGS = {
   // Quick Window Appearance Defaults
   quickWindowOpacity: 0.95,
   quickWindowBorderOpacity: 0.05,
-  quickWindowWidth: null as number | null,
+  quickWindowMaxWidth: QUICK_WINDOW_MAX_WIDTH_DEFAULT,
 
   // Quick Window Language Defaults
   quickSourceLang: 'auto' as const,

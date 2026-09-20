@@ -190,6 +190,43 @@ From the user's test of 1.6.0. Decisions 0022.
 - [ ] W6 User acceptance test of 1.6.1 — specifically that the pop-up now
       **moves** and **resizes**, which synthetic input cannot exercise
 
+## Automatic quick pop-up sizing / Release 1.6.2 (2026-09-20)
+
+The 1.6.1 move/resize design is replaced by content-driven sizing: the pop-up
+cannot start a compositor grab, so ordinary interaction never needs blur
+suppression. Approved plan: `docs/superpowers/plans/2026-09-20-auto-popup-sizing.md`.
+Decision: DECISIONS 0023.
+
+- [x] A1 Replace remembered width with a 300–600px **Maximum width** setting,
+      including whole-pixel normalization, unversioned legacy migration and
+      a guarded post-hydration rewrite that removes `quickWindowWidth` from
+      legacy storage as well as new snapshots
+- [x] A2 Measure cloned live DOM in two passes (intrinsic width, then wrapped
+      height) and route every state/font/menu/settings invalidation through one
+      coalescing, sequential resize coordinator
+- [x] A3 Remove all quick-pop-up move/resize gestures and suppression state;
+      make both native windows non-resizable while retaining programmatic
+      sizing and backend-owned focus-loss dismissal
+- [x] A4 Make Linux programmatic shrink reliable with GTK `set_size_request`
+      followed by `resize` on the GTK main thread; retain Tauri's portable path
+      elsewhere and Electron `setSize`
+- [x] A5 Add focused sizing, migration and asynchronous-ordering tests; pass
+      typecheck, production build, Electron syntax, Cargo check and Rust tests
+- [x] A6 Bump the five established project version locations to 1.6.2 for an
+      unambiguous local acceptance package
+- [ ] A7 Complete packaged native acceptance on Tauri Wayland, Tauri X11 and
+      Electron (interaction, dismissal, menu, scrolling, scaling and placement)
+- [x] A8 Build the local 1.6.2 Tauri `.deb` in the jammy container; do not tag,
+      push or publish
+- [x] A9 Inspect the 1.6.2 package metadata, contents and GLIBC floor
+- [x] A10 Rebuild and re-inspect the jammy package after review fixes freeze
+      the source again
+- [x] A11 Restore the shared visible keyboard-focus outline on the Maximum
+      width slider after final review found a later range-specific suppression
+
+- [x] A12 Complete independent task and whole-branch review; close both
+      blocking findings and verify keyboard interaction in the browser
+
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
 - [ ] Wayland selection capture (xdotool/gnome-screenshot are X11-only; C7)

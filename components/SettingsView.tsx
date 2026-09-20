@@ -4,7 +4,16 @@ import {
   RefreshCw, SlidersHorizontal,
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { ACCENTS, PROVIDERS, LLM_PRESETS, DEFAULT_SYSTEM_PROMPT, LANGUAGES } from '../constants';
+import {
+  ACCENTS,
+  PROVIDERS,
+  LLM_PRESETS,
+  DEFAULT_SYSTEM_PROMPT,
+  LANGUAGES,
+  QUICK_WINDOW_MAX_WIDTH_DEFAULT,
+  QUICK_WINDOW_MAX_WIDTH_MAX,
+  QUICK_WINDOW_MAX_WIDTH_MIN,
+} from '../constants';
 import type {
   AppearanceTheme, LlmPreset, SurfaceStyle, TranslationProviderId, TranslationTextSize,
 } from '../types';
@@ -111,7 +120,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
     quickWindowBorderOpacity,
     quickSourceLang,
     quickTargetLang,
-    quickWindowWidth,
+    quickWindowMaxWidth,
     appearanceTheme,
     surfaceStyle,
     glassOpacity,
@@ -673,21 +682,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBack }) => {
                     </div>
                   </Row>
                   <Row
-                    label="Width"
-                    description={
-                      quickWindowWidth != null
-                        ? `Remembered: ${quickWindowWidth}px. Drag the pop-up's right edge to change it.`
-                        : "Drag the pop-up's right edge to set a width. The height always follows the translation."
-                    }
+                    label="Maximum width"
+                    description="The pop-up stays narrower when the translation needs less space."
                   >
-                    <button
-                      type="button"
-                      className="btn shrink-0"
-                      disabled={quickWindowWidth == null}
-                      onClick={() => updateSettings({ quickWindowWidth: null })}
-                    >
-                      Reset
-                    </button>
+                    <div className="flex items-center gap-3 w-[300px] shrink-0">
+                      <input
+                        type="range"
+                        min={QUICK_WINDOW_MAX_WIDTH_MIN}
+                        max={QUICK_WINDOW_MAX_WIDTH_MAX}
+                        step={1}
+                        value={quickWindowMaxWidth}
+                        onChange={(event) => updateSettings({
+                          quickWindowMaxWidth: parseInt(event.target.value, 10),
+                        })}
+                        aria-label="Maximum pop-up width"
+                      />
+                      <span className="text-xs font-mono text-muted w-12 text-right shrink-0">
+                        {quickWindowMaxWidth}px
+                      </span>
+                      <button
+                        type="button"
+                        className="btn shrink-0"
+                        disabled={quickWindowMaxWidth === QUICK_WINDOW_MAX_WIDTH_DEFAULT}
+                        onClick={() => updateSettings({
+                          quickWindowMaxWidth: QUICK_WINDOW_MAX_WIDTH_DEFAULT,
+                        })}
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </Row>
                 </List>
               </SettingsGroup>

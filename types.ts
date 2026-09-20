@@ -70,9 +70,8 @@ export interface AppSettings {
   // Quick Window Appearance
   quickWindowOpacity: number; // 0.5-1.0
   quickWindowBorderOpacity: number; // 0-1.0
-  /** Width the user dragged the pop-up to; null means "use the default".
-   *  Height is always fitted to the content and is never user-set. */
-  quickWindowWidth: number | null;
+  /** Maximum automatic width in logical pixels. The rendered content may be narrower. */
+  quickWindowMaxWidth: number;
 
   // Quick Window Language Settings (independent from main panel)
   quickSourceLang: LanguageCode;
