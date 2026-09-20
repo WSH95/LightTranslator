@@ -18,8 +18,8 @@ Last verified: 2026-09-19T23:50Z — `npm run typecheck`, `npm run build`,
 `node --check electron/main.js`, 15 JS/TS unit tests
 (`node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js`),
 `cargo check --all-targets` and `cargo test` (4/4) all pass, and a release
-`.deb` builds (`LightTranslator_1.2.2_amd64.deb`, sha256
-b1aa9e949f97545ce740d304090fc54e214488e45dbe50f77adf1262bdd5fdd4) carrying the
+`.deb` builds (`LightTranslator_1.3.0_amd64.deb`, sha256
+0258c35febf2c253957bc4145798824d5a4255f37f72a2629af4a395b16d6e97) carrying the
 GNOME extension under `/usr/share/gnome-shell/extensions/`.
 
 Quick Translate was exercised on a real GNOME 46 machine, both session types:
@@ -43,10 +43,15 @@ Quick Translate was exercised on a real GNOME 46 machine, both session types:
   text renders its target language's punctuation (Simplified Chinese full stop
   on the baseline rather than a mid-height circle).
 
-Not yet done: the user pressing the hotkey in their own Wayland session after
-installing the package and logging back in (the extension needs that login), and
-a full pass in a real "Ubuntu on Xorg" session. No committed automated test
-suite beyond the unit tests named above.
+The user then installed the package, logged out and back in, and confirmed the
+whole thing works on their machine: `gnome-extensions info` reports
+`State: ACTIVE`, and the app registered
+`'/usr/bin/lighttranslator' --quick-translate` on `<Shift><Control>x`.
+
+Not yet done: a full pass in a real "Ubuntu on Xorg" session (the X11 path was
+exercised by forcing `XDG_SESSION_TYPE=x11` inside a Wayland session), and the
+Electron backend as an installed package rather than a dev run. No committed
+automated test suite beyond the unit tests named above.
 
 ## Backend parity checklist
 

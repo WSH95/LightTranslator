@@ -2,6 +2,12 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-09-20T00:30:00Z — claude
+Wayland Quick Translate shipped: user installed the package, logged back in, the
+placement extension reports ACTIVE and the whole flow works on their machine.
+Two UI fixes followed from their review (centred language labels, correct CJK
+full stop). Version bumped to 1.3.0 and merged to main at their request.
+
 ### 2026-09-19T23:35:00Z — claude
 [auto-checkpoint] Rust backend compiles and its unit tests pass; Tauri app verified on Wayland (GNOME entry, 0.18s trigger, PRIMARY read, translation request); release .deb build running; dev shortcut entry cleaned up.
 

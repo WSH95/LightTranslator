@@ -104,11 +104,17 @@ Shell extension that installs itself).
       once on first run
 - [x] W5 Settings: shortcut mechanism status + re-register + extension state;
       README and steward records
-- [ ] W6 Verification. Done on this host in the Electron backend under
-      Wayland: GNOME entry written, extension auto-installed (pending a
-      log-out), PRIMARY selection read from a Wayland-native app, popup
-      shown with the translation. Left: the Tauri build (blocked on the
-      WebKitGTK dev packages), the real key press, and an Xorg session
+- [x] W6 Verification. Both backends on this GNOME 46 host: GNOME entry
+      written, extension auto-installed, PRIMARY selection read from a
+      Wayland-native app, popup shown with the translation; X11 path
+      (forced) grabs the key itself and opens the popup at the pointer.
+      The user installed the package, logged back in — extension reports
+      ACTIVE — and confirmed the whole thing works
+- [x] W7 `fix(ui)`: title-bar language labels centre inside their dropdowns
+      (`text-align-last`), and translated output carries `lang` so CJK
+      punctuation uses the target language's glyph variant
+- [x] W8 Release 1.3.0: version bumped in all five locations, merged to
+      `main` and pushed at the user's request
 
 ## Later (backlog from the 2026-07 review — deliberately deferred)
 
