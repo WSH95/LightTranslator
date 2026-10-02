@@ -822,7 +822,12 @@ async fn set_quick_move_mode(
         .quick_move
         .lock()
         .map_err(|_| "Move state lock poisoned")?;
-    let snapshot = session.set_enabled(opening_id, enabled);
+    let snapshot = session.try_set_enabled(opening_id, enabled, || {
+        if enabled {
+            window.set_always_on_top(true).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    })?;
     // Emit under the same lock as transitions; revisions also fence delayed IPC replies.
     app.emit_to("quick", "quick-move-state", snapshot)
         .map_err(|e| e.to_string())?;

@@ -26,7 +26,8 @@ const ENABLED_KEY: &str = "enabled-extensions";
 /// The extension is written for the GNOME 45+ ESM extension API.
 const MIN_SHELL_MAJOR: u32 = 45;
 const MARKER_FILE: &str = "gnome-extension-auto-enabled";
-const FILES: [&str; 2] = ["metadata.json", "extension.js"];
+// Commit the version last so a failed code copy can be retried next startup.
+const FILES: [&str; 2] = ["extension.js", "metadata.json"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -134,6 +135,17 @@ fn copy_into(source: &Path, target: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Existing user copies shadow a current system package after login.
+fn ensure_user_copy(source: &Path, target: &Path, system_version: u32) -> Result<(), String> {
+    let shipped_version = installed_version(source);
+    if installed_version(target) < shipped_version
+        && (system_version < shipped_version || target.exists())
+    {
+        copy_into(source, target)?;
+    }
+    Ok(())
+}
+
 fn shell_settings() -> Option<Settings> {
     SettingsSchemaSource::default()
         .and_then(|source| source.lookup(SHELL_SCHEMA, true))
@@ -152,7 +164,8 @@ fn enabled_in_settings() -> bool {
 }
 
 fn enable_in_settings() -> Result<(), String> {
-    let settings = shell_settings().ok_or_else(|| "GNOME Shell settings not available".to_string())?;
+    let settings =
+        shell_settings().ok_or_else(|| "GNOME Shell settings not available".to_string())?;
     let mut enabled: Vec<String> = settings
         .strv(ENABLED_KEY)
         .iter()
@@ -186,7 +199,10 @@ fn shell_knows_extension() -> bool {
 }
 
 fn marker_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|dir| dir.join(MARKER_FILE))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| dir.join(MARKER_FILE))
 }
 
 /// Install (if needed) and enable once. Safe to call on every start.
@@ -196,27 +212,15 @@ pub fn ensure(app: &AppHandle) -> Status {
     }
 
     let shipped = shipped_dir(app);
-    let shipped_version = shipped.as_deref().map(installed_version).unwrap_or(0);
-
     let system_version = system_dirs()
         .iter()
         .map(|dir| installed_version(dir))
         .max()
         .unwrap_or(0);
     let user = user_dir();
-    let user_version = user.as_deref().map(installed_version).unwrap_or(0);
-
-    // A packaged copy is enough; only write into the user's directory when
-    // there is nothing current to load (AppImage, dev run, or an upgrade that
-    // the package did not carry).
-    if system_version < shipped_version && user_version < shipped_version {
-        match (shipped.as_deref(), user.as_deref()) {
-            (Some(source), Some(target)) => {
-                if let Err(e) = copy_into(source, target) {
-                    log::error!("Failed to install the GNOME placement extension: {}", e);
-                }
-            }
-            _ => log::warn!("GNOME placement extension is not bundled with this build"),
+    if let (Some(source), Some(target)) = (shipped.as_deref(), user.as_deref()) {
+        if let Err(e) = ensure_user_copy(source, target, system_version) {
+            log::error!("Failed to install the GNOME placement extension: {}", e);
         }
     }
 
@@ -266,11 +270,90 @@ pub fn status() -> Status {
             .iter()
             .chain(user_dir().iter())
             .any(|dir| installed_version(dir) > 0);
-        return if installed { Status::Disabled } else { Status::Missing };
+        return if installed {
+            Status::Disabled
+        } else {
+            Status::Missing
+        };
     }
     if shell_knows_extension() {
         Status::Active
     } else {
         Status::PendingRestart
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_helper(dir: &Path, version: u32, script: &str) {
+        std::fs::create_dir_all(dir).unwrap();
+        std::fs::write(
+            dir.join("metadata.json"),
+            format!("{{\"version\":{version}}}"),
+        )
+        .unwrap();
+        std::fs::write(dir.join("extension.js"), script).unwrap();
+    }
+
+    #[test]
+    fn current_system_copy_does_not_leave_a_stale_user_override() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("user");
+        write_helper(&source, 3, "above helper");
+        write_helper(&target, 2, "old helper");
+        ensure_user_copy(&source, &target, 3).unwrap();
+        assert_eq!(installed_version(&target), 3);
+        assert_eq!(
+            std::fs::read_to_string(target.join("extension.js")).unwrap(),
+            "above helper"
+        );
+    }
+
+    #[test]
+    fn fresh_system_install_does_not_create_a_user_override() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("user");
+        write_helper(&source, 3, "above helper");
+        ensure_user_copy(&source, &target, 3).unwrap();
+        assert!(!target.exists());
+        ensure_user_copy(&source, &target, 2).unwrap();
+        assert_eq!(installed_version(&target), 3);
+    }
+
+    #[test]
+    fn current_and_newer_user_copies_are_preserved() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        write_helper(&source, 3, "above helper");
+        for version in [3, 4] {
+            let target = root.path().join(format!("user-{version}"));
+            write_helper(&target, version, "existing helper");
+            ensure_user_copy(&source, &target, 2).unwrap();
+            assert_eq!(installed_version(&target), version);
+            assert_eq!(
+                std::fs::read_to_string(target.join("extension.js")).unwrap(),
+                "existing helper"
+            );
+        }
+    }
+
+    #[test]
+    fn failed_code_copy_does_not_advance_installed_version() {
+        let root = tempfile::tempdir().unwrap();
+        let source = root.path().join("source");
+        let target = root.path().join("user");
+        write_helper(&source, 3, "above helper");
+        write_helper(&target, 2, "old helper");
+        std::fs::remove_file(source.join("extension.js")).unwrap();
+        assert!(ensure_user_copy(&source, &target, 2).is_err());
+        assert_eq!(installed_version(&target), 2);
+        assert_eq!(
+            std::fs::read_to_string(target.join("extension.js")).unwrap(),
+            "old helper"
+        );
     }
 }

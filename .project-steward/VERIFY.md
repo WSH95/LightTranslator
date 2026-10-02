@@ -472,3 +472,41 @@ performs requests out-of-browser the way Electron's main process does:
 Not covered: DeepL and Microsoft were refactored onto the shared `httpJson`
 helper but not exercised against live keys; and the packaged Tauri/Electron apps
 were not rebuilt (the installed v1.3.0 app was running on the host).
+
+## 2026-10-02 — Popup above layer and helper upgrades
+
+- The shipped helper regressions first failed 4/9 for missing above-layer
+  requests, missing existing-window attachment and retained handlers; all 9
+  now pass. Pointer placement and moved-monitor clamping remain covered.
+- The actual Electron Move IPC handler first failed 2/8 for missing native
+  above and missing failure propagation; all 8 now pass. Stale openings never
+  touch native state; disabling restores blur dismissal without unpinning.
+- Real temporary-file installer tests first failed 3/6 for a stale user override
+  shadowing a current system package, disabled upgrades and partial copying;
+  all 6 now pass. The Rust suite adds matching file-upgrade cases plus native
+  success/failure and stale-opening guards.
+- Eight-file Node suite (`node --test electron/*.test.js utils/*.test.ts
+  src/lib/*.test.ts store/*.test.ts`), `cargo check --all-targets --offline`,
+  and `cargo test --all-targets --offline` pass (16 Rust tests). Typecheck,
+  production build and changed Electron/GNOME JS syntax checks pass.
+- Strict UI audit has zero findings. Its first output write was sandbox-denied;
+  rerun with `--no-write` passes. Changed Rust formatting uses skip_children
+  to avoid an existing format-only diff in gnome_shortcut.rs.
+- WebKitGTK 2.52.6 and Electron/Chromium pass 67 checks each, including text
+  sizes, width caps, loading/long-to-short transitions, final-line geometry,
+  pending/failed/stale replies, menus and no extra translation requests. The
+  first parallel hidden WebKit run failed a long-to-short geometry assertion:
+  requested 300×134, viewport still 269×80. The isolated rerun passed all 67
+  without a product change; resize timing is a repeatability follow-up (M7).
+- Native Tauri and Electron in an isolated GNOME/X11 session pass dragging,
+  above-layer flag/stack order after another window takes focus, no focus
+  stealing, toggle-off dismissal, new empty invocation reset, Escape and Close.
+  Tauri moved 300,150→400,250; Electron likewise. Its unchanged 360×200
+  fixed native bounds still reflect the separately tracked M5 sizing limit.
+
+Logs: /tmp/lighttranslator-always-top-*.log. Renderer reports/screenshots:
+/tmp/lighttranslator-always-top-renderers/. Native report/screenshots:
+/tmp/lighttranslator-always-top-native/. The physical host Wayland session is
+still running helper v1 with v2 installed. New-login/helper-v3 native Wayland
+and revised installed-package acceptance remain pending; unit fixtures do
+not prove the compositor or the installed package. M4-M6 remain separate.

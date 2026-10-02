@@ -23,7 +23,8 @@ const SHELL_SCHEMA = 'org.gnome.shell';
 const ENABLED_KEY = 'enabled-extensions';
 /** The extension uses the GNOME 45+ ESM extension API. */
 const MIN_SHELL_MAJOR = 45;
-const FILES = ['metadata.json', 'extension.js'];
+// Commit the version last so a failed code copy can be retried next startup.
+const FILES = ['extension.js', 'metadata.json'];
 
 function run(command, args) {
   return new Promise((resolve) => {
@@ -115,9 +116,10 @@ export async function ensure({ shippedDir, markerPath }) {
   const systemVersion = Math.max(0, ...systemDirs().map(installedVersion));
   const target = userDir();
 
-  // A packaged copy is enough; only write into the user's directory when there
-  // is nothing current to load.
-  if (systemVersion < shippedVersion && installedVersion(target) < shippedVersion) {
+  // Existing user copies shadow the system package, even after an upgrade.
+  // A fresh current system install still needs no user override.
+  const userVersion = installedVersion(target);
+  if (userVersion < shippedVersion && (systemVersion < shippedVersion || fs.existsSync(target))) {
     try {
       copyInto(shippedDir, target);
     } catch (error) {

@@ -721,3 +721,22 @@ Project Steward git.commit_policy changes from ask to auto. Commit verified
 related code/tests/project records at semantic boundaries and merge this work
 into local main without another approval request. This authorizes local
 integration; remote pushes and releases still require an explicit request.
+
+## 0029 — 2026-10-02 — Keep Move popups above ordinary app windows
+
+The user reported an installed Move popup hidden behind the next app. Both
+backends already request always-on-top, but GTK's hint is advisory on Wayland.
+The GNOME helper now applies make_above to recognized popups on mapping and to
+existing windows on attachment. Attaching never moves or focuses an existing
+popup; new maps retain pointer placement. The helper disconnects both owned
+window signals and ships as version 3. Normal mode still dismisses on blur;
+Move keeps the already requested above layer visible until explicit dismissal.
+
+Tauri and Electron reassert their native above request before a valid Move
+enable is confirmed. Stale IDs cause no native effects; native failures retain
+the previous mode and revision. Both helper installers refresh stale user-local
+copies even when the system copy is current, preserve newer copies and disabled
+preferences, and write metadata after code so failed copies can retry. No
+platform command, persisted setting or provider interface changes. Version
+1.6.3 remains unpublished; rebuilt packages require a fresh installed test
+after GNOME loads v3 at login before the authorized publication.

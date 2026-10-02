@@ -183,10 +183,13 @@ shortcut:
 
 To place the popup at the mouse pointer under Wayland — which applications
 themselves are not allowed to do — the package ships a small GNOME Shell
-extension, `LightTranslator Quick Translate`. It is installed with the app and
+extension, `LightTranslator Quick Translate`. It also keeps the popup above
+ordinary app windows, so Move stays visible when another app has focus.
+It is installed with the app and
 enabled on first run; **GNOME only picks up new extensions when the shell
 starts, so it becomes active after your next log in**. Without it the popup
-still opens, wherever GNOME decides to put it. Turning it off in the Extensions
+still opens, wherever GNOME decides to put it. After an extension upgrade,
+log out and back in to load the new code. Turning it off in the Extensions
 app is respected — the app will not switch it back on.
 
 To remove what the app registered on your system:

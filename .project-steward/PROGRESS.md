@@ -410,3 +410,28 @@ present. Installed packaging-tool versions match package-lock. Release-named
 copies match the originals, with provenance and notes saved under releases/.
 The app has not been installed or pushed; publication awaits the user's test
 result exactly as requested. Existing M4-M6 limits remain explicit.
+
+## 2026-10-02 — Popup stacking fix started
+
+The user tested installed 1.6.3: the previous fixes work, but a Move popup can
+fall behind another app. The approved fix enforces the existing above intent
+through the GNOME helper, reasserts it before native Move confirmation, and
+updates stale user-local helper copies in both installers. Main is clean at
+7411c42; work is isolated on codex/quick-popup-always-on-top. GNOME reports
+running helper v1 while both installed metadata files are v2. Revised packages
+and a new-login/helper-v3 acceptance test are required before publication.
+
+## 2026-10-02 — Popup stacking and helper upgrade checks passed
+
+GNOME helper v3 applies the above layer at map/attachment, without refocusing
+existing popups, and owns/disconnects both window handlers. Both backends
+reassert native above before confirming current Move requests; failure keeps
+the mode unchanged. Paired installers refresh stale user overrides, preserve
+newer copies/disabled preferences and commit the version only after code.
+Typecheck, production build, eight-file Node suite, all 16 Rust tests, Rust
+checks, JS syntax and strict UI audit pass. WebKit and Chromium pass 67 checks
+each; the first hidden parallel WebKit run failed on stale native bounds and
+an isolated rerun passed unchanged (M7). Native Tauri/Electron GNOME/X11 tests
+confirm dragging, topmost stack after switching focus, no focus stealing and
+normal dismissal/reset/explicit closing. Fresh review, local merge and rebuilt
+1.6.3 debs are next. Host Wayland/helper-v3 installed acceptance is pending.

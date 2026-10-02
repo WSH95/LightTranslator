@@ -324,7 +324,7 @@ export const QuickTranslateWindow: React.FC = () => {
         <div
           className={`flex-1 self-stretch min-w-6 ${moveState?.enabled ? 'cursor-move -webkit-app-region-drag' : ''}`}
           data-tauri-drag-region={moveState?.enabled ? '' : undefined}
-          title={moveState?.enabled ? 'Drag the header; stays open' : undefined}
+          title={moveState?.enabled ? 'Drag the header; stays open and on top' : undefined}
         />
 
         {platform.isAvailable() && (
@@ -338,8 +338,8 @@ export const QuickTranslateWindow: React.FC = () => {
             aria-pressed={moveState?.enabled ?? false}
             aria-busy={movePending}
             title={moveState?.enabled
-              ? 'Drag the header; stays open. Click to restore automatic closing.'
-              : 'Move: keep open and drag the header'}
+              ? 'Drag the header; stays open and on top. Click to restore automatic closing.'
+              : 'Move: keep open and on top; drag the header'}
           >
             <Move size={15} />
           </button>

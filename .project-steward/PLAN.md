@@ -3,10 +3,23 @@
 Milestones and tasks. If an external task backend is adopted, this file
 holds milestones + a pointer only (never a duplicate task list).
 
+## Popup always-on-top (2026-10-02)
+
+- [x] T1 Enforce GNOME Wayland stacking and reassert native above state in both
+      backends, with stale/failure guards and lifecycle regressions.
+- [x] T2 Refresh stale user-local helpers in both installers without changing
+      disabled preferences or downgrading newer copies; verify and integrate.
+- [ ] T3 Rebuild both 1.6.3 packages and wait for revised installed acceptance
+      after GNOME loads helper version 3.
+
+Plan of record: `plans/2026-10-02-quick-always-on-top.md` (approved in-session).
+The user accepted the previous installed fixes but reported Move popups hidden
+behind other windows. Earlier package acceptance does not cover this revision.
+
 ## Release 1.6.3 (2026-10-02)
 
 - [x] B1 Bump both backends and lockfiles consistently to 1.6.3.
-- [x] B2 Build and inspect Tauri/jammy and Electron Debian packages; prepare
+- [ ] B2 Rebuild and inspect Tauri/jammy and Electron Debian packages; prepare
       release notes and checksums for the installed-app test.
 - [ ] B3 Wait for the user's installed-app test result before publication.
 - [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
@@ -35,6 +48,9 @@ Plan of record: `plans/2026-10-02-quick-clipping.md` (approved in-session).
 - [ ] M5 Investigate Electron automatic sizing in GNOME/X11 and host XWayland:
       non-resizable native windows retained their initial bounds. Chromium
       geometry passes with a resizable fixture; native Move checks also pass.
+- [ ] M7 Investigate WebKit renderer-fixture resize acknowledgement timing under
+      concurrent load: first hidden run saw old native bounds; isolated rerun
+      passed 67/67 without a product change.
 - [ ] M6 Add direct pending-text delivery integration cases for close-before-ready
       and reopening before the delayed callback (minor review follow-up).
 

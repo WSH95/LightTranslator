@@ -36,7 +36,7 @@ duplicate submissions without changing button dimensions. Blank header space
 has a 24px minimum drag target. Controls, menus and text remain interactive.
 At the smallest width cap, the language pill truncates its label to leave all
 window controls and the drag area accessible.
-Native confirmation enables the drag region. Move suppresses click-away
+Native confirmation enables the drag region. Move keeps the popup above ordinary app windows and suppresses click-away
 closure until disabled; focused Escape, Close and Open in main remain explicit
 closure actions. Each new opening resets the mode. The existing automatic
 popup sizing is intentional, including width changes when content changes.

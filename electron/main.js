@@ -980,6 +980,8 @@ ipcMain.handle('set-quick-move-mode', (event, { openingId, enabled }) => {
     throw new Error('Invalid popup Move request');
   }
   if (quickMove.isCurrent(openingId)) {
+    // Do native work before confirming Move; a failure leaves its state intact.
+    if (enabled) quickWindow.setAlwaysOnTop(true, 'floating');
     // On Linux this is a no-op; the renderer's native drag region is the gate.
     quickWindow.setMovable(enabled);
   }

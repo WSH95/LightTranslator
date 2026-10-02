@@ -47,6 +47,20 @@ impl QuickMoveSession {
         self.state
     }
 
+    // Native work must succeed before the renderer can observe a new mode.
+    pub fn try_set_enabled(
+        &mut self,
+        opening_id: u64,
+        enabled: bool,
+        apply_native: impl FnOnce() -> Result<(), String>,
+    ) -> Result<QuickMoveState, String> {
+        if !self.is_current(opening_id) {
+            return Ok(self.snapshot());
+        }
+        apply_native()?;
+        Ok(self.set_enabled(opening_id, enabled))
+    }
+
     pub fn is_current(&self, opening_id: u64) -> bool {
         self.open && self.state.opening_id == opening_id
     }
@@ -120,5 +134,55 @@ mod tests {
         assert!(snapshots
             .windows(2)
             .all(|pair| pair[1].revision > pair[0].revision));
+    }
+
+    #[test]
+    fn native_failure_retains_mode_and_revision() {
+        let mut session = QuickMoveSession::default();
+        let opening = session.open();
+        let result =
+            session.try_set_enabled(opening.opening_id, true, || Err("topmost rejected".into()));
+        assert_eq!(result, Err("topmost rejected".into()));
+        assert_eq!(session.snapshot(), opening);
+        assert!(session.dismiss_on_blur().is_some());
+    }
+
+    #[test]
+    fn stale_requests_never_run_native_effects() {
+        let mut session = QuickMoveSession::default();
+        let first = session.open();
+        let next = session.open();
+        let result =
+            session.try_set_enabled(first.opening_id, true, || panic!("stale native effect"));
+        assert_eq!(result, Ok(next));
+        let closed = session.close();
+        assert_eq!(
+            session.try_set_enabled(closed.opening_id, true, || panic!("closed native effect")),
+            Ok(closed)
+        );
+    }
+
+    #[test]
+    fn native_success_confirms_the_move_transition() {
+        let mut session = QuickMoveSession::default();
+        let opening = session.open();
+        let mut applied = false;
+        let enabled = session
+            .try_set_enabled(opening.opening_id, true, || {
+                applied = true;
+                Ok(())
+            })
+            .unwrap();
+        assert!(applied);
+        assert!(enabled.enabled);
+        assert!(enabled.revision > opening.revision);
+        assert_eq!(session.dismiss_on_blur(), None);
+        assert!(
+            !session
+                .try_set_enabled(opening.opening_id, false, || Ok(()))
+                .unwrap()
+                .enabled
+        );
+        assert!(session.dismiss_on_blur().is_some());
     }
 }
