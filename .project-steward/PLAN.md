@@ -7,7 +7,7 @@ holds milestones + a pointer only (never a duplicate task list).
 
 - [x] L1 Add a failing screenshot-text regression and measure the cloned scroll
       container with scrollbar space reserved.
-- [ ] L2 Verify all text sizes, widths, transitions and both renderers; confirm
+- [x] L2 Verify all text sizes, widths, transitions and both renderers; confirm
       native Wayland, update records, commit and merge into local main.
 
 Plan of record: `plans/2026-10-02-quick-clipping.md` (approved in-session).

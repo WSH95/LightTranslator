@@ -42,6 +42,18 @@ native non-resizable bounds did not apply in this environment. Its geometry
 checks establish renderer behavior; native Electron sizing remains PLAN M5.
 Controlled fixture responses use isolated storage and no external providers.
 
+Final fresh-context review of `ebaffc0..d59aed1` found no Critical or Important
+defects and approved the local merge. The existing M6 integration-test gap is
+nonblocking. The review checked scrollbar clones, fractional sizes, fonts,
+loading, menus, capped scrolling, Move lifecycle and source-language hints;
+native Electron sizing, physical monitor/helper acceptance and handler-level
+pending-text acceptance retain the limits in M4-M6.
+
+Local main fast-forwarded to `d59aed1`, including the earlier punctuation fix.
+Its tree matched the reviewed commit exactly. The merged result passes the
+seven-file Node suite and `cargo test --all-targets` (9 tests).
+Last verified: 2026-10-02T10:49Z — popup clipping and Move integration.
+
 ## Popup Move mode (2026-10-02)
 
 The user tested the native Tauri development app on the current Wayland

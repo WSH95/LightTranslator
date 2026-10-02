@@ -350,3 +350,25 @@ were closed afterward; task-owned processes and ports 5173/5178/9232 are absent.
 The installed app was not replaced. Native Electron sizing remains unresolved
 and its renderer fixture's resizable flag is explicitly documented. Final
 whole-branch review and the authorized local-main integration are next.
+
+## 2026-10-02 — Popup fixes committed and merged into local main
+
+Committed Move, scrollbar-aware sizing, regressions and Project Steward records
+as `d59aed1 feat(quick-translate): add Move mode and prevent clipped text`.
+A fresh-context review of `ebaffc0..d59aed1` found no Critical/Important issues
+and approved integration. Main fast-forwarded to the reviewed commit, bringing
+in the earlier source-punctuation fix as well. The merged tree is identical;
+the seven-file Node suite and all 9 Rust tests pass on main.
+
+Review boundaries remain explicit: Chromium geometry uses a resizable fixture,
+so native Electron automatic sizing remains M5; accepting that limitation
+could leave native sizing wrong. Physical multi-monitor/helper/package checks
+remain M4, so cross-monitor placement still needs acceptance. Direct pending-
+text integration tests remain the nonblocking M6 follow-up; rare handler races
+are not established by lifecycle-unit coverage alone.
+
+The user authorized automatic local commits and main integration; no remote
+pull or push was needed for the known fast-forward. No version bump, package
+installation or release occurred. Test apps/servers are closed. The final
+handoff records main and the remaining follow-ups; task-specific scratch and
+the merged feature branch can be removed without affecting other worktrees.
