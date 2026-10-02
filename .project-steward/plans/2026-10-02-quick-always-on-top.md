@@ -26,26 +26,26 @@ blur and Move retains it. No public IPC, settings or translation API changes.
 
 ### Task 1: Enforce popup stacking
 
-- [ ] Add failing regressions using the shipped GNOME helper for mapping,
+- [x] Add failing regressions using the shipped GNOME helper for mapping,
   existing windows, unrelated windows and lifecycle cleanup.
-- [ ] Add native-effect failure/stale-request regressions to the Move lifecycle
+- [x] Add native-effect failure/stale-request regressions to the Move lifecycle
   and Electron IPC handler.
-- [ ] Apply make_above at map and helper attachment, preserving placement only
+- [x] Apply make_above at map and helper attachment, preserving placement only
   for new maps. Ship helper version 3 with an accurate description.
-- [ ] Reassert native always-on-top before confirming valid Move enable in both
+- [x] Reassert native always-on-top before confirming valid Move enable in both
   backends, keeping previous state on failure. Update the Move tooltips.
-- [ ] Run focused tests, Node suite and Rust checks/tests; record results.
+- [x] Run focused tests, Node suite and Rust checks/tests; record results.
 
 ### Task 2: Upgrade the helper and prepare the release
 
-- [ ] Add failing installer regressions for system-current/user-stale,
+- [x] Add failing installer regressions for system-current/user-stale,
   system-stale/fresh-user, current/newer-user and disabled-extension cases.
-- [ ] Mirror stale user-copy refresh in both installers; write metadata after
+- [x] Mirror stale user-copy refresh in both installers; write metadata after
   the code so an incomplete copy remains eligible for retry.
-- [ ] Run typecheck, build, Node/Rust checks, syntax and WebKit/Chromium checks.
-- [ ] Review the entire branch, commit code with Project Steward records, and
+- [x] Run typecheck, build, Node/Rust checks, syntax and WebKit/Chromium checks.
+- [x] Review the entire branch, commit code with Project Steward records, and
   merge locally into main.
-- [ ] Build the Tauri jammy and Electron debs; inspect contents/metadata and
+- [x] Build the Tauri jammy and Electron debs; inspect contents/metadata and
   record fresh hashes/provenance/release notes. Refresh the installed user
   helper and arrange installed testing after a new Wayland login.
 - [ ] After revised installed acceptance, push main/tag and publish v1.6.3.

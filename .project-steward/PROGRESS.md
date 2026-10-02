@@ -435,3 +435,30 @@ an isolated rerun passed unchanged (M7). Native Tauri/Electron GNOME/X11 tests
 confirm dragging, topmost stack after switching focus, no focus stealing and
 normal dismissal/reset/explicit closing. Fresh review, local merge and rebuilt
 1.6.3 debs are next. Host Wayland/helper-v3 installed acceptance is pending.
+
+## 2026-10-02 — Reviewed stacking fix on main; revised packages await testing
+
+Committed b15ade1 and obtained a fresh review of 7411c42..b15ade1: no Critical,
+Important or Minor findings. Main fast-forwarded to the reviewed tree; tree
+equality and the eight-file Node suite pass after integration. The reviewer
+kept physical Wayland/GObject behavior, compositor acknowledgement, revised
+installed acceptance and concurrent WebKit resize repeatability as explicit
+acceptance/coverage boundaries. No additional source fix was needed.
+
+Both 1.6.3 rebuilds pass. Tauri's cached jammy release compile took 40.99s; its
+archive retains GLIBC_2.34 and is 6,075,118 bytes, SHA-256
+c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7.
+Electron is 92,686,108 bytes, SHA-256
+13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55.
+Both ship helper v3 matching reviewed source. Electron ASAR native files and
+four production scripts match the source/frontend; desktop/icons and package
+versions pass inspection. Staged release files match originals.
+
+Updated the existing user-local helper v2→v3 without changing enable settings;
+backup is /tmp/lighttranslator-always-top-helper-backup. GNOME still reports
+running v1 until a new login. The app itself was not reinstalled. The managed
+worktree is recoverably archived and its fully merged branch deleted; task
+ledger/review diff were preserved under .project-steward/tmp/. Test apps and
+Vite servers are closed. No push, tag or release write occurred. The user must
+reinstall the revised same-version package and test after a fresh login before
+the authorized publication.

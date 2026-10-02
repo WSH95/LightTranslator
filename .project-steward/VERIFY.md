@@ -510,3 +510,24 @@ Logs: /tmp/lighttranslator-always-top-*.log. Renderer reports/screenshots:
 still running helper v1 with v2 installed. New-login/helper-v3 native Wayland
 and revised installed-package acceptance remain pending; unit fixtures do
 not prove the compositor or the installed package. M4-M6 remain separate.
+
+## 2026-10-02 — Revised 1.6.3 archive inspection
+
+Source commit b15ade134e363f9ccb7663c7d73abbefa6f91ad4; both builds exit 0.
+The Tauri package is light-translator 1.6.3 amd64 and retains GLIBC_2.34.
+Electron is lighttranslator 1.6.3 amd64; ASAR reports 1.6.3, all four
+production scripts and main/preload/quickMove/gnomeExtension match source.
+Both packaged helper copies report v3 and match shipped metadata/code, with
+desktop entries and icons present. Fresh checksums/sizes and staged filenames
+are releases/1.6.3-artifacts.json; originals and staged copies are identical.
+Inspection script/report: /tmp/lighttranslator-always-top-inspect.py and
+/tmp/lighttranslator-1.6.3-above-inspect/. Build logs: /tmp/lighttranslator-
+1.6.3-above-{tauri,electron}-build.log. Existing bundle-marker, Browserslist and
+Electron desktopName notices remain non-failing. The source integration is
+reviewed, main is the same source tree, and its eight-file Node suite passes.
+
+The user-local installed helper code/metadata match v3, and its previous v2
+files were backed up. Enabled state remains Yes. The active shell still
+reports v1; after login, verify helper v3 before accepting native Wayland
+stacking/focus/dismissal. The rebuilt app has not been installed or accepted
+yet. Earlier installed acceptance does not validate these revised bytes.

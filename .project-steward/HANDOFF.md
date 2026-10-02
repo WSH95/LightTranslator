@@ -1,99 +1,112 @@
 ---
-updated_at: 2026-10-02T11:56:16Z
+updated_at: 2026-10-02T12:51:55Z
 updated_by: codex
 session_status: closed
 branch: main
-last_commit: "c1cd94b chore(release): bump version to 1.6.3"
+last_commit: "b15ade1 fix(quick-translate): keep movable popups above other windows"
 ---
 # Handoff
 
 ## Now
 
-Version 1.6.3 and both Debian packages are ready on local main for the user's
-installed-app test. The Tauri build retains GLIBC_2.34, and both archives pass
-metadata/resource/hash inspection. Source version commit is c1cd94b. The user
-explicitly requested push and GitHub release after their installed-app testing;
-that result is still pending. No install or remote write was performed by the
-agent. GitHub's public release remains v1.6.2. Automatic local commits remain
-allowed; conditional publication authority comes from the user's request.
+The approved popup stacking fix is reviewed, committed and merged into local
+main as b15ade1. Both revised 1.6.3 Debian packages are built and inspected,
+with source commit b15ade134e363f9ccb7663c7d73abbefa6f91ad4 and helper v3.
+The existing user-local helper has been refreshed to v3, but this GNOME 46
+Wayland session still runs v1 until a new login. The user accepted the earlier
+installed fixes but reported the behind-other-windows problem; revised
+installed acceptance is pending. App version stays 1.6.3 because it has not
+been published. Local commits/main integration are authorized; push/release
+are authorized only after a successful test of these revised installed bytes.
 
 ## In flight
 
-Only closing preparation records remain to commit. No feature code is dirty.
-Release tasks B1-B2 are complete; B3 acceptance and B4 publication are pending.
-The earlier punctuation, Move and clipping fixes are on main and accepted in
-the native Wayland dev app. Do not substitute that dev acceptance for the new
-installed-package acceptance. Both build jobs have finished; no app is open.
+No source work remains. This checkpoint contains the closing release and
+stewardship records; no build/test app or Vite server is running. Both
+build processes finished successfully. T1-T3/B1-B2 are complete; T4/B3-B4
+await a new-login installed test and conditional publication. Test branch is
+fully merged/deleted; its managed checkout is recoverably archived. Unrelated
+worktrees and AGENTS.md/CLAUDE.md were left alone.
 
 ## Next steps
 
-1. Obtain the user's installed Tauri 1.6.3 test result. Check source Chinese
-   periods with Auto Detect, popup final-line visibility for short/long results,
-   and Move/drag/click-away/dismissal. If a problem is reported, fix it and
-   rebuild/retest before publishing. Keep the candidate version 1.6.3 until its
-   first public release.
-2. After acceptance, verify the original and staged files against
-   `releases/1.6.3-artifacts.json`. If staged copies are missing, recopy the
-   originals; do not rebuild silently after the accepted test.
-3. Check origin/main and existing v1.6.3 tag/release state before pushing. Push
-   main without force and an annotated v1.6.3 tag matching the tested code;
-   source behavior must still match c1cd94b, apart from stewardship records.
-4. Publish v1.6.3 in WSH95/LightTranslator with both staged assets and
-   `releases/1.6.3.md` as the notes body. Verify public asset hashes and Latest
-   status. Record the user's acceptance and publication in PLAN/VERIFY/PROGRESS.
-5. Keep M4-M6 separate: physical monitor/helper acceptance, native Electron
-   non-resizable sizing, and delayed-text handler integration coverage.
+1. Give the user the revised Tauri deb below. Since their installed version is
+   already 1.6.3, reinstall explicitly: `sudo apt install --reinstall /home/wsh/Documents/LightTranslator/src-tauri/target/release/bundle/deb/LightTranslator_1.6.3_amd64.deb`.
+   Log out and back in; `gnome-extensions info lighttranslator@lighttranslator.app`
+   must report Active and version 3. Preserve the disabled preference if the
+   user intentionally changes it; do not silently re-enable.
+2. Obtain the user's result: enable Move, drag, click another app/page and
+   confirm the popup remains visibly above it without taking focus. Disable
+   Move, click away and confirm dismissal; recheck reset and explicit closing.
+   The physical Wayland/helper-v3 result is not established by X11/unit checks.
+3. After acceptance, verify hashes for both original and staged debs against
+   releases/1.6.3-artifacts.json. Do not rebuild accepted bytes silently.
+   Record acceptance and update the pending line in releases/1.6.3.md.
+4. Check remote main and existing v1.6.3 tag/release state, then push main
+   without force and an annotated v1.6.3 tag matching the tested code. Source
+   behavior must match b15ade1 apart from stewardship records. No repeated
+   publication approval is needed after acceptance; it is already authorized.
+5. Publish v1.6.3 in WSH95/LightTranslator with both staged assets and prepared
+   notes, verify public asset hashes and Latest status, and record publication.
+6. Keep M4-M7 separate: physical monitors, native Electron fixed-window sizing,
+   delayed-text integration and concurrent WebKit fixture resize timing.
 
 ## Blockers
 
-Publication awaits the user's installed-app result by explicit instruction.
-No technical build blocker remains. The user has authorized publication after
-acceptance; do not ask again once a successful installed-app test is reported.
+Installed-package/new-login helper-v3 acceptance is required by the user's
+release instruction. No source or build blocker remains. The current shell
+reports helper v1 despite a v3 user-local copy, so testing before a new login
+cannot accept the new Wayland stacking logic. No push/tag/release was written.
 
 ## Key files
 
-- `src-tauri/target/release/bundle/deb/LightTranslator_1.6.3_amd64.deb`:
-  Tauri package for Ubuntu 22.04+/Debian 12+, 6,078,864 bytes, SHA-256
-  e85a5ac0b8442e24b17d1117bcf2a591c7b4a125c1263a3ee13548b08789d42d.
-- `dist-electron/LightTranslator_1.6.3_amd64.deb`: Electron package for
-  Ubuntu 18.04–20.04, 92,683,800 bytes, SHA-256
-  6123325e75ff92660a63287443cda1f185bc8e17855174fb99c36718d4e5ee03.
-- `.project-steward/tmp/release-1.6.3/`: ignored, persistent release-named
-  copies ending ubuntu22.04-or-newer.deb and ubuntu20.04-or-older.deb.
-- `releases/1.6.3-artifacts.json`: source commit, original/staged paths,
-  hashes, metadata and provenance. Acceptance is null; published is false.
-- `releases/1.6.3.md`: prepared release notes and both checksums.
-- `VERIFY.md`: fresh typecheck/build/Node checks and archive inspection.
-  Logs are `/tmp/lighttranslator-1.6.3-*.log`; extraction is in
-  `/tmp/lighttranslator-1.6.3-inspect/`.
+- src-tauri/target/release/bundle/deb/LightTranslator_1.6.3_amd64.deb:
+  Tauri, 6,075,118 bytes; SHA-256
+  c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7.
+- dist-electron/LightTranslator_1.6.3_amd64.deb: Electron, 92,686,108 bytes;
+  SHA-256 13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55.
+- .project-steward/tmp/release-1.6.3/: matching release-named copies ending
+  ubuntu22.04-or-newer.deb and ubuntu20.04-or-older.deb.
+- releases/1.6.3-artifacts.json and releases/1.6.3.md: provenance, hashes and
+  prepared notes; acceptance is null and published is false.
+- plans/2026-10-02-quick-always-on-top.md: approved plan and remaining gate.
+- VERIFY.md: full evidence; /tmp/lighttranslator-always-top-* logs/reports and
+  /tmp/lighttranslator-1.6.3-above-* package logs/inspection retain details.
+- .project-steward/tmp/quick-always-on-top-execution/: preserved task ledger
+  and reviewed diff. User helper backup: /tmp/lighttranslator-always-top-helper-backup.
 
 ## Tried and rejected
 
-Do not use a native Ubuntu 24.04 Tauri release build: its GLIBC floor would
-break Ubuntu 22.04 compatibility. The requested package used the existing
-Ubuntu 22.04.5 Docker builder; Rust release compilation took 5m08s.
-Electron packages the same production bundle directly with electron-builder,
-avoiding a concurrent rebuild of dist while Tauri embeds it. Installed
-Electron 39.8.10, electron-builder 26.15.3 and TypeScript 5.8.3 match the lockfile.
+GTK's above flag alone cannot establish Wayland stacking. The helper applies
+Meta.Window.make_above on mapping and existing-window attachment, without
+moving/focusing existing windows. Both native commands reassert above before
+Move confirmation; stale requests do nothing and native failure retains state.
+The helper owns/disconnects both window handlers and updates stale user-local
+copies even when the system copy is current. Newer copies/disabled preferences
+are preserved; metadata is copied after code to keep failures retryable.
 
-For clipping, measuring the body alone and scrollbar-gutter were insufficient;
-hidden scroll-container clones reserve the real scrollbar. Current Chromium
-geometry QA uses a resizable fixture because native fixed bounds remain M5.
+Do not use a host Ubuntu 24.04 Tauri release build: its GLIBC floor breaks
+Ubuntu 22.04. Use the jammy Docker build; this cached compile took 40.99s.
+Electron packaged the same production bundle without rebuilding dist while
+Rust consumed it. Versions match the lockfile; no dependency updates occurred.
+
+The first parallel hidden WebKit run saw requested 300×134 but old viewport
+269×80; an isolated rerun passed 67/67 unchanged. M7 retains repeatability;
+do not claim that a product timing fix was made. Native X11 stacking passes
+both backends, but does not establish Wayland compositor acknowledgement.
 
 ## Warnings
 
-Do not push or publish before installed acceptance. Do not force-push or rewrite
-published tags. Never change accepted package bytes without another test.
-No GitHub draft/tag was created during preparation. The existing never_push
-configuration remains; the user's explicit conditional request is the exception.
+Automatic/type/build/Node/Rust/syntax/UI checks pass, with 16 Rust tests and
+67 checks in each renderer. Native GNOME/X11 dragging, above stack after other
+window focus, no focus stealing, dismissal/reset/Escape/Close pass. Physical
+Wayland/GObject behavior and revised installed acceptance still need the user.
+Native Electron retains its known fixed 360×200 bounds (M5); its renderer
+geometry fixture is resizable. No multi-monitor acceptance is claimed.
 
-Both packages include the reviewed GNOME helper version 2; a new login may be
-needed to load it. Physical multi-monitor/helper checks remain unaccepted.
-Native Electron automatic sizing and direct pending-text integration checks
-remain M5-M6; renderer tests do not establish those acceptance claims.
-
-Existing Browserslist, Tauri bundle-marker and Electron desktopName notices
-were non-failing. Cargo needs /home/wsh/.cargo/bin on PATH for host checks.
-AGENTS.md/CLAUDE.md and unrelated worktrees were not changed. Preserve the staged
-release files while awaiting the user's test; no need to keep build containers
-or launch development apps.
+The original 1.6.3 debs/hashes from c1cd94b are superseded by these b15ade1
+builds. Install the new file, not a cached earlier copy. The app itself was not
+reinstalled by the agent. After reinstall/new login, check loaded helper v3.
+Never force-push or rewrite published history. Keep tested package bytes and
+provenance intact; GitHub's last-read public release was v1.6.2. Existing
+Browserslist, bundle-marker and desktopName notices are non-failing.

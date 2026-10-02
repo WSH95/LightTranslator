@@ -9,8 +9,9 @@ holds milestones + a pointer only (never a duplicate task list).
       backends, with stale/failure guards and lifecycle regressions.
 - [x] T2 Refresh stale user-local helpers in both installers without changing
       disabled preferences or downgrading newer copies; verify and integrate.
-- [ ] T3 Rebuild both 1.6.3 packages and wait for revised installed acceptance
-      after GNOME loads helper version 3.
+- [x] T3 Rebuild and inspect both 1.6.3 packages; refresh installed user helper.
+- [ ] T4 Confirm revised installed acceptance after GNOME loads helper version 3
+      at a new login, then publish under the existing conditional authorization.
 
 Plan of record: `plans/2026-10-02-quick-always-on-top.md` (approved in-session).
 The user accepted the previous installed fixes but reported Move popups hidden
@@ -19,7 +20,7 @@ behind other windows. Earlier package acceptance does not cover this revision.
 ## Release 1.6.3 (2026-10-02)
 
 - [x] B1 Bump both backends and lockfiles consistently to 1.6.3.
-- [ ] B2 Rebuild and inspect Tauri/jammy and Electron Debian packages; prepare
+- [x] B2 Rebuild and inspect Tauri/jammy and Electron Debian packages; prepare
       release notes and checksums for the installed-app test.
 - [ ] B3 Wait for the user's installed-app test result before publication.
 - [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
@@ -44,7 +45,7 @@ Plan of record: `plans/2026-10-02-quick-clipping.md` (approved in-session).
 - [x] M3 Automated/native Move checks, physical Wayland acceptance, review and
       durable records (coverage limits are recorded in VERIFY.md).
 - [ ] M4 Check physical multi-monitor movement after logging in with GNOME
-      placement helper version 2; installed-package acceptance is also pending.
+      placement helper version 3; installed-package acceptance is also pending.
 - [ ] M5 Investigate Electron automatic sizing in GNOME/X11 and host XWayland:
       non-resizable native windows retained their initial bounds. Chromium
       geometry passes with a resizable fixture; native Move checks also pass.
