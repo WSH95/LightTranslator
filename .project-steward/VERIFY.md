@@ -5,6 +5,11 @@ How to check the project is healthy. Agents run these before claiming
 
 ## Source punctuation (2026-10-02)
 
+The user also tested the native Tauri development app on Wayland, loading the
+fixed frontend from Vite, and replied "ok, tested". The app and server were
+closed at their request. This establishes a manual dev-app check, not a new
+installed-package or physical IME test claim.
+
 Verified the shared `TranslatorView` in WebKitGTK 2.52.6 and Electron 39.8.10
 (Chromium 142). Before the fix, the source textarea had no language tag; 12 of
 14 language cases failed, and the WebKit screenshot showed a centered source

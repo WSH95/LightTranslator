@@ -2,6 +2,12 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-10-02T08:35:35Z — codex
+Opened the native Tauri dev app on Wayland with the frontend fix from `ca1ee46`.
+The user replied "ok, tested" and requested closing it. Stopped the task-owned
+app and Vite server; verified both processes exited and port 5173 was released.
+No code changes or package builds were needed for this manual dev test.
+
 ### 2026-10-02T08:25:37Z — codex
 Fixed the main source textarea's missing language tag. Explicit source choices
 win; Auto Detect uses kana, then Hangul, then Han as a local rendering hint,

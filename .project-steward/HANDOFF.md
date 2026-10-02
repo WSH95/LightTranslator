@@ -1,9 +1,9 @@
 ---
-updated_at: 2026-10-02T08:25:37Z
+updated_at: 2026-10-02T08:35:35Z
 updated_by: codex
 session_status: active
 branch: codex/fix-source-punctuation
-last_commit: "ebaffc0 docs(steward): record 1.6.2 publication"
+last_commit: "ca1ee46 fix(ui): render source punctuation for the detected script"
 ---
 # Handoff
 
@@ -18,9 +18,12 @@ Chinese. This changes glyph selection without changing source text, selected
 translation language, settings or provider requests. Decision 0025 records
 the accepted fallback.
 
-The branch starts from `ebaffc0`; code and project records belong in one local
-`fix(ui)` commit. No push, merge, version bump, package build or publication is
-part of this request. The previously accepted and published release remains
+The fix and project records are committed locally as `ca1ee46`, based on
+`ebaffc0`. The user tested the native Tauri development app, replied
+"ok, tested", and requested closing it. The app and its Vite server on port
+5173 are stopped; both process exits and the released port were confirmed.
+No push, merge, version bump, package build or publication was performed.
+The previously accepted and published release remains
 v1.6.2; its package paths, checksums and acceptance history remain in VERIFY.md.
 
 ## Verification
