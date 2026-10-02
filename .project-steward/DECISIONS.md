@@ -676,3 +676,48 @@ of translation results. Han without kana or Hangul defaults to Simplified
 Chinese typography, including ambiguous Traditional Chinese or Japanese text;
 an explicit language selection overrides that hint. Input contents, persisted
 settings, provider payloads and native interfaces are unchanged.
+
+## 0026 — 2026-10-02 — Temporary Move mode for the popup
+
+**Context:** The user wants to move the popup on Wayland while keeping its
+current appearance and accepts keeping it open after movement. The earlier
+native drag attempt conflicted with focus-loss dismissal (0022), and manual
+movement was subsequently removed (0023).
+
+**Decision:** Use a Move toggle, followed by dragging the blank header. Both
+native backends suppress blur dismissal for the whole enabled mode. Turning
+Move off restores normal dismissal on the next blur without moving the window.
+Explicit Close, focused Escape and Open in main still dismiss it. Each new
+invocation starts fresh, including empty captures. The backend owns ephemeral
+state; opening IDs reject stale requests and revisions reject stale replies.
+No watchdog or focus-return reset is used. Translation and settings are
+independent of Move. A 24px drag region excludes controls and text; at the 300px
+cap the language pill truncates to keep the actions visible.
+
+**Consequences:** This supersedes only the no-manual-movement portion of 0023;
+automatic content sizing and non-resizable windows remain. GNOME resize
+clamping now follows the popup monitor; initial mapping follows the pointer.
+Extension version 2 is needed for existing installations to receive that
+change, and GNOME loads the updated helper after the next login. The user
+accepted the physical Wayland dev-app interaction on October 2. No persisted
+Move preference, package, release or publication is part of this change.
+
+## 0027 — 2026-10-02 — Reserve scrollbar space when measuring popup text
+
+The user supplied a clipped final-line screenshot and approved measuring the
+scroll container rather than only its body. The Wayland GTK/WebKit regression
+reproduces a 438×110 window with 64px of content in a 40px scroll area: an
+existing 6px scrollbar wraps one extra Chinese character while measurement
+assumes the full width. Offscreen clones now force overflow-y: scroll in both
+the intrinsic-width and wrapped-height passes. The live container retains auto
+scrollbars, and the browser supplies the scrollbar geometry without a hardcoded
+width. Width caps, the 500px height cap, appearance and Move lifecycle remain.
+This is shared frontend logic; public/native/provider interfaces are unchanged.
+
+## 0028 — 2026-10-02 — Automatic local commits and main integration
+
+The user explicitly said "remember to commit and merge to main branch auto".
+Project Steward git.commit_policy changes from ask to auto. Commit verified
+related code/tests/project records at semantic boundaries and merge this work
+into local main without another approval request. This authorizes local
+integration; remote pushes and releases still require an explicit request.

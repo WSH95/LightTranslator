@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-text-size="medium" data-window-mode="quick">
+<head><meta charset="utf-8"><title>Quick Move interaction checks</title></head>
+<body><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { QuickTranslateWindow } from '/components/QuickTranslateWindow.tsx';
+import { useAppStore } from '/store/useAppStore.ts';
+import '/index.css';
+const listeners = { text: new Set(), move: new Set() };
+const calls = { translations: 0, toggles: [], ready: [], closes: 0, main: [], dimensions: [] };
+let state = { openingId: 1, revision: 1, enabled: false };
+let responseText = '早上好，我的朋友。';
+let holdTranslation = false;
+let finishTranslation;
+const subscribe = (channel, cb) => {
+  const listener = value => cb(value);
+  listeners[channel].add(listener);
+  return () => listeners[channel].delete(listener);
+};
+window.electron = {
+  onQuickTranslate: cb => subscribe('text', cb),
+  onQuickMoveState: cb => subscribe('move', cb),
+  sendQuickReady() { calls.ready.push({text: listeners.text.size, move: listeners.move.size}); listeners.move.forEach(cb => cb(state)); },
+  setQuickMoveMode(openingId, enabled) { return new Promise((resolve, reject) => calls.toggles.push({ openingId, enabled, resolve, reject })); },
+  resizeQuickWindow: async dimensions => { calls.dimensions.push(dimensions); await window.nativeResize?.(dimensions); },
+  closeQuickWindow() { calls.closes++; },
+  openInMainWindow: async text => { calls.main.push(text); },
+  request: async () => {
+    calls.translations++;
+    if (holdTranslation) await new Promise(resolve => { finishTranslation = resolve; });
+    return { ok: true, data: JSON.stringify({choices: [{message: {content: responseText}}]}) };
+  }
+};
+useAppStore.persist.clearStorage();
+useAppStore.setState({ provider: 'openai', openaiApiKey: '', openaiBaseUrl: 'https://fixture.invalid/v1', openaiModel: 'fixture', quickSourceLang: 'auto', quickTargetLang: 'zh-CN', quickWindowMaxWidth: 480 });
+createRoot(document.getElementById('root')).render(React.createElement(React.StrictMode, null, React.createElement(QuickTranslateWindow)));
+window.moveQa = {
+  calls, store: useAppStore,
+  snapshot(next) { state = next; listeners.move.forEach(cb => cb(next)); },
+  text(text) { listeners.text.forEach(cb => cb(text)); },
+  response(text) { responseText = text; },
+  hold(value) { holdTranslation = value; if (!value) finishTranslation?.(); },
+  async run() {
+    const { runSizing } = await import('./sizing-scenarios.js');
+    const sizing = await runSizing(this);
+    const { run } = await import('./scenarios.js');
+    return [...sizing, ...await run(this)];
+  }
+};
+</script></body></html>

@@ -271,3 +271,82 @@ Project initialized as a Project Steward managed project.
   1.3.0 cleanly, so one artifact genuinely covers 22.04 through 24.04+. Docker
   is no longer required: rootless podman + podman-docker runs the existing
   build script unchanged. DECISIONS 0017.
+
+## 2026-10-02 — Popup Move mode in progress
+
+Started the approved Move-toggle plan on `codex/movable-quick-popup`, based on
+`8c73a2f` after the completed punctuation dev test. Both native backends now
+have matching ephemeral lifecycle state, opening IDs, revisioned notifications
+and stale-request protection. Focused lifecycle tests failed before behavior
+was implemented, then passed (4 Rust and 4 Electron). Typecheck passes.
+
+The popup has a native-confirmed Move toggle and an isolated blank drag area.
+The GNOME resize tests reproduced a cross-monitor jump; all 3 now pass after
+clamping to the popup monitor. Extension metadata advances to version 2 so the
+existing installer can deliver the updated helper. Renderer interaction checks
+and physical input acceptance remain in progress. No push or release.
+
+## 2026-10-02 — Popup Move implemented and verified
+
+Move is implemented across the shared UI, Rust and Electron. The user answered
+"Drag and dismissal work" after testing the native Wayland dev app. The final
+renderer suite passes 24 checks in each engine, including the added 300px
+header regression. Both real native backends pass six movement/dismissal checks
+under an isolated Xephyr/GNOME X11 desktop; the popup moved from (300,150) to
+(400,250). The startup overview and a hidden GTK client-leader window initially
+intercepted test input; the runner now closes the overview and selects visible
+windows. The initial Electron fixture timeout came from its CDP resize bridge;
+using real preload IPC resolves it. The non-resizable fixture passed 24
+interaction checks on host XWayland; later clipping checks found those tests
+did not establish that native bounds followed every sizing request.
+
+Electron's real app kept its initial 360×200 bounds under nested GNOME/X11,
+despite a ready frontend. Its Move tests passed; the sizing difference is
+unresolved and is recorded in PLAN M5 and RISKS. Physical multi-monitor/helper
+upgrade checks remain in M4. An independent review found no blocking code
+findings; direct pending-text delivery integration coverage is deferred in M6.
+
+Final typecheck/build, seven-file Node suite, Electron syntax and strict UI
+audit pass; Rust all-target check and 9 tests pass. Project records include the
+state/IPC parity contract and evidence limits. The Wayland dev app, isolated
+test apps/desktops and both Vite servers are stopped. No package, release,
+push or merge was performed. Changes are prepared on `codex/movable-quick-popup`;
+config.toml's ask commit policy keeps the commit awaiting approval.
+
+## 2026-10-02 — Popup clipping fix started
+
+The user supplied a screenshot from installed Tauri 1.6.2 and clarified that
+scrolling reveals the half-hidden final line. Reproduced its 27-character
+Chinese result in a fixture matching Tao's Wayland GTK structure: requested
+438×110, but the scroll area had 40px for 64px of wrapped content. The existing
+measurement omitted the scroll container and its 6px scrollbar, allowing a
+resize to keep a scrollbar-induced extra line. The checked-in regression failed
+before the product changes with those exact dimensions.
+
+Now measuring cloned scroll containers with overflow-y: scroll in both passes,
+while leaving the real container's automatic scrollbar unchanged. Mapping the
+Chromium fixture without focus alone did not resolve retained native bounds:
+bridge instrumentation proved delivered requests while the non-resizable
+window stayed 480×220. A resizable renderer fixture applies the sizes, with
+native Electron acceptance kept separate in PLAN M5. Existing staged Move work
+is preserved.
+
+The user explicitly requested automatic commits and merging into local main.
+Updated the durable git commit policy to auto; integration will follow successful
+checks and review. No push was requested.
+
+## 2026-10-02 — Popup clipping verified; integration in progress
+
+The screenshot regression failed before the fix and now passes. WebKitGTK and
+Chromium each pass 67 actual geometry/Move checks, covering all three text
+sizes, width limits, loading/results, long-to-short transitions and final-line
+bounds after scrolling. Both screenshots retain the accepted appearance.
+Typecheck, production build, seven-file Node suite, Electron/fixture syntax and
+strict UI audit pass. The combined branch passes all 9 Rust tests.
+
+The user tested the updated native Wayland dev app and replied "Fully visible"
+for the short screenshot result after a long result. The app and Vite servers
+were closed afterward; task-owned processes and ports 5173/5178/9232 are absent.
+The installed app was not replaced. Native Electron sizing remains unresolved
+and its renderer fixture's resizable flag is explicitly documented. Final
+whole-branch review and the authorized local-main integration are next.

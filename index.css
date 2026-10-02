@@ -197,6 +197,14 @@ html, body {
   .icon-btn-sm { width: 32px; height: 32px; }
   .icon-btn-xs { width: 30px; height: 30px; }
 
+  .quick-move-toggle[aria-pressed="true"] {
+    color: var(--accent);
+    background: var(--accent-tint);
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+  .quick-move-toggle[aria-disabled="true"] { opacity: .5; cursor: wait; }
+  .quick-window-header > .pill { min-width: 0; flex-shrink: 1; }
+
   .btn {
     height: 34px;
     padding: 0 16px;

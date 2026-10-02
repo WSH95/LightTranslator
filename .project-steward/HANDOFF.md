@@ -1,66 +1,82 @@
 ---
-updated_at: 2026-10-02T08:35:35Z
+updated_at: 2026-10-02T10:44:06Z
 updated_by: codex
 session_status: active
-branch: codex/fix-source-punctuation
-last_commit: "ca1ee46 fix(ui): render source punctuation for the detected script"
+branch: codex/movable-quick-popup
+last_commit: "8c73a2f docs(steward): record completed punctuation dev test"
 ---
 # Handoff
 
 ## Now
 
-The approved source-punctuation fix is complete on
-`codex/fix-source-punctuation` in `/home/wsh/Documents/LightTranslator`.
-It extends the translated output's language-tag approach to the main source
-textarea. Explicit source languages take precedence. Auto Detect uses kana,
-then Hangul, then Han as a display hint; ambiguous Han defaults to Simplified
-Chinese. This changes glyph selection without changing source text, selected
-translation language, settings or provider requests. Decision 0025 records
-the accepted fallback.
+The approved popup Move mode and final-line clipping fix are implemented and
+verified on `codex/movable-quick-popup`. The user authorized automatic commits
+and a local merge into main; commit policy is now auto. Final fresh-context
+whole-branch review and integration remain. No push, release, version bump or
+package installation is requested.
 
-The fix and project records are committed locally as `ca1ee46`, based on
-`ebaffc0`. The user tested the native Tauri development app, replied
-"ok, tested", and requested closing it. The app and its Vite server on port
-5173 are stopped; both process exits and the released port were confirmed.
-No push, merge, version bump, package build or publication was performed.
-The previously accepted and published release remains
-v1.6.2; its package paths, checksums and acceptance history remain in VERIFY.md.
+The clipping fix measures clones of the scroll container and padded content,
+reserving browser scrollbar space only on the clones. The screenshot's short
+Chinese result now fits fully. Automatic visible scrollbars, rounded/translucent
+appearance, width settings, 500px height cap, menus and Move are preserved.
+No public/native/provider interfaces or persisted application settings changed
+for clipping. Plan: `plans/2026-10-02-quick-clipping.md`; decision 0027.
+
+Move is native-authoritative in both Tauri and Electron. Confirmation enables
+blank-header dragging and suppresses focus-loss dismissal until disabled or
+closed. New invocations, including empty captures, reset mode and placement;
+retranslation retains it. Opening IDs and revisions fence stale requests,
+events and replies. Close, focused Escape and Open in main remain explicit
+closure paths. Decision 0026 and `plans/2026-10-02-quick-move.md` record behavior.
+The GNOME helper's monitor-aware resize clamp is bundled as version 2; a new
+login is needed to load updated installed code. Movement is never persisted.
+
+The earlier source-punctuation fix is committed in `ca1ee46`, with its accepted
+dev test in `8c73a2f`. The published/installed release remains v1.6.2.
 
 ## Verification
 
-- `npm run typecheck`, `npm run build`, the five-file Node suite and the strict
-  UI static audit pass. Independent source review found no blocking issues.
-- WebKitGTK 2.52.6 and Electron 39.8.10 / Chromium 142 each pass 14 language
-  cases. Before/after screenshots show the centered source period corrected
-  to match the translation at all three text sizes.
-- Programmatic insertion, synthetic paste, Clear, caret/focus preservation and
-  textarea identity pass. Native engine composition tests pass through
-  Chromium's input pipeline and WebKit's input-method context.
-- The synthetic provider receives one translation request using the original
-  text and Auto Detect; display-only updates do not start another request.
-- See VERIFY.md for commands, fixture details and evidence limits. Installed
-  package testing and physical OS IME candidate-window operation were not
-  exercised in this change.
+- Native Tauri Wayland user replies: "Drag and dismissal work" for Move and
+  "Fully visible" for the screenshot result after the clipping update.
+- WebKitGTK 2.52.6 and Electron 39.8.10 / Chromium 142 each pass 67 checks:
+  43 sizing and 24 Move cases. Actual viewport/overflow/final-glyph assertions
+  cover all text sizes, 300/480/600px caps, held loading, repeated invocations,
+  long-to-short shrink and final-line visibility at the scroll bottom.
+- Typecheck/build, the seven-file Node suite, Electron/fixture syntax and strict
+  UI audit pass. The combined branch passes all 9 Rust tests; the earlier
+  Move all-target Rust check also passed. Screenshot regression was RED first.
+- Native Tauri and Electron each passed six movement/dismissal checks under
+  isolated GNOME/X11 with XTest input. Both renderer screenshots were inspected.
+- Earlier Move source review had no blocking findings; direct pending-text
+  integration cases are deferred in M6. Final combined review is pending.
+- Evidence limits and reproduction commands are in VERIFY.md and
+  `tests/quick-move/README.md`. Native Electron non-resizable windows retained
+  initial bounds in GNOME/X11 and host XWayland QA; its current renderer fixture
+  is resizable so actual geometry is tested. Native sizing acceptance is M5.
 
 ## Next steps
 
-1. Review the local `codex/fix-source-punctuation` branch for integration.
-2. Build/install or publish packages only when requested. For any future Tauri
-   release package, use the jammy container rather than the Ubuntu 24.04 host.
+1. Finish whole-branch review, commit verified changes and records, and merge
+   into local main automatically. Update this handoff after actual integration.
+2. M4: physically test movement between monitors after a new login with GNOME
+   helper version 2; installed-package acceptance remains pending.
+3. M5: investigate Electron native non-resizable popup sizing. Move checks pass,
+   but renderer geometry acceptance does not establish native automatic sizing.
+4. M6: add direct close-before-ready and reopen-before-delayed-text cases.
+5. Build or publish packages only when requested. Tauri releases must use the
+   jammy container to retain Ubuntu 22.04 compatibility.
 
-## Local fixtures and warnings
+## Local fixtures and cleanup
 
-- The unused managed worktree `source-punctuation` was read-only in the
-  sandbox and was archived empty. The fix uses the original checkout.
-- The ignored `.project-steward/tmp/source-punctuation/` directory contains
-  the isolated renderer fixture, both native runners, before/after JSON and
-  screenshots. The fixture makes no external translation requests.
-- Electron probes use a temporary profile at
-  `/tmp/lighttranslator-source-qa-electron` and software rendering because
-  the host GPU process crashed. WebKit uses an ephemeral context.
-- The app's settings, shortcuts and system clipboard were not changed.
-- The task-owned Vite server on port 5178 is stopped after validation.
-- The build still prints the pre-existing Browserslist data-age warning.
-- The previous handoff still marked the September session active, but the
-  checkout was clean and its release history accounted for the latest commit.
-- AGENTS.md and CLAUDE.md were not edited. Code and records are English.
+The native dev app, Vite servers and task-owned GTK/Electron fixtures are
+stopped. No task-owned Tauri/Xephyr process or port 5173/5178/9232 remained after
+the user's clipping check. The installed package was not replaced. Renderer
+reports/screenshots are in `/tmp/lighttranslator-quick-clipping`; earlier Move
+reports and native X11 results are in `/tmp/lighttranslator-quick-move`.
+Fixtures use isolated storage and controlled responses without credentials.
+
+The original writable checkout was reused after an unused read-only managed
+worktree was archived empty. The unrelated `/tmp/lighttranslator-auto-popup-sizing`
+worktree remains untouched. Ignored execution ledgers are under `.superpowers/sdd/`.
+AGENTS.md and CLAUDE.md were not edited. The existing Browserslist warning and
+non-failing sandbox dconf warning remain recorded in VERIFY.md.

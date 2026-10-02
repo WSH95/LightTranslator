@@ -12,8 +12,10 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutEvent, S
 
 mod gnome_extension;
 mod gnome_shortcut;
+mod quick_move;
 
 use gnome_shortcut::{Mechanism, SessionKind};
+use quick_move::{QuickMoveSession, QuickMoveState};
 
 fn quick_window_diagnostics_enabled() -> bool {
     cfg!(debug_assertions)
@@ -116,10 +118,11 @@ pub struct ProxySettings {
 struct AppState {
     current_shortcut: Mutex<String>,
     proxy_settings: Mutex<Option<ProxySettings>>,
-    /// True once the quick webview has registered its quick-translate-text listener.
+    /// True once the quick webview has registered its text and Move listeners.
     quick_ready: AtomicBool,
     /// Text captured by the hotkey before the quick webview was ready.
-    pending_quick_text: Mutex<Option<String>>,
+    pending_quick_text: Mutex<Option<(u64, String)>>,
+    quick_move: Mutex<QuickMoveSession>,
     /// Kept open so the selection backend is initialised once instead of on
     /// every hotkey press (arboard probes Wayland, then falls back to X11).
     selection_clipboard: Mutex<Option<arboard::Clipboard>>,
@@ -132,6 +135,7 @@ impl Default for AppState {
             proxy_settings: Mutex::new(None),
             quick_ready: AtomicBool::new(false),
             pending_quick_text: Mutex::new(None),
+            quick_move: Mutex::new(QuickMoveSession::default()),
             selection_clipboard: Mutex::new(None),
         }
     }
@@ -289,7 +293,8 @@ async fn capture_screen(app: AppHandle) -> Result<Option<String>, String> {
 
     // Read the file and convert to base64
     let image_data = std::fs::read(&temp_path).map_err(|e| e.to_string())?;
-    let base64_data = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &image_data);
+    let base64_data =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &image_data);
 
     // Clean up
     let _ = std::fs::remove_file(&temp_path);
@@ -307,8 +312,9 @@ async fn ocr_image(base64_image: String) -> Result<OcrResult, String> {
     };
 
     // Decode base64 to bytes
-    let image_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, base64_data)
-        .map_err(|e| format!("Failed to decode base64: {}", e))?;
+    let image_bytes =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, base64_data)
+            .map_err(|e| format!("Failed to decode base64: {}", e))?;
 
     // Save to temp file
     let temp_file = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
@@ -779,18 +785,64 @@ async fn quick_window_ready(app: AppHandle, state: State<'_, AppState>) -> Resul
     // The webview now has a live listener; deliver any text the hotkey
     // captured before it was ready. No clipboard access here — reading the
     // clipboard on startup caused an unsolicited translation at every launch.
+    let session = state
+        .quick_move
+        .lock()
+        .map_err(|_| "Move state lock poisoned")?;
     state.quick_ready.store(true, Ordering::SeqCst);
+    app.emit_to("quick", "quick-move-state", session.snapshot())
+        .map_err(|e| e.to_string())?;
 
     let pending = state
         .pending_quick_text
         .lock()
         .map_err(|_| "pending text lock poisoned".to_string())?
         .take();
-    if let Some(text) = pending {
-        app.emit_to("quick", "quick-translate-text", text)
-            .map_err(|e| e.to_string())?;
+    if let Some((opening_id, text)) = pending {
+        if session.is_current(opening_id) {
+            app.emit_to("quick", "quick-translate-text", text)
+                .map_err(|e| e.to_string())?;
+        }
     }
     Ok(())
+}
+
+#[tauri::command]
+async fn set_quick_move_mode(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+    opening_id: u64,
+    enabled: bool,
+) -> Result<QuickMoveState, String> {
+    if window.label() != "quick" {
+        return Err("Move mode is only available in the popup".into());
+    }
+    let mut session = state
+        .quick_move
+        .lock()
+        .map_err(|_| "Move state lock poisoned")?;
+    let snapshot = session.set_enabled(opening_id, enabled);
+    // Emit under the same lock as transitions; revisions also fence delayed IPC replies.
+    app.emit_to("quick", "quick-move-state", snapshot)
+        .map_err(|e| e.to_string())?;
+    Ok(snapshot)
+}
+
+fn reset_quick_move_on_close(app: &AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let mut session = state
+        .quick_move
+        .lock()
+        .map_err(|_| "Move state lock poisoned")?;
+    let snapshot = session.close();
+    state
+        .pending_quick_text
+        .lock()
+        .map_err(|_| "pending text lock poisoned")?
+        .take();
+    app.emit_to("quick", "quick-move-state", snapshot)
+        .map_err(|e| e.to_string())
 }
 
 /// The pop-up's "open in main window" button: hand the text over, bring the
@@ -799,6 +851,7 @@ async fn quick_window_ready(app: AppHandle, state: State<'_, AppState>) -> Resul
 /// PARITY: mirrored by `electron/main.js`.
 #[tauri::command]
 async fn open_in_main_window(app: AppHandle, text: String) -> Result<(), String> {
+    reset_quick_move_on_close(&app)?;
     show_main_window(&app);
     app.emit_to("main", "quick-to-main", text)
         .map_err(|e| e.to_string())?;
@@ -811,6 +864,7 @@ async fn open_in_main_window(app: AppHandle, text: String) -> Result<(), String>
 
 #[tauri::command]
 async fn close_quick_window(app: AppHandle) -> Result<(), String> {
+    reset_quick_move_on_close(&app)?;
     if let Some(window) = app.get_webview_window("quick") {
         log_quick_window_event("hide", "explicit-close");
         window.hide().map_err(|e| e.to_string())?;
@@ -821,9 +875,8 @@ async fn close_quick_window(app: AppHandle) -> Result<(), String> {
 // --- Helper Functions ---
 
 fn should_start_hidden() -> bool {
-    std::env::args().any(|arg| {
-        arg == "--hidden" || arg == "--autostart" || arg == gnome_shortcut::TRIGGER_ARG
-    })
+    std::env::args()
+        .any(|arg| arg == "--hidden" || arg == "--autostart" || arg == gnome_shortcut::TRIGGER_ARG)
 }
 
 /// True when this process was started only to trigger a quick translate
@@ -939,7 +992,11 @@ fn trigger_quick_translate(app: &AppHandle) {
     // Under Wayland the pointer position is not ours to know (Xwayland reports
     // a stale one) and a client cannot place its own window, so the bundled
     // GNOME extension moves the popup to the pointer instead.
-    let cursor = if wayland { None } else { Some(cursor_position()) };
+    let cursor = if wayland {
+        None
+    } else {
+        Some(cursor_position())
+    };
 
     // Window/monitor calls touch GTK, which is main-thread-only: this runs on
     // the global-shortcut callback thread, so hop to the main thread or the
@@ -973,9 +1030,46 @@ fn trigger_quick_translate(app: &AppHandle) {
             let _ = window.hide();
         }
 
+        // A fresh presentation always starts unpinned, even for empty capture.
+        let state = app_for_window.state::<AppState>();
+        let opening = {
+            let Ok(mut session) = state.quick_move.lock() else {
+                return;
+            };
+            let opening = session.open();
+            if let Ok(mut pending) = state.pending_quick_text.lock() {
+                *pending = None;
+            }
+            let _ = app_for_window.emit_to("quick", "quick-move-state", opening);
+            opening
+        };
         log_quick_window_event("show", "quick-translate-trigger");
         let _ = window.show();
         let _ = window.set_focus();
+
+        if !clipboard_text.is_empty() {
+            let Ok(session) = state.quick_move.lock() else {
+                return;
+            };
+            if !session.is_current(opening.opening_id) {
+                return;
+            }
+            if state.quick_ready.load(Ordering::SeqCst) {
+                let app_clone = app_for_window.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(100));
+                    let state = app_clone.state::<AppState>();
+                    if let Ok(session) = state.quick_move.lock() {
+                        if session.is_current(opening.opening_id) {
+                            let _ =
+                                app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
+                        }
+                    };
+                });
+            } else if let Ok(mut pending) = state.pending_quick_text.lock() {
+                *pending = Some((opening.opening_id, clipboard_text));
+            }
+        }
     });
 
     if !wayland {
@@ -987,21 +1081,6 @@ fn trigger_quick_translate(app: &AppHandle) {
                 .args(["search", "--name", "Quick Translate", "windowactivate"])
                 .output();
         });
-    }
-
-    if !clipboard_text.is_empty() {
-        let state = app.state::<AppState>();
-        if state.quick_ready.load(Ordering::SeqCst) {
-            // Emit after a small delay for the window to be ready
-            let app_clone = app.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(Duration::from_millis(100));
-                let _ = app_clone.emit_to("quick", "quick-translate-text", clipboard_text);
-            });
-        } else if let Ok(mut pending) = state.pending_quick_text.lock() {
-            // Webview not mounted yet; quick_window_ready delivers this
-            *pending = Some(clipboard_text);
-        }
     }
 }
 
@@ -1074,7 +1153,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                     if let Ok(Some(image_data)) =
                         tauri::async_runtime::block_on(capture_screen(app_clone.clone()))
                     {
-                        if let Ok(ocr_result) = tauri::async_runtime::block_on(ocr_image(image_data)) {
+                        if let Ok(ocr_result) =
+                            tauri::async_runtime::block_on(ocr_image(image_data))
+                        {
                             if ocr_result.success {
                                 if let Some(text) = ocr_result.text {
                                     show_main_window(&app_clone);
@@ -1152,7 +1233,10 @@ fn register_global_shortcut(app: &AppHandle, shortcut_str: String) {
             if *delay > 0 {
                 std::thread::sleep(Duration::from_millis(*delay));
             }
-            match app.global_shortcut().on_shortcut(shortcut, on_quick_shortcut) {
+            match app
+                .global_shortcut()
+                .on_shortcut(shortcut, on_quick_shortcut)
+            {
                 Ok(()) => {
                     log::info!("Global shortcut '{}' registered", shortcut_str);
                     return;
@@ -1218,6 +1302,7 @@ pub fn run() {
             resize_quick_window,
             resize_main_window,
             quick_window_ready,
+            set_quick_move_mode,
             close_quick_window,
             open_in_main_window,
         ])
@@ -1299,8 +1384,20 @@ pub fn run() {
                     }
                     tauri::WindowEvent::Focused(false) => {
                         log_quick_window_event("focus", "lost");
-                        log_quick_window_event("hide", "focus-lost");
-                        let _ = window.hide();
+                        let state = window.app_handle().state::<AppState>();
+                        let dismissal = state
+                            .quick_move
+                            .lock()
+                            .ok()
+                            .and_then(|mut session| session.dismiss_on_blur());
+                        if let Some(snapshot) = dismissal {
+                            if let Ok(mut pending) = state.pending_quick_text.lock() {
+                                *pending = None;
+                            }
+                            let _ = window.emit("quick-move-state", snapshot);
+                            log_quick_window_event("hide", "focus-lost");
+                            let _ = window.hide();
+                        }
                     }
                     _ => {}
                 }

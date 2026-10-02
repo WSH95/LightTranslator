@@ -57,7 +57,7 @@ export default class QuickTranslatePlacement extends Extension {
         this._moveToPointer(window);
 
         // The popup resizes itself once the translation arrives; keep it on
-        // screen without dragging it away from the pointer.
+        // screen on its current monitor, including after a manual move.
         if (!this._sizeHandlers.has(window)) {
             const id = window.connect('size-changed', () => this._keepOnScreen(window));
             this._sizeHandlers.set(window, id);
@@ -73,14 +73,9 @@ export default class QuickTranslatePlacement extends Extension {
         this._sizeHandlers.delete(window);
     }
 
-    /** Work area of the monitor the pointer is on. */
-    _workArea(window) {
-        return window.get_work_area_for_monitor(global.display.get_current_monitor());
-    }
-
     _moveToPointer(window) {
         const [pointerX, pointerY] = global.get_pointer();
-        const work = this._workArea(window);
+        const work = window.get_work_area_for_monitor(global.display.get_current_monitor());
         const frame = window.get_frame_rect();
 
         const x = Math.min(Math.max(pointerX, work.x), work.x + work.width - frame.width);
@@ -91,7 +86,9 @@ export default class QuickTranslatePlacement extends Extension {
     }
 
     _keepOnScreen(window) {
-        const work = this._workArea(window);
+        const monitor = window.get_monitor();
+        const work = window.get_work_area_for_monitor(
+            monitor >= 0 ? monitor : global.display.get_current_monitor());
         const frame = window.get_frame_rect();
 
         const x = Math.min(Math.max(frame.x, work.x), work.x + work.width - frame.width);

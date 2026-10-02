@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electron', {
   onQuickTranslate: (callback) =>
     subscribe('quick-translate-text', (_event, text) => callback(text)),
   sendQuickReady: () => ipcRenderer.send('quick-window-ready'),
+  onQuickMoveState: (callback) =>
+    subscribe('quick-move-state', (_event, state) => callback(state)),
+  setQuickMoveMode: (openingId, enabled) =>
+    ipcRenderer.invoke('set-quick-move-mode', { openingId, enabled }),
   closeQuickWindow: () => ipcRenderer.send('close-quick-window'),
   openInMainWindow: (text) => ipcRenderer.invoke('open-in-main-window', text),
 

@@ -3,6 +3,113 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
+## Popup final-line clipping (2026-10-02)
+
+The user tested the updated native Tauri development app on Wayland and replied
+"Fully visible" to the check for the screenshot text and a long-to-short
+transition, with the short result's final line visible without scrolling.
+This confirms the dev build; installed-package and multi-monitor acceptance
+remain separate.
+
+The regression uses `你好啊` followed by 24 `哈` characters. Before the fix,
+Wayland WebKit requested 438×110 while its scroll area had 40px for 64px of
+content; the final glyph ended at y90 below the viewport's y84 bottom.
+Measuring cloned scroll containers with `overflow-y: scroll` in both intrinsic
+and wrapped passes reserves the browser's scrollbar width. The live container
+retains automatic scrollbar visibility, the 500px height limit and Move mode.
+
+- WebKitGTK 2.52.6 and Electron 39.8.10 / Chromium 142 each pass **67 checks**:
+  43 sizing checks plus the existing 24 Move checks. They assert actual viewport
+  bounds, short-result overflow and final-glyph bounds for all three text sizes,
+  300/480/600px width caps, held loading/results, repeated invocations,
+  long-to-short shrink, and the final line after scrolling to the bottom.
+  Text-size and settled-layout changes add no translation requests.
+- `npm run typecheck`, `npm run build`, the seven-file Node suite, Electron
+  and fixture syntax checks, and the strict UI audit pass. The final combined
+  branch also passes `cargo test --all-targets` (9 tests). The earlier Move
+  `cargo check --all-targets` passed; clipping changes no Rust interfaces.
+- Both renderer screenshots were inspected: rounded appearance, footer,
+  controls and the fully visible short result are retained.
+- Logs are `/tmp/quick-clipping-*.log`; reports and screenshots are in
+  `/tmp/lighttranslator-quick-clipping`. Reproduction commands and fixture
+  requirements are in `tests/quick-move/README.md`.
+- Native dev and Vite processes were stopped after the user's test. No
+  task-owned Tauri/Xephyr process or listening port 5173/5178/9232 remained.
+
+Evidence boundary: WebKit uses a non-resizable Wayland GTK window matching
+Tao's titlebar/box structure. Chromium uses a resizable test window because
+native non-resizable bounds did not apply in this environment. Its geometry
+checks establish renderer behavior; native Electron sizing remains PLAN M5.
+Controlled fixture responses use isolated storage and no external providers.
+
+## Popup Move mode (2026-10-02)
+
+The user tested the native Tauri development app on the current Wayland
+session and replied "Drag and dismissal work". The check requested enabling
+Move, dragging the blank header, clicking outside, restoring dismissal by
+turning Move off, and starting a new invocation. This is dev-app acceptance,
+not installed-package or physical multi-monitor acceptance.
+
+- Rust lifecycle regressions: 4 failed against stubs, then all 4 passed.
+  Full `cargo test`: 9 passed; `cargo check --all-targets`: exit 0.
+- Electron lifecycle regressions: 4 failed before implementation, then passed.
+  Placement tests reproduced two pointer-monitor jumps; all 3 cases pass.
+- The shared React interaction fixture passes 24 checks in WebKitGTK 2.52.6
+  and Electron 39.8.10 / Chromium 142, including StrictMode listener readiness,
+  pending/failed/stale toggle replies, keyboard-focus preservation, loading,
+  all text sizes, minimum-width controls, long-content scrolling, menus,
+  text selection, explicit actions and zero translation requests from toggles.
+- The 300px width case initially clipped controls. A popup-specific shrinking
+  language pill fixes it while keeping at least 24px of drag space; both
+  renderers now pass. Screenshots retain the existing appearance.
+- `npm run typecheck`, `npm run build`, the seven-file Node command below,
+  Electron main/preload syntax, `git diff --check` and the strict UI audit pass.
+  Build output retains the pre-existing Browserslist age warning; Rust's
+  guarded schema test prints the known sandbox dconf warning without failing.
+- Independent read-only review found no Critical or Important defects. One
+  minor is deferred: direct integration tests for close-before-ready and
+  reopening before delayed text delivery; those handlers were inspected and
+  their session-identity guard is covered by lifecycle tests.
+
+Renderer reproduction is in `tests/quick-move/README.md`. Reports/screenshots
+are in `/tmp/lighttranslator-quick-move`. The fixture uses isolated storage
+and controlled IPC/HTTP responses; it does not send provider requests or read
+the clipboard. The expanded clipping fixture checks actual native viewport
+sizes as described above; the original Move-only checks did not establish
+that every Electron sizing request changed native bounds.
+Native compositor smoke also passes for Tauri and Electron in an isolated
+Xephyr/GNOME X11 desktop, with temporary settings and an empty clipboard:
+a 100px move on both axes, focus loss while Move is enabled, dismissal after
+disabling, reset on a new empty invocation, Escape and Close. XTest input
+exercised real window-manager movement; this is distinct from the user's
+physical Wayland test. Reports are `native-x11.json`; the task-local runner
+is `.project-steward/tmp/quick-move/x11_native.py`. Both apps, the isolated
+desktop and the development servers were closed after testing.
+
+Evidence limits: in the nested GNOME X11 desktop, Electron retained its initial
+360×200 size even after the frontend was ready. Move still passed every native
+check. The host XWayland fixture passed all 24 interaction checks, but stronger
+clipping checks later showed its non-resizable window retained initial bounds
+despite delivered size requests. Native sizing is tracked separately (PLAN M5);
+no claim is made that its
+cause is a regression or a pre-existing bug. Physical multi-monitor movement,
+a new login with the updated GNOME helper and installed-package acceptance
+remain untested.
+
+Backend parity: `set_quick_move_mode` / `set-quick-move-mode` accept an
+`openingId` and `enabled`, reject changes to older/closed openings and return
+`{ openingId, revision, enabled }`. `quick-move-state` publishes transitions
+and a readiness snapshot after both renderer listeners exist. Both backends
+own blur dismissal, ignore blur while Move is enabled, reset on explicit
+closure/new trigger even without text, and discard pending/delayed text from
+older openings. No Move state is persisted. Electron Linux relies on the
+renderer drag region because `setMovable` does not gate movement there.
+
+The bundled GNOME helper is version 2. Its existing version-based installer
+will deliver the changed monitor clamp. The running shell loads the new code
+after a new login; the Wayland user test does not establish that update's
+multi-monitor behavior.
+
 ## Source punctuation (2026-10-02)
 
 The user also tested the native Tauri development app on Wayland, loading the
@@ -73,7 +180,7 @@ not receive a manual installation pass in this round.
 | Build | `npm run build` | exits 0 |
 | Tests | `TODO` | all pass |
 | Lint | `npm run typecheck` | clean (also proves backend surface parity) |
-| Unit | `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js src/lib/accents.test.ts utils/quickWindowSizing.test.ts store/settingsPersistence.test.ts` | all pass (pass files, not directories: `node --test <dir>` executes non-test files too) |
+| Unit | `node --test utils/shortcutUtils.test.ts electron/gnomeShortcut.test.js src/lib/accents.test.ts utils/quickWindowSizing.test.ts store/settingsPersistence.test.ts electron/quickMove.test.js electron/quickPlacement.test.js` | all pass (pass files, not directories: `node --test <dir>` executes non-test files too) |
 | Rust unit | `cargo test` (in `src-tauri/`) | all pass. `interface_schema_reads_are_guarded` is the canary for `get_system_appearance`: reading a key a schema does not declare **aborts the process**, so a regression takes the whole runner down rather than failing a assertion |
 | Rust | `cargo check` (in `src-tauri/`) | clean |
 | Electron | `npm run electron:build:deb` | produces `dist-electron/*.deb` |

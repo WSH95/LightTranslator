@@ -3,6 +3,31 @@
 Milestones and tasks. If an external task backend is adopted, this file
 holds milestones + a pointer only (never a duplicate task list).
 
+## Popup final-line clipping (2026-10-02)
+
+- [x] L1 Add a failing screenshot-text regression and measure the cloned scroll
+      container with scrollbar space reserved.
+- [ ] L2 Verify all text sizes, widths, transitions and both renderers; confirm
+      native Wayland, update records, commit and merge into local main.
+
+Plan of record: `plans/2026-10-02-quick-clipping.md` (approved in-session).
+
+## Popup Move mode (2026-10-02)
+
+- [x] M1 Native Move lifecycle, commands and state notifications in both backends.
+- [x] M2 Header toggle, safe native drag region and monitor-aware resize clamping.
+- [x] M3 Automated/native Move checks, physical Wayland acceptance, review and
+      durable records (coverage limits are recorded in VERIFY.md).
+- [ ] M4 Check physical multi-monitor movement after logging in with GNOME
+      placement helper version 2; installed-package acceptance is also pending.
+- [ ] M5 Investigate Electron automatic sizing in GNOME/X11 and host XWayland:
+      non-resizable native windows retained their initial bounds. Chromium
+      geometry passes with a resizable fixture; native Move checks also pass.
+- [ ] M6 Add direct pending-text delivery integration cases for close-before-ready
+      and reopening before the delayed callback (minor review follow-up).
+
+Plan of record: `plans/2026-10-02-quick-move.md` (approved in-session).
+
 ## Source punctuation (2026-10-02)
 
 - [x] P1 Apply the source textarea's selected language, or an Auto Detect display

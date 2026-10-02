@@ -11,7 +11,7 @@ auto_handoff_min_edits = 5
 [git]
 # commit_policy: "ask" (propose only), "auto" (agent may run `wrap
 # --commit`), "never".
-commit_policy = "ask"
+commit_policy = "auto"
 never_push = true
 
 [backend]

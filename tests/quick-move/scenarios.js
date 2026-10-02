@@ -1,0 +1,82 @@
+// Run in the actual React renderer with only the native IPC/HTTP boundary stubbed.
+export async function run(qa) {
+  const pause = (ms = 50) => new Promise(resolve => setTimeout(resolve, ms));
+  const checks = [];
+  const check = (name, pass) => {
+    checks.push({ name, pass: Boolean(pass) });
+    if (!pass) throw new Error(JSON.stringify({ checks, ready: qa.calls.ready, toggles: qa.calls.toggles.length,
+      dimensions: qa.calls.dimensions.slice(-4), viewport: [innerWidth, innerHeight], text: document.querySelector('.translation-text')?.textContent.slice(0, 60) }));
+  };
+  const button = () => document.querySelector('button[aria-label="Move"]');
+  const region = () => document.querySelector('[data-tauri-drag-region]');
+  const beforeToggles = qa.calls.translations;
+  await pause(100);
+  check('Move control exists', !!button());
+  if (!button()) return checks;
+  check('both listeners registered before ready, including StrictMode', qa.calls.ready.length > 0 && qa.calls.ready.every(r => r.text === 1 && r.move === 1));
+  check('normal mode has no draggable region', !region() && button().getAttribute('aria-pressed') === 'false');
+  button().focus();
+  button().click(); button().click();
+  await pause();
+  check('rapid clicks issue one request and await confirmation', qa.calls.toggles.length === 1 && button().getAttribute('aria-disabled') === 'true' && !region());
+  qa.calls.toggles[0].resolve({ openingId: 1, revision: 2, enabled: true });
+  await pause();
+  check('confirmation enables Move without losing focus', region() && button().getAttribute('aria-pressed') === 'true' && document.activeElement === button());
+  check('drag area excludes every control and text', region() && region().getBoundingClientRect().width >= 24 && !region().querySelector('button') && !region().textContent.trim() && !region().contains(document.querySelector('.translation-text')));
+  qa.snapshot({ openingId: 1, revision: 1, enabled: false });
+  await pause();
+  check('old event cannot undo a newer state', !!region());
+  button().click(); await pause();
+  qa.calls.toggles.at(-1).reject(new Error('fixture failure'));
+  await pause();
+  check('failed toggle retains native mode and explains failure', !!region() && !button().disabled && !!document.querySelector('[role="status"]')?.textContent.trim());
+  button().click(); await pause();
+  const pending = qa.calls.toggles.at(-1);
+  qa.snapshot({ openingId: 2, revision: 3, enabled: false });
+  await pause();
+  pending.resolve({ openingId: 1, revision: 2, enabled: true });
+  await pause();
+  check('new empty opening resets mode and ignores old reply', !region() && !button().disabled && !document.querySelector('[role="status"]')?.textContent.trim());
+  button().click(); await pause();
+  check('next toggle uses the new opening ID', qa.calls.toggles.at(-1).openingId === 2);
+  qa.calls.toggles.at(-1).resolve({ openingId: 2, revision: 4, enabled: true });
+  await pause();
+  check('toggles never translate', qa.calls.translations === beforeToggles);
+  qa.hold(true); qa.text('Good morning, my friend.'); await pause();
+  check('Move remains enabled and available while translating', !!region() && !button().disabled && document.body.textContent.includes('Translating'));
+  qa.hold(false); await pause(120);
+  check('translation arrives without resetting Move', !!region() && document.body.textContent.includes('早上好，我的朋友。'));
+  const before = qa.calls.translations;
+  for (const size of ['small', 'medium', 'large']) {
+    document.documentElement.dataset.textSize = size;
+    qa.store.setState({ translationTextSize: size }); await pause(80);
+    check(`Move and sizing survive ${size} text`, !!region() && qa.calls.dimensions.at(-1)?.height <= 500);
+  }
+  check('text size changes never translate', qa.calls.translations === before);
+  qa.store.setState({ quickWindowMaxWidth: 300, quickTargetLang: 'zh-TW' }); await pause(150);
+  const header = button().parentElement;
+  check('all actions and drag space fit the smallest width', header.scrollWidth <= header.clientWidth && region().getBoundingClientRect().width >= 24);
+  qa.store.setState({ quickWindowMaxWidth: 480, quickTargetLang: 'zh-CN' }); await pause(150);
+  document.querySelector('button[title="Target language"]').click(); await pause();
+  check('language menu opens while Move is active', !!document.querySelector('[role="listbox"]') && !!region());
+  document.querySelector('button[title="Target language"]').click(); await pause();
+  qa.response('A long translation. '.repeat(250)); qa.text('Long input');
+  for (let i = 0; i < 40 && qa.calls.dimensions.at(-1)?.height !== 500; i++) await pause(50);
+  check('long content remains scrollable at maximum height', qa.calls.dimensions.at(-1)?.height === 500 && getComputedStyle(document.querySelector('.overflow-y-auto')).overflowY === 'auto');
+  const text = document.querySelector('.translation-text');
+  const range = document.createRange(); range.selectNodeContents(text);
+  getSelection().removeAllRanges(); getSelection().addRange(range);
+  check('translation text remains selectable', getSelection().toString().startsWith('A long translation.'));
+  getSelection().removeAllRanges();
+  document.querySelector('button[aria-label="Open in main window"]').click(); await pause();
+  check('Open in main remains usable', qa.calls.main.at(-1) === 'Long input');
+  document.querySelector('button[aria-label="Close"]').click();
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+  check('Close and Escape remain explicit dismissal actions', qa.calls.closes === 2);
+  button().click(); await pause();
+  qa.calls.toggles.at(-1).resolve({ openingId: 2, revision: 5, enabled: false }); await pause();
+  check('turning off Move removes the drag region', !region() && button().getAttribute('aria-pressed') === 'false');
+  qa.response('早上好，我的朋友。'); qa.text('Good morning.');
+  for (let i = 0; i < 40 && qa.calls.dimensions.at(-1)?.height === 500; i++) await pause(50);
+  return checks;
+}

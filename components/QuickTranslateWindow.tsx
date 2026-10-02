@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
-import { AppWindow, Check, Copy, LoaderCircle, X } from 'lucide-react';
+import { AppWindow, Check, Copy, LoaderCircle, Move, X } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { translateText } from '../services/translationService';
 import { cleanTextLineBreaks } from '../utils/textUtils';
 import { PROVIDERS, LANGUAGES } from '../constants';
-import { platform } from '../src/lib/platform';
+import { platform, type QuickMoveState } from '../src/lib/platform';
 import { LanguagePill } from './ui';
 import { LanguageCode } from '../types';
 import { measureQuickWindowLayout } from '../utils/quickWindowDomSizing';
@@ -20,7 +20,14 @@ export const QuickTranslateWindow: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [moveState, setMoveState] = useState<QuickMoveState | null>(null);
+  const [movePending, setMovePending] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const moveStateRef = useRef<QuickMoveState | null>(null);
+  const movePendingRef = useRef(false);
+  const moveRequestRef = useRef(0);
   const headerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -48,6 +55,40 @@ export const QuickTranslateWindow: React.FC = () => {
     }
   }, []);
 
+  const acceptMoveState = useCallback((next: QuickMoveState) => {
+    const current = moveStateRef.current;
+    if (current && next.revision <= current.revision) return;
+    if (current?.openingId !== next.openingId) {
+      // A new opening/closure invalidates both pending replies and their errors.
+      moveRequestRef.current += 1;
+      movePendingRef.current = false;
+      setMovePending(false);
+      setMoveError(null);
+    }
+    moveStateRef.current = next;
+    setMoveState(next);
+  }, []);
+
+  const handleMoveToggle = async () => {
+    const current = moveStateRef.current;
+    if (!current || movePendingRef.current) return;
+    const request = ++moveRequestRef.current;
+    movePendingRef.current = true;
+    setMovePending(true);
+    setMoveError(null);
+    try {
+      const confirmed = await platform.setQuickMoveMode(current.openingId, !current.enabled);
+      if (request === moveRequestRef.current) acceptMoveState(confirmed);
+    } catch {
+      if (request === moveRequestRef.current) setMoveError('Could not change Move mode. Try again.');
+    } finally {
+      if (request === moveRequestRef.current) {
+        movePendingRef.current = false;
+        setMovePending(false);
+      }
+    }
+  };
+
   // One coordinator owns every layout-triggered resize. It measures clones
   // outside the viewport-sized root, coalesces invalidations into one frame,
   // serializes IPC, and ignores dimensions already applied.
@@ -56,11 +97,11 @@ export const QuickTranslateWindow: React.FC = () => {
     const coordinator = new QuickWindowResizeCoordinator({
       measure: () => {
         const header = headerRef.current;
-        const body = bodyRef.current;
-        if (!header || !body) return null;
+        const scrollContainer = scrollContainerRef.current;
+        if (!header || !scrollContainer) return null;
         return measureQuickWindowLayout({
           header,
-          body,
+          scrollContainer,
           footer: footerRef.current,
           menu: menuRef.current,
           maximumWidth: useAppStore.getState().quickWindowMaxWidth,
@@ -83,7 +124,7 @@ export const QuickTranslateWindow: React.FC = () => {
     resizeCoordinatorRef.current?.request();
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => resizeCoordinatorRef.current?.request());
-    [headerRef.current, bodyRef.current, footerRef.current]
+    [headerRef.current, scrollContainerRef.current, bodyRef.current, footerRef.current]
       .filter((element): element is HTMLElement => element !== null)
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
@@ -97,6 +138,7 @@ export const QuickTranslateWindow: React.FC = () => {
     provider,
     quickSourceLang,
     quickTargetLang,
+    moveError,
   ]);
 
   useEffect(() => {
@@ -115,24 +157,31 @@ export const QuickTranslateWindow: React.FC = () => {
 
   useEffect(() => () => {
     requestSeq.current += 1;
+    moveRequestRef.current += 1;
+    movePendingRef.current = false;
     if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
   }, []);
 
   useEffect(() => {
     if (platform.isAvailable()) {
-      // Signal readiness only AFTER the listener is registered — the backend
-      // parks hotkey text until quick_window_ready, so the old order lost or
-      // raced the very first event.
-      return platform.onQuickTranslate(
+      // Both listeners must exist before the backend sends its state snapshot
+      // and any parked text. Each disposer also handles StrictMode remounts.
+      let registered = 0;
+      const onRegistered = () => {
+        if (++registered === 2) platform.sendQuickReady();
+      };
+      const stopMove = platform.onQuickMoveState(acceptMoveState, onRegistered);
+      const stopText = platform.onQuickTranslate(
         (receivedText: string) => {
           const cleanedText = cleanTextLineBreaks(receivedText);
           setSourceText(cleanedText);
           handleTranslateRef.current(cleanedText);
         },
-        () => platform.sendQuickReady()
+        onRegistered
       );
+      return () => { stopMove(); stopText(); };
     }
-  }, []);
+  }, [acceptMoveState]);
 
   // Hide-on-blur lives in the backend; Escape remains an explicit dismissal.
   useEffect(() => {
@@ -261,7 +310,7 @@ export const QuickTranslateWindow: React.FC = () => {
     >
       <div
         ref={headerRef}
-        className="h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none"
+        className="quick-window-header h-11 shrink-0 box-border flex items-center gap-1 px-2 select-none"
       >
         <LanguagePill
           value={quickTargetLang}
@@ -272,9 +321,31 @@ export const QuickTranslateWindow: React.FC = () => {
           title="Target language"
         />
 
-        <div className="flex-1 self-stretch" />
+        <div
+          className={`flex-1 self-stretch min-w-6 ${moveState?.enabled ? 'cursor-move -webkit-app-region-drag' : ''}`}
+          data-tauri-drag-region={moveState?.enabled ? '' : undefined}
+          title={moveState?.enabled ? 'Drag the header; stays open' : undefined}
+        />
 
-        {/* While translating the header keeps only the pill and the close. */}
+        {platform.isAvailable() && (
+          <button
+            type="button"
+            onClick={handleMoveToggle}
+            disabled={!moveState}
+            aria-disabled={movePending}
+            className="icon-btn icon-btn-xs quick-move-toggle -webkit-app-region-no-drag"
+            aria-label="Move"
+            aria-pressed={moveState?.enabled ?? false}
+            aria-busy={movePending}
+            title={moveState?.enabled
+              ? 'Drag the header; stays open. Click to restore automatic closing.'
+              : 'Move: keep open and drag the header'}
+          >
+            <Move size={15} />
+          </button>
+        )}
+
+        {/* Move stays available during translation. */}
         {!loading && (
           <>
             <button
@@ -313,7 +384,7 @@ export const QuickTranslateWindow: React.FC = () => {
 
       {/* The scroll container. Its absence was the regression: a translation
           past the window's max height was clipped with no way to reach it. */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div ref={bodyRef} className="px-4 pt-0.5 pb-3.5 flex items-center gap-2.5 text-sm text-muted">
             <LoaderCircle size={16} className="shrink-0 text-accent animate-spin" />
@@ -343,10 +414,16 @@ export const QuickTranslateWindow: React.FC = () => {
         )}
       </div>
 
-      {!loading && (
+      {(!loading || moveError) && (
         <div ref={footerRef} className="shrink-0 px-4 pb-2.5 flex items-center gap-2 text-[11px] text-muted">
-          <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
-          <span className="truncate">{providerName} · {sourceName}</span>
+          {moveError ? (
+            <span role="status" className="text-danger">{moveError}</span>
+          ) : (
+            <>
+              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-accent" />
+              <span className="truncate">{providerName} · {sourceName}</span>
+            </>
+          )}
         </div>
       )}
 

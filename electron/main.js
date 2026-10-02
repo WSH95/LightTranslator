@@ -21,6 +21,7 @@ import {
 } from './dependencyChecker.js';
 import * as gnomeShortcut from './gnomeShortcut.js';
 import * as gnomeExtension from './gnomeExtension.js';
+import { QuickMoveSession } from './quickMove.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +37,7 @@ let proxySettings = null;
 let quickReady = false;
 /** Text captured by the hotkey before the quick webview was ready. */
 let pendingQuickText = null;
+const quickMove = new QuickMoveSession();
 /** Last time we dropped pooled sockets after a transport failure. */
 let lastHealAt = 0;
 
@@ -49,6 +51,24 @@ function quickWindowDiagnosticsEnabled() {
 function logQuickWindowEvent(action, reason) {
   if (quickWindowDiagnosticsEnabled()) {
     console.info(`[quick-window] action=${action} reason=${reason}`);
+  }
+}
+
+function publishQuickMoveState(state = quickMove.snapshot()) {
+  if (quickWindow && !quickWindow.isDestroyed()) {
+    quickWindow.webContents.send('quick-move-state', state);
+  }
+  return state;
+}
+
+function hideQuickWindow(reason) {
+  const state = quickMove.close();
+  pendingQuickText = null;
+  if (quickWindow && !quickWindow.isDestroyed()) {
+    quickWindow.setMovable(false);
+    publishQuickMoveState(state);
+    logQuickWindowEvent('hide', reason);
+    quickWindow.hide();
   }
 }
 
@@ -300,12 +320,13 @@ function createQuickWindow() {
   quickWindow.on('blur', () => {
     if (quickWindow && !quickWindow.isDestroyed()) {
       logQuickWindowEvent('focus', 'lost');
-      logQuickWindowEvent('hide', 'focus-lost');
-      quickWindow.hide();
+      if (quickMove.dismissOnBlur()) hideQuickWindow('focus-lost');
     }
   });
 
   quickWindow.on('closed', () => {
+    quickMove.close();
+    pendingQuickText = null;
     quickWindow = null;
     quickReady = false;
   });
@@ -396,6 +417,11 @@ async function triggerQuickTranslate() {
     quickWindow.setPosition(Math.floor(x), Math.floor(y));
   }
 
+  // Reset even when capture is empty. Text events are not a visibility signal.
+  const opening = quickMove.open();
+  pendingQuickText = null;
+  quickWindow.setMovable(false);
+  publishQuickMoveState(opening);
   logQuickWindowEvent('show', 'quick-translate-trigger');
   quickWindow.show();
   quickWindow.setAlwaysOnTop(true, 'floating');
@@ -405,13 +431,13 @@ async function triggerQuickTranslate() {
 
   if (quickReady) {
     setTimeout(() => {
-      if (quickWindow && !quickWindow.isDestroyed()) {
+      if (quickWindow && !quickWindow.isDestroyed() && quickMove.isCurrent(opening.openingId)) {
         quickWindow.webContents.send('quick-translate-text', text);
       }
     }, 100);
   } else {
     // Webview not mounted yet; quick-window-ready delivers this
-    pendingQuickText = text;
+    pendingQuickText = { openingId: opening.openingId, text };
   }
 }
 
@@ -938,11 +964,26 @@ ipcMain.on('quick-window-ready', (event) => {
   // The webview now has a live listener; deliver any text the hotkey captured
   // before it was ready. Deliberately does NOT read the clipboard — doing so
   // fired an unsolicited translation at every launch.
+  if (event.sender !== quickWindow?.webContents) return;
   quickReady = true;
-  if (pendingQuickText) {
-    event.sender.send('quick-translate-text', pendingQuickText);
-    pendingQuickText = null;
+  publishQuickMoveState();
+  const pending = pendingQuickText;
+  pendingQuickText = null;
+  if (pending && quickMove.isCurrent(pending.openingId)) {
+    event.sender.send('quick-translate-text', pending.text);
   }
+});
+
+ipcMain.handle('set-quick-move-mode', (event, { openingId, enabled }) => {
+  if (event.sender !== quickWindow?.webContents || typeof enabled !== 'boolean'
+      || !Number.isSafeInteger(openingId) || openingId < 0) {
+    throw new Error('Invalid popup Move request');
+  }
+  if (quickMove.isCurrent(openingId)) {
+    // On Linux this is a no-op; the renderer's native drag region is the gate.
+    quickWindow.setMovable(enabled);
+  }
+  return publishQuickMoveState(quickMove.setEnabled(openingId, enabled));
 });
 
 /**
@@ -954,10 +995,7 @@ ipcMain.handle('open-in-main-window', (_event, text) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('quick-to-main', text);
   }
-  if (quickWindow && !quickWindow.isDestroyed()) {
-    logQuickWindowEvent('hide', 'open-in-main-window');
-    quickWindow.hide();
-  }
+  hideQuickWindow('open-in-main-window');
   return { success: true };
 });
 
@@ -1003,10 +1041,7 @@ ipcMain.on('update-window-resize', (_event, direction, dx, dy) => {
 });
 
 ipcMain.on('close-quick-window', () => {
-  if (quickWindow && !quickWindow.isDestroyed()) {
-    logQuickWindowEvent('hide', 'explicit-close');
-    quickWindow.hide();
-  }
+  hideQuickWindow('explicit-close');
 });
 
 ipcMain.on('window-minimize', () => mainWindow?.minimize());

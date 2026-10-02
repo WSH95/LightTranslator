@@ -5,7 +5,7 @@ import {
 
 interface QuickWindowLayoutElements {
   header: HTMLElement;
-  body: HTMLElement;
+  scrollContainer: HTMLElement;
   footer: HTMLElement | null;
   menu: HTMLElement | null;
   maximumWidth: number;
@@ -48,6 +48,24 @@ function cloneForMeasurement(source: HTMLElement, width: number | 'max-content')
   return clone;
 }
 
+function cloneScrollContainerForMeasurement(
+  source: HTMLElement,
+  width: number | 'max-content',
+): HTMLElement {
+  const clone = cloneForMeasurement(source, width);
+  Object.assign(clone.style, {
+    height: 'auto',
+    minHeight: '0',
+    maxHeight: 'none',
+    // A scrollbar appearing during a resize can wrap an extra line and keep
+    // itself visible. Reserve its real width in both measurement passes, so
+    // the result fits even during that transition. The live container stays
+    // overflow-y: auto and shows its scrollbar only when needed.
+    overflowY: 'scroll',
+  });
+  return clone;
+}
+
 function renderedWidth(element: HTMLElement): number {
   return Math.max(element.getBoundingClientRect().width, element.scrollWidth);
 }
@@ -68,11 +86,11 @@ export function measureQuickWindowLayout(
   const host = createMeasurementHost();
   try {
     const intrinsicHeader = cloneForMeasurement(elements.header, 'max-content');
-    const intrinsicBody = cloneForMeasurement(elements.body, 'max-content');
-    host.append(intrinsicHeader, intrinsicBody);
+    const intrinsicContent = cloneScrollContainerForMeasurement(elements.scrollContainer, 'max-content');
+    host.append(intrinsicHeader, intrinsicContent);
 
     const toolbarWidth = renderedWidth(intrinsicHeader);
-    const intrinsicContentWidth = renderedWidth(intrinsicBody);
+    const intrinsicContentWidth = renderedWidth(intrinsicContent);
     const menuRect = elements.menu?.getBoundingClientRect();
     const menuRequiredWidth = elements.menu && menuRect
       ? menuRect.left + Math.max(menuRect.width, elements.menu.scrollWidth) + MENU_MARGIN
@@ -84,11 +102,11 @@ export function measureQuickWindowLayout(
 
     host.replaceChildren();
     const wrappedHeader = cloneForMeasurement(elements.header, width);
-    const wrappedBody = cloneForMeasurement(elements.body, width);
+    const wrappedContent = cloneScrollContainerForMeasurement(elements.scrollContainer, width);
     const wrappedFooter = elements.footer
       ? cloneForMeasurement(elements.footer, width)
       : null;
-    host.append(wrappedHeader, wrappedBody);
+    host.append(wrappedHeader, wrappedContent);
     if (wrappedFooter) host.append(wrappedFooter);
 
     const menuRequiredHeight = elements.menu && menuRect
@@ -99,7 +117,7 @@ export function measureQuickWindowLayout(
       intrinsicContentWidth,
       toolbarWidth,
       headerHeight: renderedHeight(wrappedHeader),
-      wrappedContentHeight: renderedHeight(wrappedBody),
+      wrappedContentHeight: renderedHeight(wrappedContent),
       footerHeight: wrappedFooter ? renderedHeight(wrappedFooter) : 0,
       maximumWidth: elements.maximumWidth,
       menuRequiredWidth,

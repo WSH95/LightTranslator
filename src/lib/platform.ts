@@ -41,6 +41,13 @@ export interface WindowDimensions {
   height: number;
 }
 
+/** Ephemeral native popup state; never persisted with translation settings. */
+export interface QuickMoveState {
+  openingId: number;
+  revision: number;
+  enabled: boolean;
+}
+
 export interface OcrDependencyStatus {
   tesseractInstalled: boolean;
   tesseractVersion?: string;
@@ -132,6 +139,8 @@ interface ElectronBridge {
   onMaximizedChanged(cb: (maximized: boolean) => void): () => void;
   onQuickTranslate(cb: (text: string) => void): () => void;
   sendQuickReady(): void;
+  onQuickMoveState(cb: (state: QuickMoveState) => void): () => void;
+  setQuickMoveMode(openingId: number, enabled: boolean): Promise<QuickMoveState>;
   closeQuickWindow(): void;
   onOpenSettings(cb: () => void): () => void;
   emitSettingsChanged(): void;
@@ -322,6 +331,20 @@ const tauriBackend = {
         callback(event.payload as string);
       });
     }, onRegistered);
+  },
+
+  onQuickMoveState(callback: (state: QuickMoveState) => void, onRegistered?: () => void): () => void {
+    return makeDisposableListener(async () => {
+      await initTauri();
+      if (!tauriEvent) return null;
+      return tauriEvent.listen('quick-move-state', (event) => callback(event.payload as QuickMoveState));
+    }, onRegistered);
+  },
+
+  async setQuickMoveMode(openingId: number, enabled: boolean): Promise<QuickMoveState> {
+    await initTauri();
+    if (!tauriInvoke) throw new Error('No native window backend available');
+    return await tauriInvoke('set_quick_move_mode', { openingId, enabled }) as QuickMoveState;
   },
 
   sendQuickReady(): void {
@@ -624,6 +647,14 @@ const electronBackend: PlatformBackend = {
     );
   },
 
+  onQuickMoveState(callback: (state: QuickMoveState) => void, onRegistered?: () => void): () => void {
+    return makeDisposableListener(async () => bridge().onQuickMoveState(callback), onRegistered);
+  },
+
+  async setQuickMoveMode(openingId: number, enabled: boolean): Promise<QuickMoveState> {
+    return bridge().setQuickMoveMode(openingId, enabled);
+  },
+
   sendQuickReady(): void {
     bridge().sendQuickReady();
   },
@@ -780,6 +811,10 @@ export const platform = {
   onQuickTranslate: (cb: (text: string) => void, onRegistered?: () => void) =>
     activeBackend().onQuickTranslate(cb, onRegistered),
   sendQuickReady: () => activeBackend().sendQuickReady(),
+  onQuickMoveState: (cb: (state: QuickMoveState) => void, onRegistered?: () => void) =>
+    activeBackend().onQuickMoveState(cb, onRegistered),
+  setQuickMoveMode: (openingId: number, enabled: boolean) =>
+    activeBackend().setQuickMoveMode(openingId, enabled),
   closeQuickWindow: () => activeBackend().closeQuickWindow(),
   resizeQuickWindow: (dimensions: WindowDimensions) => activeBackend().resizeQuickWindow(dimensions),
   resizeMainWindow: (dimensions: WindowDimensions) => activeBackend().resizeMainWindow(dimensions),
