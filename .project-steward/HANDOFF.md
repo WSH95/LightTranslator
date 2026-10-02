@@ -1,93 +1,99 @@
 ---
-updated_at: 2026-10-02T11:38:26Z
+updated_at: 2026-10-02T11:56:16Z
 updated_by: codex
-session_status: active
+session_status: closed
 branch: main
-last_commit: "0e38fd3 docs(steward): record verified popup fixes on main"
+last_commit: "c1cd94b chore(release): bump version to 1.6.3"
 ---
 # Handoff
 
 ## Now
 
-Release 1.6.3 preparation is active on main. The user requested the version
-bump and Debian packages now, then a repository push and GitHub release update
-after their installed-app test. All five version files are updated consistently.
-Tauri is building in the cached Ubuntu 22.04 container; Electron packaging and
-artifact inspection follow. GitHub's latest public release is still v1.6.2.
-No remote write or installed-package replacement has occurred.
+Version 1.6.3 and both Debian packages are ready on local main for the user's
+installed-app test. The Tauri build retains GLIBC_2.34, and both archives pass
+metadata/resource/hash inspection. Source version commit is c1cd94b. The user
+explicitly requested push and GitHub release after their installed-app testing;
+that result is still pending. No install or remote write was performed by the
+agent. GitHub's public release remains v1.6.2. Automatic local commits remain
+allowed; conditional publication authority comes from the user's request.
 
 ## In flight
 
-Version changes are in package.json, package-lock.json, Tauri config and both
-Cargo files. PLAN/PROGRESS record the release workflow. Build logs are under
-/tmp/lighttranslator-1.6.3-*.log. Source behavior is the reviewed 0e38fd3 tree,
-including punctuation, Move and final-line fixes already accepted in the dev
-app. Local automatic commits remain authorized. Publication waits for the
-user's installed-app acceptance, which has not yet been received.
+Only closing preparation records remain to commit. No feature code is dirty.
+Release tasks B1-B2 are complete; B3 acceptance and B4 publication are pending.
+The earlier punctuation, Move and clipping fixes are on main and accepted in
+the native Wayland dev app. Do not substitute that dev acceptance for the new
+installed-package acceptance. Both build jobs have finished; no app is open.
 
 ## Next steps
 
-1. Finish Tauri/jammy and Electron builds; inspect version, architecture,
-   compatibility floor, packaged resources and hashes. Prepare release notes.
-2. Commit preparation records and provide the Tauri 1.6.3 package for the user
-   to install and test. Keep both release assets tied to the verified source.
-3. Wait for the installed-app test result. After acceptance, push main and tag
-   v1.6.3, publish the GitHub release with both packages, and verify uploads.
-4. Keep M4-M6 follow-ups explicit: physical multi-monitor/helper acceptance,
-   native Electron non-resizable sizing, and pending-text integration tests.
+1. Obtain the user's installed Tauri 1.6.3 test result. Check source Chinese
+   periods with Auto Detect, popup final-line visibility for short/long results,
+   and Move/drag/click-away/dismissal. If a problem is reported, fix it and
+   rebuild/retest before publishing. Keep the candidate version 1.6.3 until its
+   first public release.
+2. After acceptance, verify the original and staged files against
+   `releases/1.6.3-artifacts.json`. If staged copies are missing, recopy the
+   originals; do not rebuild silently after the accepted test.
+3. Check origin/main and existing v1.6.3 tag/release state before pushing. Push
+   main without force and an annotated v1.6.3 tag matching the tested code;
+   source behavior must still match c1cd94b, apart from stewardship records.
+4. Publish v1.6.3 in WSH95/LightTranslator with both staged assets and
+   `releases/1.6.3.md` as the notes body. Verify public asset hashes and Latest
+   status. Record the user's acceptance and publication in PLAN/VERIFY/PROGRESS.
+5. Keep M4-M6 separate: physical monitor/helper acceptance, native Electron
+   non-resizable sizing, and delayed-text handler integration coverage.
 
 ## Blockers
 
-No build blocker so far. Publication is conditional on the user's installed-app
-acceptance. M4 needs physical monitors/new login; M5's cause remains unresolved.
+Publication awaits the user's installed-app result by explicit instruction.
+No technical build blocker remains. The user has authorized publication after
+acceptance; do not ask again once a successful installed-app test is reported.
 
 ## Key files
 
-- `components/QuickTranslateWindow.tsx`, `utils/quickWindowDomSizing.ts`:
-  confirmed Move UI and cloned scroll-container measurement.
-- `src-tauri/src/quick_move.rs`, `src-tauri/src/lib.rs`, `electron/quickMove.js`,
-  `electron/main.js`, `electron/preload.cjs`, `src/lib/platform.ts`: equivalent
-  native mode, opening identity, revisions, readiness and dismissal behavior.
-- `gnome-extension/lighttranslator@lighttranslator.app/extension.js`: resize
-  clamping follows the window monitor; initial placement follows the pointer.
-- `components/TranslatorView.tsx`: selected/auto display language for source
-  punctuation, independent of translation requests.
-- `tests/quick-move/README.md`: reproducible real-renderer checks. Both engines
-  pass 67 cases, including actual final-line bounds, all text sizes, width caps,
-  loading/results, repeated invocations, long-to-short and existing Move cases.
-- `VERIFY.md`: full checks and evidence limits. Typecheck/build, seven Node test
-  files, syntax and UI audit pass; merged main also passes all 9 Rust tests.
-- `plans/2026-10-02-quick-clipping.md`, `plans/2026-10-02-quick-move.md`:
-  approved plans. Decisions 0026-0028 record behavior, sizing and authorization.
+- `src-tauri/target/release/bundle/deb/LightTranslator_1.6.3_amd64.deb`:
+  Tauri package for Ubuntu 22.04+/Debian 12+, 6,078,864 bytes, SHA-256
+  e85a5ac0b8442e24b17d1117bcf2a591c7b4a125c1263a3ee13548b08789d42d.
+- `dist-electron/LightTranslator_1.6.3_amd64.deb`: Electron package for
+  Ubuntu 18.04–20.04, 92,683,800 bytes, SHA-256
+  6123325e75ff92660a63287443cda1f185bc8e17855174fb99c36718d4e5ee03.
+- `.project-steward/tmp/release-1.6.3/`: ignored, persistent release-named
+  copies ending ubuntu22.04-or-newer.deb and ubuntu20.04-or-older.deb.
+- `releases/1.6.3-artifacts.json`: source commit, original/staged paths,
+  hashes, metadata and provenance. Acceptance is null; published is false.
+- `releases/1.6.3.md`: prepared release notes and both checksums.
+- `VERIFY.md`: fresh typecheck/build/Node checks and archive inspection.
+  Logs are `/tmp/lighttranslator-1.6.3-*.log`; extraction is in
+  `/tmp/lighttranslator-1.6.3-inspect/`.
 
 ## Tried and rejected
 
-Measuring padded content alone missed the scrollbar's 6px width; the screenshot
-case had 64px content in a 40px viewport. CSS scrollbar-gutter did not reliably
-reserve the custom WebKit scrollbar. Clone the actual scroll container and
-force overflow-y: scroll only on those hidden measurements.
+Do not use a native Ubuntu 24.04 Tauri release build: its GLIBC floor would
+break Ubuntu 22.04 compatibility. The requested package used the existing
+Ubuntu 22.04.5 Docker builder; Rust release compilation took 5m08s.
+Electron packages the same production bundle directly with electron-builder,
+avoiding a concurrent rebuild of dist while Tauri embeds it. Installed
+Electron 39.8.10, electron-builder 26.15.3 and TypeScript 5.8.3 match the lockfile.
 
-Mapping the Chromium fixture without focus did not make its non-resizable
-window resize. Instrumentation proved requests reached IPC while bounds stayed
-480×220. Use actual viewport assertions; the old 24 Move-only checks did not
-establish native sizing. Tauri's Wayland fixture needs Tao's GTK titlebar/box
-structure to reproduce the clipped-line timing.
+For clipping, measuring the body alone and scrollbar-gutter were insufficient;
+hidden scroll-container clones reserve the real scrollbar. Current Chromium
+geometry QA uses a resizable fixture because native fixed bounds remain M5.
 
 ## Warnings
 
-Keep Move native-authoritative and ephemeral. Reject older opening IDs and
-revisions; retranslation retains mode, new/empty invocations and explicit close
-reset it. Clone scrollbar reservation must not alter live automatic scrolling.
+Do not push or publish before installed acceptance. Do not force-push or rewrite
+published tags. Never change accepted package bytes without another test.
+No GitHub draft/tag was created during preparation. The existing never_push
+configuration remains; the user's explicit conditional request is the exception.
 
-Native Electron sizing, physical helper/multi-monitor behavior and installed
-packages are not accepted by renderer tests. GNOME loads changed helper code
-after a new login. Existing Browserslist age and sandbox dconf warnings do not
-fail the recorded checks. Cargo needs `/home/wsh/.cargo/bin` on PATH.
+Both packages include the reviewed GNOME helper version 2; a new login may be
+needed to load it. Physical multi-monitor/helper checks remain unaccepted.
+Native Electron automatic sizing and direct pending-text integration checks
+remain M5-M6; renderer tests do not establish those acceptance claims.
 
-Task-owned apps/servers are stopped; no Tauri/Xephyr process or port
-5173/5178/9232 remained. Logs/reports are under `/tmp/quick-clipping-*.log` and
-`/tmp/lighttranslator-quick-clipping`; earlier Move/native X11 evidence is under
-`/tmp/lighttranslator-quick-move`. Fixtures use isolated storage and controlled
-responses without credentials. AGENTS.md and CLAUDE.md were not edited. Leave
-other `.superpowers/sdd/` plans and the unrelated/prunable auto-popup-sizing
-worktree alone.
+Existing Browserslist, Tauri bundle-marker and Electron desktopName notices
+were non-failing. Cargo needs /home/wsh/.cargo/bin on PATH for host checks.
+AGENTS.md/CLAUDE.md and unrelated worktrees were not changed. Preserve the staged
+release files while awaiting the user's test; no need to keep build containers
+or launch development apps.

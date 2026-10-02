@@ -10,11 +10,30 @@ Cargo.toml and Cargo.lock agree on 1.6.3. Only the application version changed;
 dependencies and source behavior are unchanged from the reviewed main tree.
 Fresh typecheck, production frontend build and the seven-file Node suite pass.
 
-Tauri is building in Ubuntu 22.04.5; Electron packages the same production
-bundle with `electron-builder --linux deb`. Artifact versions, resources,
-compatibility floor and SHA-256 inspection remain in progress. Logs are under
-`/tmp/lighttranslator-1.6.3-*.log`. Installed-app acceptance is pending; push
-and GitHub publication are authorized only after the user supplies that result.
+`npm run app:docker:build` completed in Ubuntu 22.04.5. Electron packages the
+same production bundle with `electron-builder --linux deb`; both commands exit
+0. Installed electron/electron-builder/TypeScript versions match the lockfile.
+
+- Tauri: `src-tauri/target/release/bundle/deb/LightTranslator_1.6.3_amd64.deb`,
+  6,078,864 bytes; SHA-256
+  `e85a5ac0b8442e24b17d1117bcf2a591c7b4a125c1263a3ee13548b08789d42d`.
+  Metadata: light-translator 1.6.3 amd64; extracted ELF requires GLIBC_2.34.
+- Electron: `dist-electron/LightTranslator_1.6.3_amd64.deb`, 92,683,800 bytes;
+  SHA-256 `6123325e75ff92660a63287443cda1f185bc8e17855174fb99c36718d4e5ee03`.
+  Metadata: lighttranslator 1.6.3 amd64; app.asar also reports 1.6.3. Packaged
+  main/preload/quickMove sources and four frontend scripts match local source
+  and production output byte for byte; clipping and Move UI code are present.
+- Both archives include desktop entries, icons and GNOME helper version 2;
+  extension.js matches the reviewed source. Depends/Recommends are unchanged.
+- Release-named copies are staged in the ignored
+  `.project-steward/tmp/release-1.6.3/` directory and match the original hashes.
+  Provenance is in `releases/1.6.3-artifacts.json`; notes are `releases/1.6.3.md`.
+
+Logs are under `/tmp/lighttranslator-1.6.3-*.log`. Non-failing Browserslist,
+Tauri bundle-marker and Electron desktopName notices remain in the logs.
+Installed-app acceptance is pending; push/tag publication and GitHub release
+writes are authorized only after the user supplies that result. No install or
+remote write occurred. Last verified: 2026-10-02 — release artifact inspection.
 
 ## Popup final-line clipping (2026-10-02)
 

@@ -393,3 +393,20 @@ Ubuntu 22.04.5 and a previous release cache; it is compiling Rust dependencies.
 The fresh production bundle passed and is shared by both packages. Electron
 uses electron-builder --linux deb directly to avoid rebuilding dist while
 Tauri consumes it. Local draft notes are releases/1.6.3.md. No remote writes.
+
+## 2026-10-02 — 1.6.3 packages ready for installed-app testing
+
+Version preparation is committed as c1cd94b on local main. Both Debian builds
+finished successfully. Tauri's release compile took 5m08s in Ubuntu 22.04.5;
+the extracted binary retains GLIBC_2.34. Its package is 6,078,864 bytes, SHA-256
+e85a5ac0b8442e24b17d1117bcf2a591c7b4a125c1263a3ee13548b08789d42d.
+Electron is 92,683,800 bytes, SHA-256
+6123325e75ff92660a63287443cda1f185bc8e17855174fb99c36718d4e5ee03.
+
+Both metadata versions are 1.6.3 amd64, and both ship desktop files, icons and
+the reviewed GNOME helper v2. Electron ASAR native sources and four production
+scripts match the working source/output; the new Move and clipping code is
+present. Installed packaging-tool versions match package-lock. Release-named
+copies match the originals, with provenance and notes saved under releases/.
+The app has not been installed or pushed; publication awaits the user's test
+result exactly as requested. Existing M4-M6 limits remain explicit.

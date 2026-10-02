@@ -6,7 +6,7 @@ holds milestones + a pointer only (never a duplicate task list).
 ## Release 1.6.3 (2026-10-02)
 
 - [x] B1 Bump both backends and lockfiles consistently to 1.6.3.
-- [ ] B2 Build and inspect Tauri/jammy and Electron Debian packages; prepare
+- [x] B2 Build and inspect Tauri/jammy and Electron Debian packages; prepare
       release notes and checksums for the installed-app test.
 - [ ] B3 Wait for the user's installed-app test result before publication.
 - [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
