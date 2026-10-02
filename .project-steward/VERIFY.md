@@ -3,6 +3,19 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
+## Release 1.6.3 preparation (2026-10-02)
+
+All six version declarations in package.json, package-lock.json, Tauri config,
+Cargo.toml and Cargo.lock agree on 1.6.3. Only the application version changed;
+dependencies and source behavior are unchanged from the reviewed main tree.
+Fresh typecheck, production frontend build and the seven-file Node suite pass.
+
+Tauri is building in Ubuntu 22.04.5; Electron packages the same production
+bundle with `electron-builder --linux deb`. Artifact versions, resources,
+compatibility floor and SHA-256 inspection remain in progress. Logs are under
+`/tmp/lighttranslator-1.6.3-*.log`. Installed-app acceptance is pending; push
+and GitHub publication are authorized only after the user supplies that result.
+
 ## Popup final-line clipping (2026-10-02)
 
 The user tested the updated native Tauri development app on Wayland and replied

@@ -372,3 +372,24 @@ pull or push was needed for the known fast-forward. No version bump, package
 installation or release occurred. Test apps/servers are closed. The final
 handoff records main and the remaining follow-ups; task-specific scratch and
 the merged feature branch can be removed without affecting other worktrees.
+
+## 2026-10-02 — Release 1.6.3 preparation started
+
+The user requested a version bump and Debian build, then a repository push and
+GitHub release update after their installed-app test. Main is clean at 0e38fd3
+before this work. GitHub's current release is v1.6.2 with Tauri and Electron
+Debian assets. Bumped package.json, package-lock.json, Tauri config and both
+Cargo files to 1.6.3 without changing dependencies or application behavior.
+
+Build the Tauri package in the existing Ubuntu 22.04 builder to retain its
+compatibility floor; build the matching Electron package for the second public
+asset. Prepare the release locally and record checksums. Commit policy remains
+auto. The explicit publication authorization is conditional on the user's
+installed-app acceptance; no push, tag publication or release write yet.
+
+Release-preparation checks pass: all six declarations agree on 1.6.3,
+typecheck and the seven-file Node suite pass. The Docker builder reports
+Ubuntu 22.04.5 and a previous release cache; it is compiling Rust dependencies.
+The fresh production bundle passed and is shared by both packages. Electron
+uses electron-builder --linux deb directly to avoid rebuilding dist while
+Tauri consumes it. Local draft notes are releases/1.6.3.md. No remote writes.

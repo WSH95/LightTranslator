@@ -3,6 +3,18 @@
 Milestones and tasks. If an external task backend is adopted, this file
 holds milestones + a pointer only (never a duplicate task list).
 
+## Release 1.6.3 (2026-10-02)
+
+- [x] B1 Bump both backends and lockfiles consistently to 1.6.3.
+- [ ] B2 Build and inspect Tauri/jammy and Electron Debian packages; prepare
+      release notes and checksums for the installed-app test.
+- [ ] B3 Wait for the user's installed-app test result before publication.
+- [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
+      with both packages, and verify the uploaded files.
+
+The user explicitly authorized push/release after their installed-app test.
+No remote write is authorized before that condition is met.
+
 ## Popup final-line clipping (2026-10-02)
 
 - [x] L1 Add a failing screenshot-text regression and measure the cloned scroll

@@ -1,6 +1,6 @@
 [package]
 name = "lighttranslator"
-version = "1.6.2"
+version = "1.6.3"
 description = "A lightweight translation app"
 authors = ["LightTranslator"]
 license = "MIT"

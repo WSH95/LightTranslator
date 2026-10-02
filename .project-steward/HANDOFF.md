@@ -1,48 +1,45 @@
 ---
-updated_at: 2026-10-02T10:53:14Z
+updated_at: 2026-10-02T11:38:26Z
 updated_by: codex
-session_status: closed
+session_status: active
 branch: main
-last_commit: "d59aed1 feat(quick-translate): add Move mode and prevent clipped text"
+last_commit: "0e38fd3 docs(steward): record verified popup fixes on main"
 ---
 # Handoff
 
 ## Now
 
-The approved source-punctuation, popup Move and clipped-final-line fixes are
-on local main. Implementation commit `d59aed1` passed fresh review and merged
-by fast-forward at the user's request. The user accepted native Wayland Move
-("Drag and dismissal work") and clipping ("Fully visible"). The dev app is
-closed. Automatic commit policy is enabled; no push, release, version bump or
-package installation occurred. The published release remains v1.6.2.
+Release 1.6.3 preparation is active on main. The user requested the version
+bump and Debian packages now, then a repository push and GitHub release update
+after their installed-app test. All five version files are updated consistently.
+Tauri is building in the cached Ubuntu 22.04 container; Electron packaging and
+artifact inspection follow. GitHub's latest public release is still v1.6.2.
+No remote write or installed-package replacement has occurred.
 
 ## In flight
 
-No unfinished feature implementation remains. Git was clean after the merge;
-this closing handoff and its related PLAN/PROGRESS/VERIFY updates form the
-final documentation commit. M4-M6 remain follow-ups, not acceptance claims.
-All changes are owned by this task; unrelated worktrees are untouched.
+Version changes are in package.json, package-lock.json, Tauri config and both
+Cargo files. PLAN/PROGRESS record the release workflow. Build logs are under
+/tmp/lighttranslator-1.6.3-*.log. Source behavior is the reviewed 0e38fd3 tree,
+including punctuation, Move and final-line fixes already accepted in the dev
+app. Local automatic commits remain authorized. Publication waits for the
+user's installed-app acceptance, which has not yet been received.
 
 ## Next steps
 
-1. M4: after a new login loads GNOME helper version 2, enable Move and drag
-   the popup between physical monitors. Translate again and open its menu;
-   expect resizing to stay on the popup's monitor. Repeat in an installed
-   package when a package build is requested.
-2. M5: investigate native Electron non-resizable sizing on GNOME/X11 and host
-   XWayland. Reproduce retained initial bounds despite delivered resize IPC,
-   compare actual bounds with requests, and establish cause before changing
-   window behavior. Renderer geometry passes with a resizable fixture.
-3. M6: add integration cases for closing before readiness and reopening before
-   delayed text delivery. Expect neither callback to deliver to a closed or
-   newer opening. Run the Node lifecycle tests and Rust quick_move tests.
-4. Build/publish only when requested. Tauri release packages must use the
-   jammy container for Ubuntu 22.04 compatibility; do not push automatically.
+1. Finish Tauri/jammy and Electron builds; inspect version, architecture,
+   compatibility floor, packaged resources and hashes. Prepare release notes.
+2. Commit preparation records and provide the Tauri 1.6.3 package for the user
+   to install and test. Keep both release assets tied to the verified source.
+3. Wait for the installed-app test result. After acceptance, push main and tag
+   v1.6.3, publish the GitHub release with both packages, and verify uploads.
+4. Keep M4-M6 follow-ups explicit: physical multi-monitor/helper acceptance,
+   native Electron non-resizable sizing, and pending-text integration tests.
 
 ## Blockers
 
-None for the completed fixes. M4 needs physical monitors and a new login;
-M5's cause is unresolved. No question or approval is pending.
+No build blocker so far. Publication is conditional on the user's installed-app
+acceptance. M4 needs physical monitors/new login; M5's cause remains unresolved.
 
 ## Key files
 
