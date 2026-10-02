@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
 import {
   ArrowRightLeft, Check, ClipboardList, Copy, LoaderCircle, ScanText, X,
 } from 'lucide-react';
@@ -48,6 +48,16 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Match the output's regional CJK glyphs without changing the language sent
+  // to the provider. In Auto Detect, Han-only text defaults to Simplified Chinese.
+  const sourceTextLang = useMemo(() => {
+    if (sourceLang !== 'auto') return sourceLang;
+    if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(inputText)) return 'ja';
+    if (/\p{Script=Hangul}/u.test(inputText)) return 'ko';
+    if (/\p{Script=Han}/u.test(inputText)) return 'zh-CN';
+    return undefined;
+  }, [sourceLang, inputText]);
 
   // We use a ref to track the latest request to prevent race conditions
   const latestRequestText = useRef<string>('');
@@ -332,6 +342,7 @@ export const TranslatorView: React.FC<TranslatorViewProps> = ({ onOpenOCR }) => 
 
         <textarea
           ref={textareaRef}
+          lang={sourceTextLang}
           className="translation-text flex-1 min-h-0 w-full bg-transparent resize-none overflow-y-auto focus:outline-none text-text placeholder:text-placeholder pt-1.5 px-4 pb-4 selection:bg-accent/20"
           placeholder="Enter text..."
           value={inputText}

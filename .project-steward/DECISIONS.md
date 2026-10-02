@@ -658,3 +658,21 @@ compatibility coverage, not a claim attached to this acceptance result.
 **Consequences**: v1.6.2 becomes the first public release of the Ubuntu UI
 refresh and the automatic pop-up sizing work. Both uploaded assets must be
 downloaded after publication and compared with their local SHA-256 values.
+
+## 0025 — 2026-10-02 — Select source glyphs without changing translation detection
+
+**Context**: the translation output already carries its target language, but
+the main source textarea inherits the English document language. WebKit renders
+its Chinese full stop centered. The user approved fixing both explicit Chinese
+selection and Auto Detect.
+
+**Decision**: derive a memoized display-language tag in `TranslatorView`.
+Explicit source selections take precedence. In Auto Detect, kana selects `ja`,
+otherwise Hangul selects `ko`, otherwise Han selects `zh-CN`; other input
+inherits the document language. Set only the textarea's `lang` attribute.
+
+**Consequences**: punctuation updates immediately as text changes, independently
+of translation results. Han without kana or Hangul defaults to Simplified
+Chinese typography, including ambiguous Traditional Chinese or Japanese text;
+an explicit language selection overrides that hint. Input contents, persisted
+settings, provider payloads and native interfaces are unchanged.

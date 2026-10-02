@@ -3,6 +3,49 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
+## Source punctuation (2026-10-02)
+
+Verified the shared `TranslatorView` in WebKitGTK 2.52.6 and Electron 39.8.10
+(Chromium 142). Before the fix, the source textarea had no language tag; 12 of
+14 language cases failed, and the WebKit screenshot showed a centered source
+period beside the output's baseline period. After the fix:
+
+- All 14 cases pass in each engine: explicit Simplified, Traditional,
+  Japanese, Korean and English; Auto Detect Chinese, mixed English/Chinese,
+  Japanese, halfwidth kana, Korean, kana precedence, supplementary Han,
+  English and empty input.
+- Screenshots at 14, 16 and 19px show the source Chinese period at the bottom,
+  matching the target column. Explicit Simplified uses the same `zh-CN` tag.
+- Programmatic text insertion, synthetic text paste and Clear preserve values,
+  caret position, focus and textarea identity. Inserting kana changes `lang`
+  to `ja` without replacing the textarea. Clearing removes the Auto Detect tag.
+- Chromium's `Input.imeSetComposition` and WebKit's input-method context both
+  pass preedit `中文` followed by commit `中文。`, with correct text and caret.
+- A synthetic provider receives exactly one debounced request for changed
+  input, with the original text and "detected language" in its system prompt.
+  A text-size change and unrelated rerender add no requests. Auto-translate-off
+  language and editing cases make zero requests.
+- `npm run typecheck`, `npm run build`, the five-file Node command below,
+  `git diff --check` and the frontend skill's strict static audit exit 0.
+  Independent source review reports no blocking findings.
+
+Reproduction files and screenshots are ignored under
+`.project-steward/tmp/source-punctuation/`. Start Vite with
+`npm run dev -- --host 127.0.0.1 --port 5178`, then run
+`python3 .project-steward/tmp/source-punctuation/webkit.py` and
+`./node_modules/.bin/electron .project-steward/tmp/source-punctuation/electron.cjs`.
+The fixture imports the real component and CSS, uses isolated/ephemeral browser
+storage, intercepts provider requests, and does not use user credentials or
+the system clipboard. Reports are `webkit-after.json` and `electron-after.json`.
+The static audit report is `/tmp/lighttranslator-source-punctuation-ui-audit.json`.
+
+Evidence limits: these are renderer checks on the current host, not installed
+Tauri/Electron package acceptance or a physical OS IME candidate-window test.
+Electron used software rendering after the host GPU process crashed. The
+Browserslist age warning remains pre-existing. No package or release was made.
+
+## Previous release verification
+
 Last verified on merged `main` at `b6bee54` on 2026-09-20T14:51:16Z:
 `npm run typecheck`, `npm run build`, the five-file Node test command, both
 Electron syntax checks, `cargo check --all-targets` and `cargo test` all exited

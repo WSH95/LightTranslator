@@ -2,6 +2,22 @@
 
 Newest first. One short entry per semantic checkpoint — not per edit.
 
+### 2026-10-02T08:25:37Z — codex
+Fixed the main source textarea's missing language tag. Explicit source choices
+win; Auto Detect uses kana, then Hangul, then Han as a local rendering hint,
+with Han defaulting to Simplified Chinese. The selected translation language
+and provider requests are unchanged. Reproduced the centered source period in
+WebKit before the fix and visually verified matching baseline punctuation
+afterward in WebKitGTK and Electron at all three text sizes. Both engines
+passed 14 language cases, editing/caret checks and input-method composition;
+the mock provider received one request using "detected language", with no
+additional request after a display-only update. Typecheck, build, the existing
+five-file Node suite, UI static audit and independent source review passed.
+See VERIFY.md for the fixture commands and evidence limits. The managed
+worktree was read-only under the sandbox and was archived empty; work uses
+`codex/fix-source-punctuation` in the original checkout. No release was built
+or published.
+
 ### 2026-09-20T14:55:05Z — codex
 Pushed `main` through `a2f033c`, created and pushed annotated tag v1.6.2, and
 published v1.6.2 as the latest GitHub release with notes covering v1.4.0 through

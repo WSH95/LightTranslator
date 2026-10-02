@@ -3,6 +3,13 @@
 Milestones and tasks. If an external task backend is adopted, this file
 holds milestones + a pointer only (never a duplicate task list).
 
+## Source punctuation (2026-10-02)
+
+- [x] P1 Apply the source textarea's selected language, or an Auto Detect display
+      hint (kana, Hangul, then Han), without changing translation requests.
+- [x] P2 Check punctuation and editing in WebKit and Chromium, run typecheck
+      and build, and record the evidence and limits.
+
 ## Stabilization: land the 2026-07 code-review fixes (broken features, races, leaks, hardening, docs)
 
 Source: full findings + per-fix designs in the 2026-07-28 review (see

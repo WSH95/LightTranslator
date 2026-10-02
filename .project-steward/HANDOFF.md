@@ -1,93 +1,63 @@
 ---
-updated_at: 2026-09-20T14:55:05Z
+updated_at: 2026-10-02T08:25:37Z
 updated_by: codex
 session_status: active
-branch: main
-last_commit: "a2f033c fix(steward): repair handoff frontmatter"
+branch: codex/fix-source-punctuation
+last_commit: "ebaffc0 docs(steward): record 1.6.2 publication"
 ---
 # Handoff
 
 ## Now
 
-The automatic pop-up sizing implementation is merged locally into `main` as
-commit `58dedc7`. The user installed the final 1.6.2 Tauri package in the
-original Wayland problem environment, tested it and reported no problems. This
-closes acceptance of the reported click-to-dismiss issue.
+The approved source-punctuation fix is complete on
+`codex/fix-source-punctuation` in `/home/wsh/Documents/LightTranslator`.
+It extends the translated output's language-tag approach to the main source
+textarea. Explicit source languages take precedence. Auto Detect uses kana,
+then Hangul, then Han as a display hint; ambiguous Han defaults to Simplified
+Chinese. This changes glyph selection without changing source text, selected
+translation language, settings or provider requests. Decision 0025 records
+the accepted fallback.
 
-Fresh checks passed before the feature commit and again on merged `main`.
-Commit `a2f033c` fixed this file's frontmatter by quoting the `last_commit`
-value, then `main` and annotated tag v1.6.2 were pushed. v1.6.2 is the latest
-GitHub release: https://github.com/WSH95/LightTranslator/releases/tag/v1.6.2
+The branch starts from `ebaffc0`; code and project records belong in one local
+`fix(ui)` commit. No push, merge, version bump, package build or publication is
+part of this request. The previously accepted and published release remains
+v1.6.2; its package paths, checksums and acceptance history remain in VERIFY.md.
 
-The final test package is available in both checkouts at
-`src-tauri/target/release/bundle/deb/LightTranslator_1.6.2_amd64.deb`.
-It is 6,041,218 bytes, SHA-256
-`8097cd8d1537b3dea779cae16f76252aa141dbc7170fae46098f8257508fcc31`,
-package `light-translator` 1.6.2 amd64, GLIBC floor 2.34. The jammy rebuild
-includes both review fixes. This supersedes earlier 1.6.2 candidates.
+## Verification
 
-The Electron release package is `dist-electron/LightTranslator_1.6.2_amd64.deb`,
-92,682,104 bytes, SHA-256
-`9fc30a64487b4b0f6d28e2891a1f5dcd9bbcfeb4d3871628c9b430e37a7ccd19`,
-package `lighttranslator` 1.6.2 amd64. It contains the app archive, desktop
-entry, icons and GNOME placement extension.
-
-## Behavior
-
-Settings > Pop-up > Maximum width defaults to 480 (range 300–600 logical px).
-Short content narrows with a measured toolbar minimum; long content wraps at
-the cap, grows to 500px high, and then scrolls. A previous manually remembered
-width migrates to a maximum and is saved immediately in the canonical format.
-Menu/font/settings changes use one serialized layout coordinator without
-requesting another translation. The pop-up has no manual move/resize gestures;
-main-window controls remain. Backend focus loss still dismisses the pop-up.
-
-Linux GTK requires `set_size_request` before `resize` to shrink below a fixed
-window's initial default size. That work stays on the GTK main thread.
-Electron retains programmatic `setSize` with user resizing disabled.
-
-## Verification and limits
-
-Typecheck, production builds, all five Node test files (focused sizing 7/7 and
-persistence 7/7), Electron syntax, Cargo check and Rust 5/5 pass. The same
-automated checks passed again after the fast-forward merge. Browser QA
-covers settings/reset, menu expansion/restoration, font sizes, real legacy
-storage/restart, and keyboard focus/arrow/reset operation. Native GTK/WebKit
-layout probes passed Wayland, X11 and 200% scaling. GTK/Electron screen-edge
-probes passed under Mutter. See VERIFY.md for the evidence boundary.
-
-The user completed packaged acceptance in the original Tauri Wayland problem
-environment and reported no problems. Packaged Tauri X11 and Electron were not
-manually installed in this round; source, renderer, toolkit and package checks
-cover those paths. A Minor remains: an explicit hide can be followed by a
-duplicate blur/hide log; the original reason remains present and repeated hide
-is idempotent.
-
-Whole-tree rustfmt still reports old formatting drift; it was not
-mass-reformatted. Existing packaging notices are documented in VERIFY.md and
-did not prevent either Debian build.
+- `npm run typecheck`, `npm run build`, the five-file Node suite and the strict
+  UI static audit pass. Independent source review found no blocking issues.
+- WebKitGTK 2.52.6 and Electron 39.8.10 / Chromium 142 each pass 14 language
+  cases. Before/after screenshots show the centered source period corrected
+  to match the translation at all three text sizes.
+- Programmatic insertion, synthetic paste, Clear, caret/focus preservation and
+  textarea identity pass. Native engine composition tests pass through
+  Chromium's input pipeline and WebKit's input-method context.
+- The synthetic provider receives one translation request using the original
+  text and Auto Detect; display-only updates do not start another request.
+- See VERIFY.md for commands, fixture details and evidence limits. Installed
+  package testing and physical OS IME candidate-window operation were not
+  exercised in this change.
 
 ## Next steps
 
-1. Treat the 1.6.2 release task as complete. Both published assets were
-   downloaded and matched their local SHA-256 values.
-2. If compatibility work resumes, manually install the packaged Tauri X11 and
-   Electron builds; those paths have automated coverage but no manual package
-   acceptance in this round.
+1. Review the local `codex/fix-source-punctuation` branch for integration.
+2. Build/install or publish packages only when requested. For any future Tauri
+   release package, use the jammy container rather than the Ubuntu 24.04 host.
 
-## Warnings and retained local fixtures
+## Local fixtures and warnings
 
-- The agent shell inherits `GDK_BACKEND=x11`; set `wayland` explicitly for
-  native Wayland checks. Session type alone does not identify the app backend.
-- Never ship a host Ubuntu 24.04 build; use `npm run app:docker:build` (jammy).
-- Preserve user settings, shortcuts and clipboard when testing the real app.
-- Ignored fixtures remain under `.project-steward/tmp/pop-up-harness*.html`;
-  they use a synthetic provider and make no external translation requests.
-- Native test scripts are `/tmp/lighttranslator-gtk-sizing-probe.py`,
-  `/tmp/lighttranslator-webkit-popup-probe.py`,
-  `/tmp/lighttranslator-screen-edge-probe.py` and
-  `/tmp/lighttranslator-electron-edge-probe.cjs`.
-- The task-owned Vite server and browser tabs are stopped at handoff. Start
-  Vite on port 5178 again only if the retained fixtures are needed.
-- Code, UI, comments and project records for this change are English.
-  AGENTS.md and CLAUDE.md were not edited.
+- The unused managed worktree `source-punctuation` was read-only in the
+  sandbox and was archived empty. The fix uses the original checkout.
+- The ignored `.project-steward/tmp/source-punctuation/` directory contains
+  the isolated renderer fixture, both native runners, before/after JSON and
+  screenshots. The fixture makes no external translation requests.
+- Electron probes use a temporary profile at
+  `/tmp/lighttranslator-source-qa-electron` and software rendering because
+  the host GPU process crashed. WebKit uses an ephemeral context.
+- The app's settings, shortcuts and system clipboard were not changed.
+- The task-owned Vite server on port 5178 is stopped after validation.
+- The build still prints the pre-existing Browserslist data-age warning.
+- The previous handoff still marked the September session active, but the
+  checkout was clean and its release history accounted for the latest commit.
+- AGENTS.md and CLAUDE.md were not edited. Code and records are English.
