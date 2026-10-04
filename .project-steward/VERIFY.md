@@ -3,6 +3,33 @@
 How to check the project is healthy. Agents run these before claiming
 "validated" in HANDOFF.md.
 
+## Release 1.6.3 publication (2026-10-03)
+
+The user accepted the revised installed Tauri package. GNOME reports helper
+v3 ACTIVE and enabled from the user-local extension directory. Main and
+annotated v1.6.3 were pushed normally; the tag resolves to
+a9033352346444540f7d2719c7ee8f1e7ec8c690. App source at that tag matches
+b15ade1 apart from stewardship records. The accepted files were not rebuilt.
+
+GitHub release 402788790 is public, not a prerelease, and is Latest:
+https://github.com/WSH95/LightTranslator/releases/tag/v1.6.3. Release notes
+match releases/1.6.3.md and both assets report uploaded. Downloads from GitHub
+match the original/staged files and GitHub's digest:
+
+- Tauri: 6,075,118 bytes; SHA-256
+  c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7.
+- Electron: 92,686,108 bytes; SHA-256
+  13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55.
+
+Provenance includes acceptance, release/tag metadata, asset IDs and URLs.
+Verification report is /tmp/lighttranslator-release-1.6.3-verification/ and
+tmp/release-1.6.3/public-verification.json. Multi-monitor, native Electron
+installed/sizing and concurrent WebKit timing coverage retain PLAN M4-M7.
+Last verified: 2026-10-03 (America/New_York), release publication and downloads.
+
+The preparation record below describes superseded candidate files. Use the
+publication hashes above or releases/1.6.3-artifacts.json for this release.
+
 ## Release 1.6.3 preparation (2026-10-02)
 
 All six version declarations in package.json, package-lock.json, Tauri config,

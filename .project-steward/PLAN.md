@@ -10,12 +10,13 @@ holds milestones + a pointer only (never a duplicate task list).
 - [x] T2 Refresh stale user-local helpers in both installers without changing
       disabled preferences or downgrading newer copies; verify and integrate.
 - [x] T3 Rebuild and inspect both 1.6.3 packages; refresh installed user helper.
-- [ ] T4 Confirm revised installed acceptance after GNOME loads helper version 3
+- [x] T4 Confirm revised installed acceptance after GNOME loads helper version 3
       at a new login, then publish under the existing conditional authorization.
 
 Plan of record: `plans/2026-10-02-quick-always-on-top.md` (approved in-session).
 The user accepted the revised installed Tauri package on October 3, 2026.
-GNOME reports helper version 3 ACTIVE; publication is now authorized.
+GNOME reports helper version 3 ACTIVE; v1.6.3 is published as Latest with both
+verified packages: https://github.com/WSH95/LightTranslator/releases/tag/v1.6.3.
 
 ## Release 1.6.3 (2026-10-02)
 
@@ -23,11 +24,11 @@ GNOME reports helper version 3 ACTIVE; publication is now authorized.
 - [x] B2 Rebuild and inspect Tauri/jammy and Electron Debian packages; prepare
       release notes and checksums for the installed-app test.
 - [x] B3 Accept the revised installed-app test; verify GNOME helper v3 ACTIVE.
-- [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
+- [x] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
       with both packages, and verify the uploaded files.
 
-The successful installed test satisfies the user's conditional push/release
-authorization. Publication is the remaining release task.
+Release completed under the user's conditional authorization. Both public
+asset downloads match the accepted hashes and sizes; no rebuild occurred.
 
 ## Popup final-line clipping (2026-10-02)
 

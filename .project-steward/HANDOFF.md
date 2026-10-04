@@ -1,59 +1,58 @@
 ---
-updated_at: 2026-10-04T02:26:58Z
+updated_at: 2026-10-04T02:32:54Z
 updated_by: codex
-session_status: active
+session_status: closed
 branch: main
-last_commit: "e103954 docs(release): record revised 1.6.3 packages awaiting Wayland testing"
+last_commit: "a903335 docs(release): record installed acceptance for 1.6.3 (v1.6.3)"
 ---
 # Handoff
 
 ## Now
 
-The user accepted the revised installed Tauri 1.6.3 package on October 3, 2026.
-GNOME reports helper v3 ACTIVE, loaded from the refreshed user-local copy.
-The conditional authorization to push main and publish v1.6.3 is satisfied.
-All four original/staged package copies retain the recorded hashes and sizes.
-Source behavior matches reviewed b15ade1 apart from Project Steward records.
-No package rebuild or app source change is needed.
+Version 1.6.3 is published as the Latest public GitHub release:
+https://github.com/WSH95/LightTranslator/releases/tag/v1.6.3. The user accepted
+the revised installed Tauri package on October 3, 2026; GNOME reports helper
+v3 ACTIVE. Main and annotated v1.6.3 were pushed under the user's satisfied
+conditional authorization. The tag resolves to a903335; app source matches
+reviewed b15ade1 apart from stewardship records. Both downloaded Debian assets
+match the accepted original/staged files, sizes and SHA-256. No rebuild occurred.
 
 ## In flight
 
-This checkpoint records acceptance, fresh publication checks and updated
-release notes. Only stewardship files are changing; no unrelated work is dirty.
-Publication remains in flight: no push, tag or release write has occurred yet.
-The code branch is already merged/deleted and its managed worktree archived.
-No build/test app or Vite server is running.
+No app source or release work remains. This closing checkpoint records the
+publication and verification; only stewardship files changed. T1-T4/B1-B4 and
+the approved stacking plan are complete. The feature branch is merged/deleted
+and its managed worktree recoverably archived. No build/test app or Vite server
+is running. Unrelated worktrees and AGENTS.md/CLAUDE.md were left alone.
 
 ## Next steps
 
-1. Review and commit the acceptance records under the existing auto policy.
-2. Create annotated tag v1.6.3 at the acceptance commit and push main/tag
-   normally to git@github.com:WSH95/LightTranslator.git. Remote main was verified
-   as ebaffc0 and an ancestor; the tag/release is absent. Do not force-push.
-3. Publish v1.6.3 with both accepted files in tmp/release-1.6.3/ and the notes
-   in releases/1.6.3.md. Verify the remote tag target before publication.
-4. Download both release assets to /tmp, compare size/SHA-256 with
-   releases/1.6.3-artifacts.json, and verify public/latest release status.
-5. Record release URL, tag target, assets and verification; close T4/B4 and
-   the plan's publication checkbox, commit the closing records and push main.
-6. Keep M4-M7 separate: physical multi-monitor tests, native Electron fixed
-   sizing, delayed-text integration and concurrent WebKit fixture timing.
+1. Use the Latest release URL above for installation; no further publication
+   approval or package rebuild is needed for v1.6.3. Keep the tag/assets intact.
+2. M4: test moving/resizing across physical monitors with loaded helper v3;
+   installed acceptance did not establish multi-monitor coverage.
+3. M5: investigate native Electron fixed 360x200 bounds on GNOME/X11/XWayland.
+   Its resizable Chromium fixture passes geometry; native installed acceptance
+   and non-resizable automatic sizing remain separate.
+4. M6: add direct pending-text close-before-ready and reopening integration
+   cases. M7: investigate concurrent WebKit fixture resize acknowledgement
+   using the first-run stale bounds and unchanged isolated rerun evidence.
+5. Preserve the explicit user-approval rule for future pushes/releases. This
+   session's authorization covers v1.6.3, not unrelated future publication.
 
 ## Blockers
 
-None for publication. No repeated approval is needed: the user approved the
-release after installed testing and has now reported success.
+None for this release. M4-M7 are separate backlog tasks.
 
 ## Key files
 
-- releases/1.6.3-artifacts.json: accepted source b15ade1, package hashes/sizes,
-  installed acceptance and publication fields.
-- releases/1.6.3.md: reviewed notes including installed acceptance.
-- tmp/release-1.6.3/: accepted release-named Debian files. Tauri SHA-256
-  c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7;
-  Electron SHA-256
-  13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55.
-- VERIFY.md and plans/2026-10-02-quick-always-on-top.md: evidence and scope.
+- releases/1.6.3-artifacts.json: accepted source b15ade1, installed acceptance,
+  publication/tag metadata, package hashes/sizes, public asset IDs and URLs.
+- releases/1.6.3.md: exact published notes.
+- tmp/release-1.6.3/: accepted Debian assets and public-verification.json.
+- VERIFY.md and plans/2026-10-02-quick-always-on-top.md: completed evidence/plan.
+- /tmp/lighttranslator-release-1.6.3-verification/: GitHub metadata, downloaded
+  packages and round-trip verification report.
 - tmp/quick-always-on-top-execution/: preserved implementation ledger/review.
 
 ## Tried and rejected
@@ -69,8 +68,11 @@ rerun passed 67/67 unchanged. M7 records this without claiming a timing fix.
 
 ## Warnings
 
-Keep the accepted bytes unchanged. Tauri was built in jammy with GLIBC_2.34;
-a host Ubuntu 24.04 rebuild would raise the compatibility floor. The earlier
-c1cd94b packages were superseded. Native Electron fixed 360x200 sizing remains
-M5; physical multi-monitor coverage is not established by installed acceptance.
-AGENTS.md and CLAUDE.md are untouched. Never rewrite published history.
+The released tag is a903335; later main commits may store closing records only.
+Never rewrite the published tag/history or replace accepted assets silently.
+Tauri was built in jammy with GLIBC_2.34; a host Ubuntu 24.04 rebuild would raise
+the compatibility floor. The earlier c1cd94b packages are superseded. Native
+Electron fixed sizing remains M5. Physical multi-monitor coverage is pending.
+Both original/staged packages and public downloads retain these SHA-256:
+Tauri c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7;
+Electron 13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55.

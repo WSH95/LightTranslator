@@ -48,4 +48,12 @@ blur and Move retains it. No public IPC, settings or translation API changes.
 - [x] Build the Tauri jammy and Electron debs; inspect contents/metadata and
   record fresh hashes/provenance/release notes. Refresh the installed user
   helper and arrange installed testing after a new Wayland login.
-- [ ] After revised installed acceptance, push main/tag and publish v1.6.3.
+- [x] After revised installed acceptance, push main/tag and publish v1.6.3.
+
+## Completion
+
+The user accepted the revised installed package on October 3, 2026. GNOME
+reports helper v3 ACTIVE. Pushed main and annotated v1.6.3 at a903335, then
+published both accepted Debian files as the Latest GitHub release. Downloaded
+assets match the recorded size and SHA-256; notes match the prepared file.
+Source behavior at the tag matches reviewed b15ade1. No rebuild occurred.

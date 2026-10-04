@@ -473,3 +473,15 @@ release notes. Remote main remains an ancestor; no v1.6.3 tag/release exists.
 The user's conditional publication authorization is now satisfied. Next: push
 main with an annotated tag, publish both accepted files, verify public bytes,
 and close the release records.
+
+## 2026-10-03 — Published and verified v1.6.3
+
+Pushed main and annotated v1.6.3 normally at a903335 under the user's satisfied
+conditional authorization. Published release 402788790 with both accepted
+Debian packages and the prepared notes; GitHub reports it as Latest, public
+and not a prerelease. Downloaded both assets and verified their sizes and
+SHA-256 against the accepted original/staged files and GitHub digests. Notes
+match the repository file; tagged app source matches b15ade1. No rebuild or
+source change occurred. Recorded release URL, tag target and asset metadata,
+closed T4/B4 and the approved plan. M4-M7 remain separate follow-ups. The final
+publication checkpoint is ready to commit and push to main.

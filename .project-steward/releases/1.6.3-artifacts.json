@@ -15,7 +15,7 @@
       "verifiedAt": "2026-10-04T02:26:58Z"
     }
   },
-  "published": false,
+  "published": true,
   "artifacts": [
     {
       "backend": "tauri",
@@ -37,7 +37,12 @@
       "iconCount": 3,
       "releaseName": "LightTranslator-1.6.3-amd64-ubuntu22.04-or-newer.deb",
       "stagedPath": ".project-steward/tmp/release-1.6.3/LightTranslator-1.6.3-amd64-ubuntu22.04-or-newer.deb",
-      "glibcFloor": "2.34"
+      "glibcFloor": "2.34",
+      "releaseAsset": {
+        "id": 608972632,
+        "url": "https://github.com/WSH95/LightTranslator/releases/download/v1.6.3/LightTranslator-1.6.3-amd64-ubuntu22.04-or-newer.deb",
+        "githubDigest": "sha256:c974b82b92690e89a5aca35a21c8f8b407fa888ed51fb518218785322136e9d7"
+      }
     },
     {
       "backend": "electron",
@@ -61,7 +66,22 @@
       "stagedPath": ".project-steward/tmp/release-1.6.3/LightTranslator-1.6.3-amd64-ubuntu20.04-or-older.deb",
       "asarVersion": "1.6.3",
       "frontendScripts": 4,
-      "sourceMatches": true
+      "sourceMatches": true,
+      "releaseAsset": {
+        "id": 608972616,
+        "url": "https://github.com/WSH95/LightTranslator/releases/download/v1.6.3/LightTranslator-1.6.3-amd64-ubuntu20.04-or-older.deb",
+        "githubDigest": "sha256:13865ee04be75d3b91fc416f2004c462eece23c5412b85300773f169ed627f55"
+      }
     }
-  ]
+  ],
+  "publication": {
+    "url": "https://github.com/WSH95/LightTranslator/releases/tag/v1.6.3",
+    "releaseId": 402788790,
+    "tag": "v1.6.3",
+    "tagCommit": "a9033352346444540f7d2719c7ee8f1e7ec8c690",
+    "publishedAt": "2026-10-04T02:31:03Z",
+    "latest": true,
+    "verifiedAt": "2026-10-04T02:32:54Z",
+    "verification": "Downloaded both GitHub assets; sizes and SHA-256 match the accepted originals and staged copies."
+  }
 }
