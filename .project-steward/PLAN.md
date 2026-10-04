@@ -14,20 +14,20 @@ holds milestones + a pointer only (never a duplicate task list).
       at a new login, then publish under the existing conditional authorization.
 
 Plan of record: `plans/2026-10-02-quick-always-on-top.md` (approved in-session).
-The user accepted the previous installed fixes but reported Move popups hidden
-behind other windows. Earlier package acceptance does not cover this revision.
+The user accepted the revised installed Tauri package on October 3, 2026.
+GNOME reports helper version 3 ACTIVE; publication is now authorized.
 
 ## Release 1.6.3 (2026-10-02)
 
 - [x] B1 Bump both backends and lockfiles consistently to 1.6.3.
 - [x] B2 Rebuild and inspect Tauri/jammy and Electron Debian packages; prepare
       release notes and checksums for the installed-app test.
-- [ ] B3 Wait for the user's installed-app test result before publication.
+- [x] B3 Accept the revised installed-app test; verify GNOME helper v3 ACTIVE.
 - [ ] B4 After acceptance, push main and tag v1.6.3, publish the GitHub release
       with both packages, and verify the uploaded files.
 
-The user explicitly authorized push/release after their installed-app test.
-No remote write is authorized before that condition is met.
+The successful installed test satisfies the user's conditional push/release
+authorization. Publication is the remaining release task.
 
 ## Popup final-line clipping (2026-10-02)
 
@@ -45,7 +45,7 @@ Plan of record: `plans/2026-10-02-quick-clipping.md` (approved in-session).
 - [x] M3 Automated/native Move checks, physical Wayland acceptance, review and
       durable records (coverage limits are recorded in VERIFY.md).
 - [ ] M4 Check physical multi-monitor movement after logging in with GNOME
-      placement helper version 3; installed-package acceptance is also pending.
+      placement helper version 3; multi-monitor acceptance remains separate.
 - [ ] M5 Investigate Electron automatic sizing in GNOME/X11 and host XWayland:
       non-resizable native windows retained their initial bounds. Chromium
       geometry passes with a resizable fixture; native Move checks also pass.

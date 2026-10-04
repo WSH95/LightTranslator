@@ -531,3 +531,17 @@ files were backed up. Enabled state remains Yes. The active shell still
 reports v1; after login, verify helper v3 before accepting native Wayland
 stacking/focus/dismissal. The rebuilt app has not been installed or accepted
 yet. Earlier installed acceptance does not validate these revised bytes.
+
+## 2026-10-03 — Installed acceptance and publication checks
+
+The user reports "The installed test succeeds." for the revised Tauri 1.6.3
+package. GNOME now reports helper version 3, Enabled Yes, State ACTIVE, loaded
+from the user-local extension directory. This establishes the required
+new-login/helper-v3 condition. Physical multi-monitor and native Electron
+installed acceptance remain outside this result.
+
+Fresh pre-publication checks match all four original/staged package hashes and
+sizes against releases/1.6.3-artifacts.json. Both Debian metadata sets report
+1.6.3 amd64. App source matches b15ade1 apart from stewardship records. Remote
+main is ebaffc0 and is an ancestor of local main; v1.6.3 has no existing remote
+tag or GitHub release. The accepted package bytes will not be rebuilt.

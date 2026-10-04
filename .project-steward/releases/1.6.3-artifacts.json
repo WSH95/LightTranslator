@@ -2,7 +2,19 @@
   "version": "1.6.3",
   "sourceCommit": "b15ade134e363f9ccb7663c7d73abbefa6f91ad4",
   "inspectedAt": "2026-10-02T12:47:16Z",
-  "installedAcceptance": null,
+  "installedAcceptance": {
+    "reportedOn": "2026-10-03",
+    "backend": "tauri",
+    "reportedBy": "user",
+    "message": "The installed test succeeds.",
+    "result": "passed",
+    "gnomeHelper": {
+      "version": 3,
+      "enabled": true,
+      "state": "ACTIVE",
+      "verifiedAt": "2026-10-04T02:26:58Z"
+    }
+  },
   "published": false,
   "artifacts": [
     {

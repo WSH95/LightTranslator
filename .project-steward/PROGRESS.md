@@ -462,3 +462,14 @@ ledger/review diff were preserved under .project-steward/tmp/. Test apps and
 Vite servers are closed. No push, tag or release write occurred. The user must
 reinstall the revised same-version package and test after a fresh login before
 the authorized publication.
+
+## 2026-10-03 — Revised installed test accepted; release ready to publish
+
+The user confirmed the revised installed test succeeds. Verified the loaded
+GNOME helper is v3 ACTIVE with the enabled preference unchanged. Both original
+and release-named Debian package copies retain the recorded hashes/sizes, and
+source behavior matches b15ade1. Recorded acceptance and updated the prepared
+release notes. Remote main remains an ancestor; no v1.6.3 tag/release exists.
+The user's conditional publication authorization is now satisfied. Next: push
+main with an annotated tag, publish both accepted files, verify public bytes,
+and close the release records.
